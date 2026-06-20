@@ -1,7 +1,7 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/AuthContext.jsx";
 import { HotelProvider } from "./contexts/HotelContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Login from "./components/auth/Login";
