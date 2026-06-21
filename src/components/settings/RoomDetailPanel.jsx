@@ -42,8 +42,7 @@ export default function RoomDetailPanel({
     await onSendMessage(room.id, reply, "admin");
     setReply("");
   };
-  // src/components/settings/RoomDetailPanel.jsx
-  // src/components/settings/RoomDetailPanel.jsx
+
   const copyQRUrl = () => {
     const baseUrl = window.location.origin;
     const roomParam = encodeURIComponent(`${hotelId}_${room.id}`);

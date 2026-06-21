@@ -10,12 +10,9 @@ export default function QRModal({ room, onClose, hotelId }) {
       qrRef.current.innerHTML = "";
 
       const baseUrl = window.location.origin;
-      // ENCODE the room parameter properly
-      // src/components/dashboard/QRDownload.jsx
-      // In the downloadAllQRs function, update the URL generation:
-
-      const roomParam = encodeURIComponent(`${hotel.id}_${room.id}`);
-      const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
+      // Use hotelId directly (it's passed as a prop)
+      const roomParam = encodeURIComponent(`${hotelId}_${room.id}`);
+      const url = `${baseUrl}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
       console.log("QR URL generated:", url);
 
       try {

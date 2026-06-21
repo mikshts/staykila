@@ -50,9 +50,11 @@ export default function QRDownload({ hotel, rooms, onClose }) {
         // src/components/dashboard/QRDownload.jsx
         // In the downloadAllQRs function, update the URL generation:
 
-        const roomParam = `${hotel.id}_${room.id}`;
-        const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
-        // Generate QR code
+        // src/components/dashboard/QRDownload.jsx
+        // In the downloadAllQRs function:
+
+        const roomParam = encodeURIComponent(`${hotel.id}_${room.id}`);
+        const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`; // Generate QR code
         new window.QRCode(div, {
           text: url,
           width: 200,

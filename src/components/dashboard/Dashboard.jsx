@@ -745,9 +745,6 @@ export default function Dashboard() {
     }
   };
 
-  // src/components/dashboard/Dashboard.jsx
-  // src/components/dashboard/Dashboard.jsx
-  // src/components/dashboard/Dashboard.jsx
   const generateQRUrl = (room) => {
     const baseUrl = window.location.origin;
     const roomParam = encodeURIComponent(`${hotel.id}_${room.id}`);
