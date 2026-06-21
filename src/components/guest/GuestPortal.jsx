@@ -232,6 +232,7 @@ export default function GuestPortal() {
   // src/components/guest/GuestPortal.jsx
   // src/components/guest/GuestPortal.jsx
   // Update the QR generation useEffect:
+
   useEffect(() => {
     if (room && hotel && qrContainerRef.current && window.QRCode) {
       qrContainerRef.current.innerHTML = "";

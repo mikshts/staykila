@@ -10,7 +10,7 @@ export default function QRModal({ room, onClose, hotelId }) {
       qrRef.current.innerHTML = "";
 
       const baseUrl = window.location.origin;
-      // Use hotelId directly (it's passed as a prop)
+      // Use hotelId (the prop) not hotel.id
       const roomParam = encodeURIComponent(`${hotelId}_${room.id}`);
       const url = `${baseUrl}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
       console.log("QR URL generated:", url);
