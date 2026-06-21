@@ -10,6 +10,7 @@ import {
   RoomNotFoundSkeleton,
   GuestPortalLoading,
 } from "../ui";
+import QRCode from "qrcode";
 
 export default function GuestPortal() {
   const [searchParams] = useSearchParams();
@@ -234,20 +235,33 @@ export default function GuestPortal() {
   // Update the QR generation useEffect:
 
   useEffect(() => {
-    if (room && hotel && qrContainerRef.current && window.QRCode) {
+    if (room && hotel && qrContainerRef.current) {
+      // Clear previous QR
       qrContainerRef.current.innerHTML = "";
-      const roomParam = encodeURIComponent(`${hotel.id}_${room.id}`);
+
+      const roomParam = `${hotel.id}_${room.id}`;
       const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
       console.log("Guest Portal QR URL:", url);
-      try {
-        new window.QRCode(qrContainerRef.current, {
-          text: url,
+
+      // Generate QR using npm package
+      QRCode.toCanvas(
+        qrContainerRef.current,
+        url,
+        {
           width: 120,
-          height: 120,
-        });
-      } catch (error) {
-        console.error("QR generation error:", error);
-      }
+          margin: 1,
+          color: {
+            dark: "#0f1b2d",
+            light: "#ffffff",
+          },
+          errorCorrectionLevel: "H",
+        },
+        function (error) {
+          if (error) {
+            console.error("QR generation error:", error);
+          }
+        },
+      );
     }
   }, [room, hotel]);
 

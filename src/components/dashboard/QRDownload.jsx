@@ -1,7 +1,7 @@
 // src/components/dashboard/QRDownload.jsx
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import { supabase } from "../../lib/supabase";
+import QRCode from "qrcode"; // Import from npm package
 
 export default function QRDownload({ hotel, rooms, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -21,6 +21,27 @@ export default function QRDownload({ hotel, rooms, onClose }) {
     };
   }, [onClose]);
 
+  const generateQRCodeDataURL = (url) => {
+    return new Promise((resolve, reject) => {
+      QRCode.toDataURL(
+        url,
+        {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: "#0f1b2d",
+            light: "#ffffff",
+          },
+          errorCorrectionLevel: "H",
+        },
+        (err, dataUrl) => {
+          if (err) reject(err);
+          else resolve(dataUrl);
+        },
+      );
+    });
+  };
+
   const downloadAllQRs = async () => {
     if (rooms.length === 0) {
       toast.error("No rooms to generate QR codes");
@@ -31,7 +52,6 @@ export default function QRDownload({ hotel, rooms, onClose }) {
       setLoading(true);
       setProgress(0);
 
-      // Dynamically import JSZip
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
       const folder = zip.folder(`${hotel.name.replace(/\s/g, "_")}_QRCodes`);
@@ -42,41 +62,17 @@ export default function QRDownload({ hotel, rooms, onClose }) {
         const room = rooms[i];
         setProgress(((i + 1) / totalRooms) * 100);
 
-        // Create a temporary div for QR code
-        const div = document.createElement("div");
-        div.style.cssText = "position:absolute;left:-9999px";
-        document.body.appendChild(div);
+        const roomParam = `${hotel.id}_${room.id}`;
+        const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
 
-        // src/components/dashboard/QRDownload.jsx
-        // In the downloadAllQRs function, update the URL generation:
-
-        // src/components/dashboard/QRDownload.jsx
-        // In the downloadAllQRs function:
-
-        const roomParam = encodeURIComponent(`${hotel.id}_${room.id}`);
-        const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`; // Generate QR code
-        new window.QRCode(div, {
-          text: url,
-          width: 200,
-          height: 200,
+        console.log(`Generating QR for ${room.name}:`, url);
+        const dataUrl = await generateQRCodeDataURL(url);
+        const base64Data = dataUrl.split(",")[1];
+        folder.file(`${room.name.replace(/\s/g, "_")}.png`, base64Data, {
+          base64: true,
         });
-
-        // Wait for QR to render
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        const canvas = div.querySelector("canvas");
-        if (canvas) {
-          const dataUrl = canvas.toDataURL("image/png");
-          const base64Data = dataUrl.split(",")[1];
-          folder.file(`${room.name.replace(/\s/g, "_")}.png`, base64Data, {
-            base64: true,
-          });
-        }
-
-        div.remove();
       }
 
-      // Generate the ZIP file
       const blob = await zip.generateAsync({ type: "blob" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -88,7 +84,7 @@ export default function QRDownload({ hotel, rooms, onClose }) {
       onClose();
     } catch (error) {
       console.error("Error downloading QR codes:", error);
-      toast.error("Failed to download QR codes");
+      toast.error("Failed to download QR codes: " + error.message);
     } finally {
       setLoading(false);
     }

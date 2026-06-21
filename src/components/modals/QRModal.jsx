@@ -1,35 +1,42 @@
 // src/components/modals/QRModal.jsx
 import React, { useEffect, useRef } from "react";
 import toast from "react-hot-toast";
+import QRCode from "qrcode"; // Import from npm package
 
 export default function QRModal({ room, onClose, hotelId }) {
-  const qrRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
-    if (qrRef.current && window.QRCode) {
-      qrRef.current.innerHTML = "";
-
-      const baseUrl = window.location.origin;
-      // Use hotelId (the prop) not hotel.id
-      const roomParam = encodeURIComponent(`${hotelId}_${room.id}`);
-      const url = `${baseUrl}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
+    if (canvasRef.current) {
+      const roomParam = `${hotelId}_${room.id}`;
+      const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
       console.log("QR URL generated:", url);
 
-      try {
-        new window.QRCode(qrRef.current, {
-          text: url,
+      // Generate QR code using npm package
+      QRCode.toCanvas(
+        canvasRef.current,
+        url,
+        {
           width: 200,
-          height: 200,
-        });
-      } catch (error) {
-        console.error("QR generation error:", error);
-        toast.error("Failed to generate QR code");
-      }
+          margin: 2,
+          color: {
+            dark: "#0f1b2d",
+            light: "#ffffff",
+          },
+          errorCorrectionLevel: "H", // High error correction for better scanning
+        },
+        function (error) {
+          if (error) {
+            console.error("QR generation error:", error);
+            toast.error("Failed to generate QR code");
+          }
+        },
+      );
     }
   }, [room, hotelId]);
 
   const downloadQR = () => {
-    const canvas = qrRef.current?.querySelector("canvas");
+    const canvas = canvasRef.current;
     if (canvas) {
       try {
         const link = document.createElement("a");
@@ -57,7 +64,9 @@ export default function QRModal({ room, onClose, hotelId }) {
           <p className="text-xs text-[#8a8278] mb-4">
             Scan to view room status
           </p>
-          <div ref={qrRef} className="flex justify-center my-4"></div>
+          <div className="flex justify-center my-4">
+            <canvas ref={canvasRef}></canvas>
+          </div>
           <p className="text-[10px] text-[#8a8278] mt-2">
             Guests scan to see their stay information
           </p>
