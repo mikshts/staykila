@@ -430,7 +430,7 @@ export default function GuestPortal() {
               </div>
             )}
 
-            {/* WiFi Button */}
+            {/* WiFi Button - Remove the duplicate */}
             {wifiPassword && (
               <div className="mt-4">
                 <button
@@ -449,8 +449,7 @@ export default function GuestPortal() {
                 )}
               </div>
             )}
-
-            {/* Menu Button */}
+            {/* Menu Button - Remove the duplicate */}
             {menuImages.length > 0 && (
               <div className="mt-4">
                 <button
@@ -473,7 +472,6 @@ export default function GuestPortal() {
                 )}
               </div>
             )}
-
             {/* Notes */}
             {room.notes && (
               <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
@@ -483,7 +481,6 @@ export default function GuestPortal() {
                 <p className="text-amber-800 text-sm">{room.notes}</p>
               </div>
             )}
-
             {/* Chat */}
             <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
               <div className="flex items-center gap-2 mb-2">
@@ -536,7 +533,6 @@ export default function GuestPortal() {
                 id="guest-message-status"
                 className="text-xs text-gray-400 mt-1"></div>
             </div>
-
             {/* QR Code */}
             <div className="mt-4 text-center">
               <div

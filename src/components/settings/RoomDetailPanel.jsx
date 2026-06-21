@@ -26,6 +26,7 @@ export default function RoomDetailPanel({
   const [notes, setNotes] = useState(room.notes || "");
   const [showQR, setShowQR] = useState(false);
   const chatEndRef = useRef(null);
+  const panelRef = useRef(null);
 
   const status = room.booking
     ? getRoomStatus(room.booking.end_time)
@@ -42,10 +43,26 @@ export default function RoomDetailPanel({
     setReply("");
   };
 
+  // Handle click outside to close
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
-        <div className="bg-white w-full max-w-md h-full overflow-y-auto">
+        <div
+          ref={panelRef}
+          className="bg-white w-full max-w-md h-full overflow-y-auto">
           <div className="sticky top-0 bg-[#0f1b2d] text-white p-4">
             <div className="flex items-start justify-between">
               <div>

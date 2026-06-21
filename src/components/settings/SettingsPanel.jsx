@@ -1,5 +1,5 @@
 // src/components/settings/SettingsPanel.jsx
-import React from "react";
+import React, { useRef, useEffect } from "react";
 
 export default function SettingsPanel({
   hotel,
@@ -12,9 +12,26 @@ export default function SettingsPanel({
   onOpenMenu,
   onOpenPrice,
 }) {
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
-      <div className="bg-white w-full max-w-md h-full overflow-y-auto">
+      <div
+        ref={panelRef}
+        className="bg-white w-full max-w-md h-full overflow-y-auto">
         <div className="sticky top-0 bg-[#0f1b2d] text-white p-4 flex items-center justify-between">
           <div>
             <div className="font-bold">Settings</div>

@@ -50,6 +50,26 @@ body {
   padding: 8px 0 4px;
 }
 
+/* Make sure panels are clickable */
+.z-50 {
+  z-index: 50 !important;
+}
+
+/* Ensure buttons inside panels work */
+.bg-\[\#0f1b2d\] {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Fix for panel overlays */
+.fixed.inset-0 {
+  pointer-events: none;
+}
+
+.fixed.inset-0 > div {
+  pointer-events: auto;
+}
+
 .timer-display.ok {
   color: var(--green);
 }

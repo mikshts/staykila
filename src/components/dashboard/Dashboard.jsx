@@ -673,6 +673,8 @@ export default function Dashboard() {
     );
   }
 
+  // src/components/dashboard/Dashboard.jsx - Fixed render section
+
   return (
     <div className="min-h-screen bg-[#f7f3ee] flex">
       <Sidebar
@@ -822,7 +824,6 @@ export default function Dashboard() {
           formatTime={formatTime}
         />
       )}
-
       {showExtendModal && selectedRoom && (
         <ExtendModal
           room={selectedRoom}
@@ -833,7 +834,6 @@ export default function Dashboard() {
           formatCountdown={formatCountdown}
         />
       )}
-
       {showPriceModal && (
         <PriceModal
           prices={editPrices}
@@ -842,7 +842,6 @@ export default function Dashboard() {
           onClose={() => setShowPriceModal(false)}
         />
       )}
-
       {showWifiModal && (
         <WifiModal
           currentPassword={wifiPassword}
@@ -850,7 +849,6 @@ export default function Dashboard() {
           onClose={() => setShowWifiModal(false)}
         />
       )}
-
       {showMenuModal && (
         <MenuModal
           menuImages={menuImages}
@@ -859,7 +857,6 @@ export default function Dashboard() {
           onClose={() => setShowMenuModal(false)}
         />
       )}
-
       {showActivityPanel && (
         <ActivityPanel
           logs={activityLog}
@@ -867,12 +864,13 @@ export default function Dashboard() {
         />
       )}
 
+      {/* Messages Panel */}
       {showMessagesPanel && (
         <MessagesPanel
-          messages={messages}
           rooms={rooms}
           onClose={() => setShowMessagesPanel(false)}
           onOpenChat={(room) => {
+            console.log("Opening chat for room:", room);
             setShowMessagesPanel(false);
             setSelectedRoom(room);
             setShowRoomDetail(true);
@@ -902,7 +900,6 @@ export default function Dashboard() {
           }}
         />
       )}
-
       {showRoomDetail && selectedRoom && (
         <RoomDetailPanel
           room={selectedRoom}
@@ -947,6 +944,7 @@ export default function Dashboard() {
           getRoomStatus={getRoomStatus}
           getStatusMeta={getStatusMeta}
           getUnreadForRoom={getUnreadForRoom}
+          hotelId={hotel?.id}
         />
       )}
     </div>
