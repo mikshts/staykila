@@ -9,7 +9,7 @@ import { supabase } from "../../lib/supabase";
 export default function GuestPortal() {
   const [searchParams] = useSearchParams();
   const [room, setRoom] = useState(null);
-  const [hotel, setHotel] = useState(null); // Add hotel state
+  const [hotel, setHotel] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -23,6 +23,7 @@ export default function GuestPortal() {
   const chatEndRef = useRef(null);
   const subscriptionRef = useRef(null);
   const qrContainerRef = useRef(null);
+  const messageIdsRef = useRef(new Set());
 
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
@@ -41,21 +42,74 @@ export default function GuestPortal() {
   const loadRoomData = async () => {
     try {
       setLoading(true);
-      const [hotelId, roomId] = roomParam.split("_");
 
-      // Get hotel info first
-      const { data: hotelData, error: hotelError } = await supabase
-        .from("hotels")
-        .select("*")
-        .eq("id", hotelId)
-        .single();
+      // Parse room param - handle both formats: hotelId_roomId or just roomId
+      let hotelId, roomId;
+      if (roomParam.includes("_")) {
+        const parts = roomParam.split("_");
+        // The hotel ID might be the first part, or it might be combined
+        if (parts.length === 2) {
+          [hotelId, roomId] = parts;
+        } else {
+          // If more than 2 parts, join the first parts for hotel ID
+          hotelId = parts.slice(0, parts.length - 1).join("_");
+          roomId = parts[parts.length - 1];
+        }
+      } else {
+        // If no underscore, treat as room ID and try to find hotel
+        roomId = roomParam;
+        // Try to get hotel from room data
+        const roomData = await roomService.getRoom(roomId);
+        if (roomData) {
+          hotelId = roomData.hotel_id;
+        }
+      }
 
-      if (hotelError) throw hotelError;
-      setHotel(hotelData);
+      console.log("Hotel ID:", hotelId, "Room ID:", roomId);
+
+      // Get hotel info
+      if (hotelId) {
+        const { data: hotelData, error: hotelError } = await supabase
+          .from("hotels")
+          .select("*")
+          .eq("id", hotelId)
+          .single();
+
+        if (!hotelError && hotelData) {
+          setHotel(hotelData);
+          setWifiPassword(hotelData.wifi_password || "");
+        }
+      }
 
       // Get room details
       const roomData = await roomService.getRoom(roomId);
       setRoom(roomData);
+
+      // Get hotel ID from room data if not set
+      if (!hotelId && roomData) {
+        hotelId = roomData.hotel_id;
+        if (hotelId) {
+          const { data: hotelData } = await supabase
+            .from("hotels")
+            .select("*")
+            .eq("id", hotelId)
+            .single();
+          if (hotelData) {
+            setHotel(hotelData);
+            setWifiPassword(hotelData.wifi_password || "");
+          }
+        }
+      }
+
+      // Get menu images
+      if (hotelId) {
+        const { data: menuData } = await supabase
+          .from("menu_images")
+          .select("*")
+          .eq("hotel_id", hotelId)
+          .order("display_order");
+        setMenuImages(menuData || []);
+      }
 
       // Get active booking
       const { data: bookings } = await supabase
@@ -76,19 +130,18 @@ export default function GuestPortal() {
 
       // Get messages
       const msgs = await messageService.getMessages(roomId);
-      setMessages(msgs);
-
-      // Get WiFi password and menu images from hotel data
-      if (hotelData) {
-        setWifiPassword(hotelData.wifi_password || "");
-        // Get menu images
-        const { data: menuData } = await supabase
-          .from("menu_images")
-          .select("*")
-          .eq("hotel_id", hotelId)
-          .order("display_order");
-        setMenuImages(menuData || []);
-      }
+      // Deduplicate messages
+      const uniqueMsgs = [];
+      const seenIds = new Set();
+      msgs.forEach((msg) => {
+        if (!seenIds.has(msg.id)) {
+          seenIds.add(msg.id);
+          uniqueMsgs.push(msg);
+        }
+      });
+      setMessages(uniqueMsgs);
+      // Store message IDs for deduplication
+      uniqueMsgs.forEach((msg) => messageIdsRef.current.add(msg.id));
 
       // Create or get guest session
       let token = localStorage.getItem(`guest_${roomId}_token`);
@@ -99,15 +152,19 @@ export default function GuestPortal() {
       }
       setGuestToken(token);
 
-      // Setup realtime subscription
+      // Setup realtime subscription with deduplication
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
       }
       subscriptionRef.current = messageService.subscribeToRoom(
         roomId,
         (newMsg) => {
-          setMessages((prev) => [...prev, newMsg]);
-          chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          // Check if message already exists
+          if (!messageIdsRef.current.has(newMsg.id)) {
+            messageIdsRef.current.add(newMsg.id);
+            setMessages((prev) => [...prev, newMsg]);
+            chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          }
         },
       );
     } catch (error) {
@@ -121,9 +178,10 @@ export default function GuestPortal() {
   // Generate QR code after room and hotel are loaded
   useEffect(() => {
     if (room && hotel && qrContainerRef.current && window.QRCode) {
-      // Clear previous QR
       qrContainerRef.current.innerHTML = "";
+      // Use the hotel ID from the hotel object
       const url = `${window.location.origin}/guest?room=${hotel.id}_${room.id}&name=${encodeURIComponent(room.name)}`;
+      console.log("QR URL:", url);
       new window.QRCode(qrContainerRef.current, {
         text: url,
         width: 120,
@@ -188,7 +246,11 @@ export default function GuestPortal() {
         newMessage,
         guestToken,
       );
-      setMessages((prev) => [...prev, msg]);
+      // Add message to state with deduplication
+      if (!messageIdsRef.current.has(msg.id)) {
+        messageIdsRef.current.add(msg.id);
+        setMessages((prev) => [...prev, msg]);
+      }
       setNewMessage("");
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     } catch (error) {
@@ -211,6 +273,7 @@ export default function GuestPortal() {
         <div className="text-center p-8">
           <i className="fas fa-door-open text-6xl text-gray-300 mb-4"></i>
           <p className="text-gray-500">Room not found</p>
+          <p className="text-xs text-gray-400 mt-2">Room ID: {roomParam}</p>
         </div>
       </div>
     );

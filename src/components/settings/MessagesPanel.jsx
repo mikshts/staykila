@@ -22,7 +22,16 @@ export default function MessagesPanel({
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        setAllMessages(data);
+        // Deduplicate messages by ID
+        const uniqueMessages = [];
+        const seenIds = new Set();
+        data.forEach((msg) => {
+          if (!seenIds.has(msg.id)) {
+            seenIds.add(msg.id);
+            uniqueMessages.push(msg);
+          }
+        });
+        setAllMessages(uniqueMessages);
       }
     };
     fetchAllMessages();

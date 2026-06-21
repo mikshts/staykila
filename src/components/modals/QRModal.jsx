@@ -4,27 +4,44 @@ import toast from "react-hot-toast";
 
 export default function QRModal({ room, onClose, hotelId }) {
   const qrRef = useRef(null);
-  const QRCode = window.QRCode; // Use global QRCode from CDN
 
   useEffect(() => {
-    if (qrRef.current && QRCode) {
+    if (qrRef.current && window.QRCode) {
+      // Clear previous QR
+      qrRef.current.innerHTML = "";
+
+      // Build the URL correctly
       const url = `${window.location.origin}/guest?room=${hotelId}_${room.id}&name=${encodeURIComponent(room.name)}`;
-      new QRCode(qrRef.current, {
-        text: url,
-        width: 200,
-        height: 200,
-      });
+      console.log("QR URL generated:", url);
+
+      try {
+        new window.QRCode(qrRef.current, {
+          text: url,
+          width: 200,
+          height: 200,
+        });
+      } catch (error) {
+        console.error("QR generation error:", error);
+        toast.error("Failed to generate QR code");
+      }
     }
   }, [room, hotelId]);
 
   const downloadQR = () => {
     const canvas = qrRef.current?.querySelector("canvas");
     if (canvas) {
-      const link = document.createElement("a");
-      link.download = `${room.name.replace(/\s/g, "_")}_QR.png`;
-      link.href = canvas.toDataURL();
-      link.click();
-      toast.success("QR code downloaded!");
+      try {
+        const link = document.createElement("a");
+        link.download = `${room.name.replace(/\s/g, "_")}_QR.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        toast.success("QR code downloaded!");
+      } catch (error) {
+        console.error("Download error:", error);
+        toast.error("Failed to download QR code");
+      }
+    } else {
+      toast.error("QR code not ready");
     }
   };
 
