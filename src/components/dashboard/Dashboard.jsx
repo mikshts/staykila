@@ -10,6 +10,7 @@ import RoomGrid from "./RoomGrid";
 import RoomList from "./RoomList";
 import ReportsPanel from "../reports/ReportsPanel";
 import { DashboardSkeleton } from "../ui";
+import QRDownload from "./QRDownload";
 
 import {
   CheckinModal,
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showReportsPanel, setShowReportsPanel] = useState(false);
   const [uploading, setUploading] = useState(false); // <-- ADD THIS LINE
+  const [showQRDownload, setShowQRDownload] = useState(false);
 
   const [activityLog, setActivityLog] = useState([]);
   const [messages, setMessages] = useState({});
@@ -785,6 +787,10 @@ export default function Dashboard() {
           setShowPriceModal(true);
           setSidebarOpen(false);
         }}
+        onQRDownloadClick={() => {
+          setShowQRDownload(true);
+          setSidebarOpen(false);
+        }}
         onReportsClick={() => {
           setShowReportsPanel(true);
           setSidebarOpen(false);
@@ -923,6 +929,13 @@ export default function Dashboard() {
           onPricesChange={setEditPrices}
           onSave={savePrices}
           onClose={() => setShowPriceModal(false)}
+        />
+      )}
+      {showQRDownload && (
+        <QRDownload
+          hotel={hotel}
+          rooms={rooms}
+          onClose={() => setShowQRDownload(false)}
         />
       )}
       {showWifiModal && (
