@@ -235,7 +235,6 @@ body {
     display: table-footer-group;
   }
 }
-/* src/index.css - Add these animation styles */
 
 /* Skeleton loading animation */
 @keyframes shimmer {
@@ -266,7 +265,7 @@ body {
   50% {
     opacity: 0.5;
   }
-} /* src/index.css - Add these for Guest Portal */
+}
 
 /* Guest Portal skeleton specific styles */
 .guest-skeleton .bg-indigo-300\/50 {
@@ -286,4 +285,91 @@ body {
 
 .skeleton-pulse {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* ============================================
+   THIN SCROLLBAR STYLES
+   ============================================ */
+
+/* Global scrollbar - Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* Sidebar specific scrollbar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Main content scrollbar */
+.main-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.main-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.main-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 8px;
+}
+
+.main-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Light variant for panels */
+.light-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.light-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+
+.light-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 8px;
+}
+
+.light-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
