@@ -47,7 +47,7 @@ export default function QRDownload({ hotel, rooms, onClose }) {
         div.style.cssText = "position:absolute;left:-9999px";
         document.body.appendChild(div);
 
-        const url = `${window.location.origin}/guest?room=${hotel.id}_${room.id}&name=${encodeURIComponent(room.name)}`;
+        const url = `${window.location.origin}/guest?room=${encodeURIComponent(hotel.id + "_" + room.id)}&name=${encodeURIComponent(room.name)}`;
 
         // Generate QR code
         new window.QRCode(div, {

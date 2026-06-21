@@ -50,7 +50,6 @@ export default function Sidebar({
             <i className="fas fa-times text-xl"></i>
           </button>
         </div>
-
         {/* Hotel Badge */}
         <div className="m-4 p-3 bg-white/5 border border-white/10 rounded-xl">
           <div className="text-white text-sm font-semibold truncate">
@@ -67,7 +66,6 @@ export default function Sidebar({
             {occupancyRate}% occupancy
           </div>
         </div>
-
         {/* Navigation */}
         <nav className="px-2 py-4">
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pb-2">
@@ -163,16 +161,15 @@ export default function Sidebar({
             Room Service Menu
           </button>
         </nav>
-
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-          <div className="text-white/40 text-xs mb-2 truncate">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-[#0f1b2d]">
+          <div className="text-white/40 text-xs mb-2 truncate overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
             <i className="fas fa-user mr-1"></i>
-            {user?.email}
+            {user?.email || "Guest"}
           </div>
           <button
             onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 text-white/40 hover:text-white/70 text-sm py-2 px-4 border border-white/10 rounded-lg transition">
+            className="w-full flex items-center justify-center gap-2 text-white/40 hover:text-white/70 text-sm py-2 px-4 border border-white/10 rounded-lg transition hover:bg-white/5">
             <i className="fas fa-sign-out-alt"></i>
             Sign out
           </button>

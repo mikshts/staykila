@@ -42,7 +42,12 @@ export default function RoomDetailPanel({
     await onSendMessage(room.id, reply, "admin");
     setReply("");
   };
-
+  const copyQRUrl = () => {
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/guest?room=${encodeURIComponent(hotelId + "_" + room.id)}&name=${encodeURIComponent(room.name)}`;
+    navigator.clipboard.writeText(url);
+    toast.success("QR URL copied to clipboard");
+  };
   // Handle click outside to close
   useEffect(() => {
     const handleClickOutside = (event) => {

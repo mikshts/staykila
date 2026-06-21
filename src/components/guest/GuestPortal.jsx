@@ -35,16 +35,29 @@ export default function GuestPortal() {
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
 
+  // Parse room param helper - IMPROVED
   const parseRoomParam = (param) => {
     if (!param) return null;
+
+    // Decode the parameter first
+    const decoded = decodeURIComponent(param);
+    console.log("Decoded room param:", decoded);
+
+    // Try to parse as JSON first (for QR codes)
     try {
-      const parsed = JSON.parse(decodeURIComponent(param));
+      const parsed = JSON.parse(decoded);
       if (parsed.hotelId && parsed.roomId) {
         return { hotelId: parsed.hotelId, roomId: parsed.roomId };
       }
-    } catch (e) {}
-    if (param.includes("_")) {
-      const parts = param.split("_");
+    } catch (e) {
+      // Not JSON, continue
+    }
+
+    // Format: hotelId_roomId
+    if (decoded.includes("_")) {
+      const parts = decoded.split("_");
+      console.log("Split parts:", parts);
+
       if (parts.length === 2) {
         return { hotelId: parts[0], roomId: parts[1] };
       } else {
@@ -53,65 +66,78 @@ export default function GuestPortal() {
         return { hotelId, roomId };
       }
     }
-    return { roomId: param };
+
+    return { roomId: decoded };
   };
 
-  useEffect(() => {
-    if (roomParam) {
-      loadRoomData();
-    }
-    return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-      }
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-    };
-  }, [roomParam]);
-
+  // In loadRoomData, add more logging:
   const loadRoomData = async () => {
     try {
       setLoading(true);
-      const parsed = parseRoomParam(roomParam);
-      let hotelId = parsed?.hotelId;
-      let roomId = parsed?.roomId;
 
+      const parsed = parseRoomParam(roomParam);
+      console.log("Parsed room param:", parsed);
+      console.log("Original roomParam:", roomParam);
+
+      // Extract variables from parsed
+      const hotelId = parsed?.hotelId;
+      const roomId = parsed?.roomId;
+
+      console.log("Extracted hotelId:", hotelId);
+      console.log("Extracted roomId:", roomId);
+
+      // If no hotelId, try to get it from room data
       if (!hotelId && roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
-          hotelId = roomData.hotel_id;
+          const newHotelId = roomData.hotel_id;
           setRoom(roomData);
+
+          // Fetch hotel with the ID from room data
+          if (newHotelId) {
+            const { data: hotelData } = await supabase
+              .from("hotels")
+              .select("*")
+              .eq("id", newHotelId)
+              .single();
+            if (hotelData) {
+              setHotel(hotelData);
+              setWifiPassword(hotelData.wifi_password || "");
+            }
+          }
         }
       } else if (roomId) {
+        // Get room details with provided hotelId
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
           setRoom(roomData);
         }
-      }
 
-      if (hotelId) {
-        const { data: hotelData } = await supabase
-          .from("hotels")
-          .select("*")
-          .eq("id", hotelId)
-          .single();
-        if (hotelData) {
-          setHotel(hotelData);
-          setWifiPassword(hotelData.wifi_password || "");
+        // Get hotel info
+        if (hotelId) {
+          const { data: hotelData } = await supabase
+            .from("hotels")
+            .select("*")
+            .eq("id", hotelId)
+            .single();
+          if (hotelData) {
+            setHotel(hotelData);
+            setWifiPassword(hotelData.wifi_password || "");
+          }
         }
       }
 
+      // If we still don't have room data, try once more with just the roomId
       if (!room && roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
           setRoom(roomData);
           if (!hotelId && roomData.hotel_id) {
-            hotelId = roomData.hotel_id;
+            const newHotelId = roomData.hotel_id;
             const { data: hotelData } = await supabase
               .from("hotels")
               .select("*")
-              .eq("id", hotelId)
+              .eq("id", newHotelId)
               .single();
             if (hotelData) {
               setHotel(hotelData);
@@ -121,15 +147,18 @@ export default function GuestPortal() {
         }
       }
 
-      if (hotelId) {
+      // Get menu images
+      const currentHotelId = hotel?.id || hotelId;
+      if (currentHotelId) {
         const { data: menuData } = await supabase
           .from("menu_images")
           .select("*")
-          .eq("hotel_id", hotelId)
+          .eq("hotel_id", currentHotelId)
           .order("display_order");
         setMenuImages(menuData || []);
       }
 
+      // Get active booking
       if (roomId) {
         const { data: bookings } = await supabase
           .from("bookings")
@@ -148,6 +177,7 @@ export default function GuestPortal() {
           setIsExpired(true);
         }
 
+        // Get messages
         const msgs = await messageService.getMessages(roomId);
         const uniqueMsgs = [];
         const seenIds = new Set();
@@ -160,6 +190,7 @@ export default function GuestPortal() {
         setMessages(uniqueMsgs);
         uniqueMsgs.forEach((msg) => messageIdsRef.current.add(msg.id));
 
+        // Create or get guest session
         let token = localStorage.getItem(`guest_${roomId}_token`);
         if (!token) {
           const session = await messageService.createGuestSession(roomId);
@@ -191,9 +222,24 @@ export default function GuestPortal() {
   };
 
   useEffect(() => {
+    if (roomParam) {
+      loadRoomData();
+    }
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+      }
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [roomParam]);
+
+  useEffect(() => {
     if (room && hotel && qrContainerRef.current && window.QRCode) {
       qrContainerRef.current.innerHTML = "";
-      const url = `${window.location.origin}/guest?room=${hotel.id}_${room.id}&name=${encodeURIComponent(room.name)}`;
+      const url = `${window.location.origin}/guest?room=${encodeURIComponent(hotel.id + "_" + room.id)}&name=${encodeURIComponent(room.name)}`;
+      console.log("Guest Portal QR URL:", url);
       try {
         new window.QRCode(qrContainerRef.current, {
           text: url,
@@ -206,6 +252,7 @@ export default function GuestPortal() {
     }
   }, [room, hotel]);
 
+  // Timer effect with cleanup
   useEffect(() => {
     if (timeRemaining <= 0) return;
     if (timerIntervalRef.current) {

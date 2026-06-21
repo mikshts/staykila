@@ -745,11 +745,11 @@ export default function Dashboard() {
     }
   };
 
+  // src/components/dashboard/Dashboard.jsx
   const generateQRUrl = (room) => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/guest?room=${hotel.id}_${room.id}&name=${encodeURIComponent(room.name)}`;
+    return `${baseUrl}/guest?room=${encodeURIComponent(hotel.id + "_" + room.id)}&name=${encodeURIComponent(room.name)}`;
   };
-
   if (loading) {
     return <DashboardSkeleton />;
   }

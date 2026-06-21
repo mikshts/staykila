@@ -7,11 +7,11 @@ export default function QRModal({ room, onClose, hotelId }) {
 
   useEffect(() => {
     if (qrRef.current && window.QRCode) {
-      // Clear previous QR
       qrRef.current.innerHTML = "";
 
-      // Build the URL correctly
-      const url = `${window.location.origin}/guest?room=${hotelId}_${room.id}&name=${encodeURIComponent(room.name)}`;
+      // Build the URL with full origin
+      const baseUrl = window.location.origin;
+      const url = `${baseUrl}/guest?room=${encodeURIComponent(hotelId + "_" + room.id)}&name=${encodeURIComponent(room.name)}`;
       console.log("QR URL generated:", url);
 
       try {
