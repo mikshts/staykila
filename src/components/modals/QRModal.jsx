@@ -1,30 +1,26 @@
-// src/components/dashboard/QRDownload.jsx
-import React, { useState } from "react";
+// src/components/modals/QRModal.jsx
+import React, { useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import QRCode from "qrcode"; // Import from npm package
 import { buildGuestUrl } from "../../lib/guestUrl";
 
-export default function QRDownload({ hotel, rooms, onClose }) {
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const panelRef = React.useRef(null);
+export default function QRModal({ room, onClose, hotelId }) {
+  const canvasRef = useRef(null);
 
-  React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
-        onClose();
-      }
-    };
+  useEffect(() => {
+    if (canvasRef.current) {
+      // buildGuestUrl uses URLSearchParams, which guarantees the same
+      // encoding here as in GuestPortal.jsx and QRDownload.jsx. Previously
+      // each file hand-built this string slightly differently
+      // (`room=${hotelId}_${room.id}&name=${encodeURIComponent(room.name)}`),
+      // which is how subtly different encodings ended up in different QR
+      // codes depending on which component generated them.
+      const url = buildGuestUrl(hotelId, room.id, room.name);
+      console.log("QR URL generated:", url);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [onClose]);
-
-  const generateQRCodeDataURL = (url) => {
-    return new Promise((resolve, reject) => {
-      QRCode.toDataURL(
+      // Generate QR code using npm package
+      QRCode.toCanvas(
+        canvasRef.current,
         url,
         {
           width: 200,
@@ -33,137 +29,66 @@ export default function QRDownload({ hotel, rooms, onClose }) {
             dark: "#0f1b2d",
             light: "#ffffff",
           },
-          errorCorrectionLevel: "H",
+          errorCorrectionLevel: "H", // High error correction for better scanning
         },
-        (err, dataUrl) => {
-          if (err) reject(err);
-          else resolve(dataUrl);
+        function (error) {
+          if (error) {
+            console.error("QR generation error:", error);
+            toast.error("Failed to generate QR code");
+          }
         },
       );
-    });
-  };
-
-  const downloadAllQRs = async () => {
-    if (rooms.length === 0) {
-      toast.error("No rooms to generate QR codes");
-      return;
     }
+  }, [room, hotelId]);
 
-    try {
-      setLoading(true);
-      setProgress(0);
-
-      const JSZip = (await import("jszip")).default;
-      const zip = new JSZip();
-      const folder = zip.folder(`${hotel.name.replace(/\s/g, "_")}_QRCodes`);
-
-      const totalRooms = rooms.length;
-
-      for (let i = 0; i < rooms.length; i++) {
-        const room = rooms[i];
-        setProgress(((i + 1) / totalRooms) * 100);
-
-        // Shared helper — same encoding as GuestPortal.jsx / QRModal.jsx.
-        const url = buildGuestUrl(hotel.id, room.id, room.name);
-
-        console.log(`Generating QR for ${room.name}:`, url);
-        const dataUrl = await generateQRCodeDataURL(url);
-        const base64Data = dataUrl.split(",")[1];
-        folder.file(`${room.name.replace(/\s/g, "_")}.png`, base64Data, {
-          base64: true,
-        });
+  const downloadQR = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      try {
+        const link = document.createElement("a");
+        link.download = `${room.name.replace(/\s/g, "_")}_QR.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        toast.success("QR code downloaded!");
+      } catch (error) {
+        console.error("Download error:", error);
+        toast.error("Failed to download QR code");
       }
-
-      const blob = await zip.generateAsync({ type: "blob" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${hotel.name.replace(/\s/g, "_")}_QRCodes.zip`;
-      link.click();
-      URL.revokeObjectURL(link.href);
-
-      toast.success(`Downloaded ${rooms.length} QR codes!`);
-      onClose();
-    } catch (error) {
-      console.error("Error downloading QR codes:", error);
-      toast.error("Failed to download QR codes: " + error.message);
-    } finally {
-      setLoading(false);
+    } else {
+      toast.error("QR code not ready");
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div
-        ref={panelRef}
-        className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/25">
-            <i className="fas fa-qrcode text-white text-2xl"></i>
+      <div className="bg-white rounded-2xl max-w-md w-full p-6">
+        <div className="text-center">
+          <div className="text-xs font-semibold uppercase tracking-wider text-[#8a8278] mb-1">
+            QR Code
           </div>
-          <h3 className="text-xl font-bold text-[#0f1b2d]">
-            Download All QR Codes
-          </h3>
-          <p className="text-sm text-[#8a8278] mt-1">
-            Generate QR codes for all {rooms.length} rooms
+          <h3 className="font-bold text-[#0f1b2d] text-lg">{room.name}</h3>
+          <p className="text-xs text-[#8a8278] mb-4">
+            Scan to view room status
+          </p>
+          <div className="flex justify-center my-4">
+            <canvas ref={canvasRef}></canvas>
+          </div>
+          <p className="text-[10px] text-[#8a8278] mt-2">
+            Guests scan to see their stay information
           </p>
         </div>
 
-        <div className="bg-[#f7f3ee] rounded-xl p-4 mb-6">
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-[#8a8278]">Total Rooms</span>
-            <span className="font-semibold text-[#0f1b2d]">{rooms.length}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-[#8a8278]">File Format</span>
-            <span className="font-semibold text-[#0f1b2d]">ZIP with PNGs</span>
-          </div>
-        </div>
-
-        {loading && (
-          <div className="mb-4">
-            <div className="flex justify-between text-sm text-[#8a8278] mb-1">
-              <span>Generating...</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <div className="w-full bg-[#f7f3ee] rounded-full h-2 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={downloadQR}
+            className="flex-1 py-2 bg-[#0f1b2d] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+            <i className="fas fa-download"></i> Download PNG
+          </button>
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 border border-[#e5e2db] rounded-xl text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition"
-            disabled={loading}>
-            Cancel
+            className="flex-1 py-2 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition">
+            Close
           </button>
-          <button
-            onClick={downloadAllQRs}
-            disabled={loading || rooms.length === 0}
-            className="flex-1 py-2.5 bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-indigo-500/25 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-            {loading ? (
-              <>
-                <i className="fas fa-spinner fa-spin"></i>
-                Generating...
-              </>
-            ) : (
-              <>
-                <i className="fas fa-download"></i>
-                Download All
-              </>
-            )}
-          </button>
-        </div>
-
-        <div className="mt-4 text-center">
-          <p className="text-[10px] text-[#8a8278]">
-            <i className="fas fa-info-circle mr-1"></i>
-            QR codes will be named after each room
-          </p>
         </div>
       </div>
     </div>
