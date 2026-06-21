@@ -9,9 +9,10 @@ export default function QRModal({ room, onClose, hotelId }) {
     if (qrRef.current && window.QRCode) {
       qrRef.current.innerHTML = "";
 
-      // Build the URL with full origin
+      // Build the URL WITHOUT encoding the room param (it's already safe)
       const baseUrl = window.location.origin;
-      const url = `${baseUrl}/guest?room=${encodeURIComponent(hotelId + "_" + room.id)}&name=${encodeURIComponent(room.name)}`;
+      const roomParam = `${hotelId}_${room.id}`;
+      const url = `${baseUrl}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
       console.log("QR URL generated:", url);
 
       try {

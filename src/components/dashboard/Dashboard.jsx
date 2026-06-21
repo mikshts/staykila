@@ -746,9 +746,11 @@ export default function Dashboard() {
   };
 
   // src/components/dashboard/Dashboard.jsx
+  // src/components/dashboard/Dashboard.jsx
   const generateQRUrl = (room) => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/guest?room=${encodeURIComponent(hotel.id + "_" + room.id)}&name=${encodeURIComponent(room.name)}`;
+    const roomParam = `${hotel.id}_${room.id}`;
+    return `${baseUrl}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
   };
   if (loading) {
     return <DashboardSkeleton />;
