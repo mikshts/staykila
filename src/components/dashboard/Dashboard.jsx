@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
 
 export default function Dashboard() {
   const { user, hotel, logout } = useAuth();
@@ -22,6 +21,7 @@ export default function Dashboard() {
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [activityLog, setActivityLog] = useState([]);
   const [messages, setMessages] = useState({});
   const [stats, setStats] = useState({
@@ -46,22 +46,23 @@ export default function Dashboard() {
   });
   const [wifiPassword, setWifiPassword] = useState("");
   const [menuImages, setMenuImages] = useState([]);
-  const [checkinHours, setCheckinHours] = useState(3);
-  const [extendHours, setExtendHours] = useState(1);
-  const [newMessage, setNewMessage] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
   const [adminReply, setAdminReply] = useState("");
   const [roomNotes, setRoomNotes] = useState("");
-  const [editingPrice, setEditingPrice] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [editPrices, setEditPrices] = useState({});
+  const [uploading, setUploading] = useState(false);
+  const [qrCodes, setQrCodes] = useState([]);
 
   const chatEndRef = useRef(null);
   const timerIntervalRef = useRef(null);
 
+  // Fetch data on mount
   useEffect(() => {
     if (hotel?.id) {
       fetchRooms();
       fetchHotelSettings();
       fetchMessages();
+      fetchActivityLogs();
     }
     return () => {
       if (timerIntervalRef.current) {
@@ -70,8 +71,8 @@ export default function Dashboard() {
     };
   }, [hotel]);
 
+  // Start timer for countdown updates
   useEffect(() => {
-    // Start timer for countdown updates
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
@@ -85,6 +86,7 @@ export default function Dashboard() {
     };
   }, [rooms]);
 
+  // Fetch all hotel settings
   const fetchHotelSettings = async () => {
     try {
       // Fetch wifi password
@@ -121,12 +123,14 @@ export default function Dashboard() {
           priceMap[p.duration_hours] = p.price;
         });
         setPrices(priceMap);
+        setEditPrices(priceMap);
       }
     } catch (error) {
       console.error("Error fetching hotel settings:", error);
     }
   };
 
+  // Fetch messages
   const fetchMessages = async () => {
     try {
       const { data, error } = await supabase
@@ -145,7 +149,6 @@ export default function Dashboard() {
         });
         setMessages(messageMap);
 
-        // Count unread messages
         const unread = data.filter(
           (msg) => !msg.is_read && msg.sender === "guest",
         ).length;
@@ -156,6 +159,25 @@ export default function Dashboard() {
     }
   };
 
+  // Fetch activity logs
+  const fetchActivityLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .select("*")
+        .eq("hotel_id", hotel.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (!error && data) {
+        setActivityLog(data);
+      }
+    } catch (error) {
+      console.error("Error fetching activity logs:", error);
+    }
+  };
+
+  // Fetch rooms
   const fetchRooms = async () => {
     try {
       setLoading(true);
@@ -182,7 +204,6 @@ export default function Dashboard() {
 
       if (error) throw error;
 
-      // Process rooms with active bookings
       const processedRooms = (data || []).map((room) => {
         const activeBooking = room.bookings?.find((b) => b.status === "active");
         if (activeBooking) {
@@ -241,11 +262,11 @@ export default function Dashboard() {
     }
   };
 
+  // Helper functions
   const getRoomStatus = (endTime) => {
     const now = new Date();
     const end = new Date(endTime);
     const diff = end - now;
-
     if (diff <= 0) return "expired";
     if (diff < 10 * 60 * 1000) return "expiring";
     return "occupied";
@@ -264,7 +285,6 @@ export default function Dashboard() {
     const now = new Date();
     const end = new Date(endTime);
     const diff = end - now;
-
     if (diff <= 0) return "00:00:00";
     const hours = Math.floor(diff / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
@@ -275,7 +295,6 @@ export default function Dashboard() {
   };
 
   const updateTimers = () => {
-    // Update all timer displays
     document.querySelectorAll("[data-timer]").forEach((el) => {
       const roomId = el.dataset.timer;
       const room = rooms.find((r) => r.id === parseInt(roomId));
@@ -327,6 +346,33 @@ export default function Dashboard() {
     return meta[status] || meta.available;
   };
 
+  const getUnreadForRoom = (roomId) => {
+    return (
+      messages[roomId]?.filter((m) => !m.is_read && m.sender === "guest")
+        .length || 0
+    );
+  };
+
+  const filteredRooms = () => {
+    return rooms.filter((room) => {
+      const status = room.booking
+        ? getRoomStatus(room.booking.end_time)
+        : room.status || "available";
+      if (filter !== "all" && status !== filter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (
+          !room.name?.toLowerCase().includes(q) &&
+          !String(room.room_number).includes(q)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  };
+
+  // Room actions
   const handleCheckin = async (roomId, hours) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
@@ -353,7 +399,6 @@ export default function Dashboard() {
 
       if (bookingError) throw bookingError;
 
-      // Update room status
       const { error: roomError } = await supabase
         .from("rooms")
         .update({ status: "occupied" })
@@ -361,7 +406,6 @@ export default function Dashboard() {
 
       if (roomError) throw roomError;
 
-      // Log activity
       await logActivity(
         "checkin",
         `Checked into ${room.name} for ${hours}h (₱${price})`,
@@ -416,7 +460,6 @@ export default function Dashboard() {
       const room = rooms.find((r) => r.id === roomId);
       if (!room || !room.booking) return;
 
-      // Update booking
       const { error: bookingError } = await supabase
         .from("bookings")
         .update({
@@ -427,7 +470,6 @@ export default function Dashboard() {
 
       if (bookingError) throw bookingError;
 
-      // Update room status to cleaning
       const { error: roomError } = await supabase
         .from("rooms")
         .update({ status: "cleaning" })
@@ -435,7 +477,6 @@ export default function Dashboard() {
 
       if (roomError) throw roomError;
 
-      // Clear messages for this room
       const { error: msgError } = await supabase
         .from("messages")
         .delete()
@@ -467,7 +508,6 @@ export default function Dashboard() {
       if (error) throw error;
 
       await logActivity("clean", `Room marked as available`);
-
       toast.success("Room is now available");
       fetchRooms();
     } catch (error) {
@@ -493,7 +533,6 @@ export default function Dashboard() {
 
       if (error) throw error;
 
-      // Update local messages
       setMessages((prev) => {
         const roomMessages = prev[roomId] || [];
         return { ...prev, [roomId]: [...roomMessages, data] };
@@ -517,11 +556,7 @@ export default function Dashboard() {
         action_type: action,
         description: description,
       });
-      // Update local activity log
-      setActivityLog((prev) => [
-        { action, description, created_at: new Date().toISOString() },
-        ...prev,
-      ]);
+      fetchActivityLogs();
     } catch (error) {
       console.error("Error logging activity:", error);
     }
@@ -545,33 +580,99 @@ export default function Dashboard() {
     }
   };
 
-  const filteredRooms = () => {
-    return rooms.filter((room) => {
-      const status = room.booking
-        ? getRoomStatus(room.booking.end_time)
-        : room.status || "available";
-      if (filter !== "all" && status !== filter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        if (
-          !room.name?.toLowerCase().includes(q) &&
-          !String(room.room_number).includes(q)
-        ) {
-          return false;
-        }
-      }
-      return true;
-    });
+  const savePrices = async () => {
+    try {
+      const promises = Object.entries(editPrices).map(([hours, price]) =>
+        supabase.from("pricing").upsert({
+          hotel_id: hotel.id,
+          duration_hours: parseInt(hours),
+          price: price,
+        }),
+      );
+      await Promise.all(promises);
+      setPrices(editPrices);
+      toast.success("Prices updated");
+      setShowPriceModal(false);
+      fetchRooms();
+    } catch (error) {
+      console.error("Error saving prices:", error);
+      toast.error("Failed to save prices");
+    }
   };
 
-  const getMessageCount = (roomId) => {
-    return messages[roomId]?.length || 0;
+  const handleMenuUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${hotel.id}_${Date.now()}.${fileExt}`;
+      const filePath = `menu/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("menu-images")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("menu-images")
+        .getPublicUrl(filePath);
+
+      await supabase.from("menu_images").insert({
+        hotel_id: hotel.id,
+        image_url: urlData.publicUrl,
+        display_order: menuImages.length,
+      });
+
+      toast.success("Menu image uploaded");
+      fetchHotelSettings();
+      setShowMenuModal(false);
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const getUnreadForRoom = (roomId) => {
+  const handleMenuRemove = async (imageId) => {
+    try {
+      await supabase.from("menu_images").delete().eq("id", imageId);
+      toast.success("Image removed");
+      fetchHotelSettings();
+    } catch (error) {
+      console.error("Remove error:", error);
+      toast.error("Failed to remove image");
+    }
+  };
+
+  const handleSaveNotes = async (roomId, notes) => {
+    try {
+      await supabase.from("rooms").update({ notes }).eq("id", roomId);
+      toast.success("Notes saved");
+    } catch (error) {
+      console.error("Error saving notes:", error);
+      toast.error("Failed to save notes");
+    }
+  };
+
+  // QR Code generation (simplified)
+  const generateQRUrl = (room) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/guest?room=${hotel.id}_${room.id}&name=${encodeURIComponent(room.name)}`;
+  };
+
+  // Render helper: status pill
+  const StatusPill = ({ status }) => {
+    const meta = getStatusMeta(status);
     return (
-      messages[roomId]?.filter((m) => !m.is_read && m.sender === "guest")
-        .length || 0
+      <span
+        className={`status-pill ${meta.color} text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`}></span>
+        {meta.label}
+      </span>
     );
   };
 
@@ -633,7 +734,10 @@ export default function Dashboard() {
             Operations
           </div>
           <button
-            onClick={() => setFilter("all")}
+            onClick={() => {
+              setFilter("all");
+              setSidebarOpen(false);
+            }}
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition ${
               filter === "all"
                 ? "text-[#c9a84c] bg-[#c9a84c]/10 border-l-2 border-[#c9a84c]"
@@ -647,7 +751,10 @@ export default function Dashboard() {
           </button>
           {stats.expiring + stats.expired > 0 && (
             <button
-              onClick={() => setFilter("expiring")}
+              onClick={() => {
+                setFilter("expiring");
+                setSidebarOpen(false);
+              }}
               className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
               <i className="fas fa-triangle-exclamation w-5 text-center"></i>
               Alerts
@@ -657,7 +764,10 @@ export default function Dashboard() {
             </button>
           )}
           <button
-            onClick={() => setShowMessagesPanel(true)}
+            onClick={() => {
+              setShowMessagesPanel(true);
+              setSidebarOpen(false);
+            }}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-envelope w-5 text-center"></i>
             Messages
@@ -668,7 +778,10 @@ export default function Dashboard() {
             )}
           </button>
           <button
-            onClick={() => setShowActivityPanel(true)}
+            onClick={() => {
+              setShowActivityPanel(true);
+              setSidebarOpen(false);
+            }}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-list-ul w-5 text-center"></i>
             Activity
@@ -678,19 +791,37 @@ export default function Dashboard() {
             Property
           </div>
           <button
-            onClick={() => setShowPriceModal(true)}
+            onClick={() => {
+              setShowSettingsPanel(true);
+              setSidebarOpen(false);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+            <i className="fas fa-gear w-5 text-center"></i>
+            Settings
+          </button>
+          <button
+            onClick={() => {
+              setShowPriceModal(true);
+              setSidebarOpen(false);
+            }}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-tag w-5 text-center"></i>
             Edit Prices
           </button>
           <button
-            onClick={() => setShowWifiModal(true)}
+            onClick={() => {
+              setShowWifiModal(true);
+              setSidebarOpen(false);
+            }}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-wifi w-5 text-center"></i>
             WiFi Settings
           </button>
           <button
-            onClick={() => setShowMenuModal(true)}
+            onClick={() => {
+              setShowMenuModal(true);
+              setSidebarOpen(false);
+            }}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-utensils w-5 text-center"></i>
             Room Service Menu
@@ -911,11 +1042,15 @@ export default function Dashboard() {
       {showMenuModal && renderMenuModal()}
       {showActivityPanel && renderActivityPanel()}
       {showMessagesPanel && renderMessagesPanel()}
+      {showSettingsPanel && renderSettingsPanel()}
       {showRoomDetail && selectedRoom && renderRoomDetail()}
     </div>
   );
 
-  // Render Functions
+  // ============================================================
+  // RENDER FUNCTIONS
+  // ============================================================
+
   function renderGridView() {
     const rooms = filteredRooms();
     if (!rooms.length) {
@@ -964,12 +1099,7 @@ export default function Dashboard() {
                       {unread}
                     </span>
                   )}
-                  <span
-                    className={`status-pill ${meta.color} text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1`}>
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${meta.dot}`}></span>
-                    {meta.label}
-                  </span>
+                  <StatusPill status={status} />
                 </div>
               </div>
 
@@ -1143,12 +1273,7 @@ export default function Dashboard() {
                       {room.name || `Room ${room.room_number}`}
                     </td>
                     <td className="p-2">
-                      <span
-                        className={`status-pill ${meta.color} text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 w-fit`}>
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${meta.dot}`}></span>
-                        {meta.label}
-                      </span>
+                      <StatusPill status={status} />
                     </td>
                     <td className="p-2">
                       {unread > 0 ? (
@@ -1238,6 +1363,10 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  // ============================================================
+  // MODAL RENDER FUNCTIONS
+  // ============================================================
 
   function renderCheckinModal() {
     const durations = [
@@ -1366,35 +1495,6 @@ export default function Dashboard() {
   }
 
   function renderPriceModal() {
-    const [editPrices, setEditPrices] = useState(prices);
-    const durations = [
-      { hours: 1, label: "Quick rest" },
-      { hours: 3, label: "Short stay" },
-      { hours: 6, label: "Half day" },
-      { hours: 12, label: "Day use" },
-      { hours: 24, label: "Overnight" },
-    ];
-
-    const savePrices = async () => {
-      try {
-        const promises = Object.entries(editPrices).map(([hours, price]) =>
-          supabase.from("pricing").upsert({
-            hotel_id: hotel.id,
-            duration_hours: parseInt(hours),
-            price: price,
-          }),
-        );
-        await Promise.all(promises);
-        setPrices(editPrices);
-        toast.success("Prices updated");
-        setShowPriceModal(false);
-        fetchRooms();
-      } catch (error) {
-        console.error("Error saving prices:", error);
-        toast.error("Failed to save prices");
-      }
-    };
-
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl max-w-md w-full p-6">
@@ -1406,7 +1506,13 @@ export default function Dashboard() {
           </p>
 
           <div className="space-y-2">
-            {durations.map((d) => (
+            {[
+              { hours: 1, label: "Quick rest" },
+              { hours: 3, label: "Short stay" },
+              { hours: 6, label: "Half day" },
+              { hours: 12, label: "Day use" },
+              { hours: 24, label: "Overnight" },
+            ].map((d) => (
               <div
                 key={d.hours}
                 className="flex items-center justify-between p-2 bg-[#f7f3ee] rounded-xl">
@@ -1495,56 +1601,6 @@ export default function Dashboard() {
   }
 
   function renderMenuModal() {
-    const [uploading, setUploading] = useState(false);
-
-    const handleUpload = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      try {
-        setUploading(true);
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${hotel.id}_${Date.now()}.${fileExt}`;
-        const filePath = `menu/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("menu-images")
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage
-          .from("menu-images")
-          .getPublicUrl(filePath);
-
-        await supabase.from("menu_images").insert({
-          hotel_id: hotel.id,
-          image_url: urlData.publicUrl,
-          display_order: menuImages.length,
-        });
-
-        toast.success("Menu image uploaded");
-        fetchHotelSettings();
-        setShowMenuModal(false);
-      } catch (error) {
-        console.error("Upload error:", error);
-        toast.error("Failed to upload image");
-      } finally {
-        setUploading(false);
-      }
-    };
-
-    const handleRemove = async (imageId) => {
-      try {
-        await supabase.from("menu_images").delete().eq("id", imageId);
-        toast.success("Image removed");
-        fetchHotelSettings();
-      } catch (error) {
-        console.error("Remove error:", error);
-        toast.error("Failed to remove image");
-      }
-    };
-
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -1566,7 +1622,7 @@ export default function Dashboard() {
                     className="w-full h-32 object-cover rounded-lg border border-[#e5e2db]"
                   />
                   <button
-                    onClick={() => handleRemove(img.id)}
+                    onClick={() => handleMenuRemove(img.id)}
                     className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition">
                     ×
                   </button>
@@ -1588,7 +1644,7 @@ export default function Dashboard() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleUpload}
+                onChange={handleMenuUpload}
                 disabled={uploading}
                 className="w-full px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:border-[#c9a84c] outline-none file:mr-3 file:py-1.5 file:px-3 file:border-0 file:bg-[#0f1b2d] file:text-white file:text-sm file:rounded-lg hover:file:opacity-90 transition"
               />
@@ -1618,24 +1674,6 @@ export default function Dashboard() {
   }
 
   function renderActivityPanel() {
-    const [logs, setLogs] = useState([]);
-
-    useEffect(() => {
-      const fetchLogs = async () => {
-        const { data, error } = await supabase
-          .from("activity_logs")
-          .select("*")
-          .eq("hotel_id", hotel.id)
-          .order("created_at", { ascending: false })
-          .limit(50);
-
-        if (!error && data) {
-          setLogs(data);
-        }
-      };
-      fetchLogs();
-    }, []);
-
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
         <div className="bg-white w-full max-w-md h-full overflow-y-auto">
@@ -1652,12 +1690,12 @@ export default function Dashboard() {
           </div>
 
           <div className="p-4">
-            {logs.length === 0 ? (
+            {activityLog.length === 0 ? (
               <div className="text-center py-8 text-[#8a8278]">
                 <p className="text-sm">No activity yet</p>
               </div>
             ) : (
-              logs.map((log, idx) => (
+              activityLog.map((log, idx) => (
                 <div
                   key={idx}
                   className="flex items-start gap-3 py-3 border-b border-[#e5e2db]">
@@ -1701,7 +1739,6 @@ export default function Dashboard() {
       };
       fetchAllMessages();
 
-      // Subscribe to new messages
       const subscription = supabase
         .channel("messages-channel")
         .on(
@@ -1825,6 +1862,120 @@ export default function Dashboard() {
     );
   }
 
+  function renderSettingsPanel() {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
+        <div className="bg-white w-full max-w-md h-full overflow-y-auto">
+          <div className="sticky top-0 bg-[#0f1b2d] text-white p-4 flex items-center justify-between">
+            <div>
+              <div className="font-bold">Settings</div>
+              <div className="text-xs text-white/50">{hotel?.name}</div>
+            </div>
+            <button
+              onClick={() => setShowSettingsPanel(false)}
+              className="text-white/60 hover:text-white">
+              <i className="fas fa-times text-xl"></i>
+            </button>
+          </div>
+
+          <div className="p-4">
+            {/* Property Info */}
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a8278] mb-2">
+              Property info
+            </div>
+            <div className="bg-[#f7f3ee] rounded-xl p-4 mb-4 text-sm leading-relaxed">
+              <div>
+                <b>Hotel:</b> {hotel?.name}
+              </div>
+              <div>
+                <b>Owner:</b> {hotel?.owner}
+              </div>
+              <div>
+                <b>Email:</b> {hotel?.email}
+              </div>
+              <div>
+                <b>Rooms:</b> {rooms.length}
+              </div>
+              <div>
+                <b>Plan:</b> {hotel?.plan || "Basic"}
+              </div>
+            </div>
+
+            {/* Current Prices */}
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a8278] mb-2">
+              Current Prices
+            </div>
+            <div className="bg-[#f7f3ee] rounded-xl p-4 mb-4 text-sm leading-relaxed">
+              {[1, 3, 6, 12, 24].map((h) => (
+                <div key={h}>
+                  <b>{h}h:</b> ₱{prices[h] || 0}
+                </div>
+              ))}
+            </div>
+
+            {/* WiFi */}
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a8278] mb-2">
+              WiFi
+            </div>
+            <div className="bg-[#f7f3ee] rounded-xl p-4 mb-4 text-sm">
+              <div>
+                <b>Current password:</b> {wifiPassword || "(not set)"}
+              </div>
+              <button
+                onClick={() => {
+                  setShowSettingsPanel(false);
+                  setShowWifiModal(true);
+                }}
+                className="mt-2 px-4 py-1.5 bg-[#0f1b2d] text-white rounded-lg text-xs font-semibold hover:opacity-90 transition">
+                <i className="fas fa-edit mr-1"></i>Change WiFi
+              </button>
+            </div>
+
+            {/* Room Service Menu */}
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a8278] mb-2">
+              Room Service Menu
+            </div>
+            <div className="bg-[#f7f3ee] rounded-xl p-4 mb-4 text-sm">
+              {menuImages.length === 0 ? (
+                <span className="text-[#8a8278]">No menu images uploaded</span>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {menuImages.map((img) => (
+                    <img
+                      key={img.id}
+                      src={img.image_url}
+                      alt="Menu"
+                      className="h-20 w-full object-cover rounded-lg border"
+                    />
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  setShowSettingsPanel(false);
+                  setShowMenuModal(true);
+                }}
+                className="mt-2 px-4 py-1.5 bg-[#0f1b2d] text-white rounded-lg text-xs font-semibold hover:opacity-90 transition">
+                <i className="fas fa-edit mr-1"></i>Manage Menu (
+                {menuImages.length}/6)
+              </button>
+            </div>
+
+            {/* Plan limits */}
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a8278] mb-2">
+              Plan limits
+            </div>
+            <div className="bg-[#f7f3ee] rounded-xl p-4 mb-4 text-xs text-[#8a8278] leading-relaxed">
+              <div>Basic — up to 20 rooms · ₱299/mo</div>
+              <div>Pro — up to 50 rooms · ₱599/mo</div>
+              <div>Unlimited — no limit · ₱999/mo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function renderRoomDetail() {
     const room = selectedRoom;
     if (!room) return null;
@@ -1835,13 +1986,17 @@ export default function Dashboard() {
     const meta = getStatusMeta(status);
     const roomMessages = messages[room.id] || [];
     const [reply, setReply] = useState("");
+    const [notes, setNotes] = useState(room.notes || "");
 
     const sendReply = async () => {
       if (!reply.trim()) return;
       await handleSendMessage(room.id, reply, "admin");
       setReply("");
-      // Fetch updated messages
       fetchMessages();
+    };
+
+    const saveNotes = async () => {
+      await handleSaveNotes(room.id, notes);
     };
 
     return (
@@ -2019,6 +2174,34 @@ export default function Dashboard() {
                   <i className="fas fa-sparkles"></i> Mark as Available
                 </button>
               )}
+              <button
+                onClick={() => {
+                  const url = generateQRUrl(room);
+                  navigator.clipboard.writeText(url);
+                  toast.success("QR URL copied to clipboard");
+                }}
+                className="w-full py-2 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition flex items-center justify-center gap-2">
+                <i className="fas fa-qrcode"></i> Copy QR URL
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm(`Rename ${room.name}?`)) {
+                    const newName = prompt("Enter new room name:", room.name);
+                    if (newName && newName.trim()) {
+                      supabase
+                        .from("rooms")
+                        .update({ name: newName.trim() })
+                        .eq("id", room.id)
+                        .then(() => {
+                          toast.success("Room renamed");
+                          fetchRooms();
+                        });
+                    }
+                  }
+                }}
+                className="w-full py-2 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition flex items-center justify-center gap-2">
+                <i className="fas fa-pen"></i> Rename Room
+              </button>
             </div>
 
             {/* Notes */}
@@ -2028,25 +2211,14 @@ export default function Dashboard() {
             <div className="flex gap-2">
               <textarea
                 rows="3"
-                value={roomNotes}
-                onChange={(e) => setRoomNotes(e.target.value)}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
                 placeholder="Guest notes, special requests…"
                 className="flex-1 px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:border-[#c9a84c] outline-none resize-none"
               />
             </div>
             <button
-              onClick={async () => {
-                try {
-                  await supabase
-                    .from("rooms")
-                    .update({ notes: roomNotes })
-                    .eq("id", room.id);
-                  toast.success("Notes saved");
-                } catch (error) {
-                  console.error("Error saving notes:", error);
-                  toast.error("Failed to save notes");
-                }
-              }}
+              onClick={saveNotes}
               className="mt-2 py-1.5 px-4 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition">
               <i className="fas fa-save mr-1"></i>Save notes
             </button>
