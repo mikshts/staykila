@@ -637,37 +637,92 @@ export default function Dashboard() {
     }
   };
 
+  // src/components/dashboard/Dashboard.jsx - Fixed handleMenuUpload
+
   const handleMenuUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+      toast.error("Please select a file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 5MB");
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
 
     try {
+      setUploading(true);
+
       const fileExt = file.name.split(".").pop();
       const fileName = `${hotel.id}_${Date.now()}.${fileExt}`;
-      const filePath = `menu/${fileName}`;
+      // Remove 'menu/' prefix - just use the file name directly
+      const filePath = fileName;
 
-      const { error: uploadError } = await supabase.storage
+      console.log("Uploading file:", filePath);
+      console.log("File size:", file.size);
+      console.log("File type:", file.type);
+
+      // Upload to storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from("menu-images")
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Upload error details:", uploadError);
+        toast.error(`Upload failed: ${uploadError.message}`);
+        return;
+      }
 
+      console.log("Upload successful:", uploadData);
+
+      // Get public URL
       const { data: urlData } = supabase.storage
         .from("menu-images")
         .getPublicUrl(filePath);
 
-      await supabase.from("menu_images").insert({
-        hotel_id: hotel.id,
-        image_url: urlData.publicUrl,
-        display_order: menuImages.length,
-      });
+      console.log("Public URL:", urlData.publicUrl);
 
-      toast.success("Menu image uploaded");
-      fetchHotelSettings();
+      // Insert into menu_images table
+      const { error: insertError, data: insertData } = await supabase
+        .from("menu_images")
+        .insert({
+          hotel_id: hotel.id,
+          image_url: urlData.publicUrl,
+          display_order: menuImages.length,
+        })
+        .select();
+
+      if (insertError) {
+        console.error("Insert error details:", insertError);
+        // Try to delete the uploaded file if insert fails
+        await supabase.storage.from("menu-images").remove([filePath]);
+        toast.error(`Failed to save menu: ${insertError.message}`);
+        return;
+      }
+
+      console.log("Insert successful:", insertData);
+
+      toast.success("Menu image uploaded successfully!");
+      await fetchHotelSettings();
       setShowMenuModal(false);
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload image");
+      toast.error(
+        "Failed to upload image: " + (error.message || "Unknown error"),
+      );
+    } finally {
+      setUploading(false);
     }
   };
 
