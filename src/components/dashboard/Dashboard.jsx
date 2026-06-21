@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showReportsPanel, setShowReportsPanel] = useState(false);
+  const [uploading, setUploading] = useState(false); // <-- ADD THIS LINE
 
   const [activityLog, setActivityLog] = useState([]);
   const [messages, setMessages] = useState({});
@@ -638,7 +639,7 @@ export default function Dashboard() {
   };
 
   // src/components/dashboard/Dashboard.jsx - Fixed handleMenuUpload
-
+  // Your handleMenuUpload function can stay as-is since setUploading is now defined
   const handleMenuUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) {
@@ -663,14 +664,12 @@ export default function Dashboard() {
 
       const fileExt = file.name.split(".").pop();
       const fileName = `${hotel.id}_${Date.now()}.${fileExt}`;
-      // Remove 'menu/' prefix - just use the file name directly
       const filePath = fileName;
 
       console.log("Uploading file:", filePath);
       console.log("File size:", file.size);
       console.log("File type:", file.type);
 
-      // Upload to storage
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from("menu-images")
         .upload(filePath, file, {
@@ -686,14 +685,12 @@ export default function Dashboard() {
 
       console.log("Upload successful:", uploadData);
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from("menu-images")
         .getPublicUrl(filePath);
 
       console.log("Public URL:", urlData.publicUrl);
 
-      // Insert into menu_images table
       const { error: insertError, data: insertData } = await supabase
         .from("menu_images")
         .insert({
@@ -705,7 +702,6 @@ export default function Dashboard() {
 
       if (insertError) {
         console.error("Insert error details:", insertError);
-        // Try to delete the uploaded file if insert fails
         await supabase.storage.from("menu-images").remove([filePath]);
         toast.error(`Failed to save menu: ${insertError.message}`);
         return;
