@@ -18,7 +18,7 @@ export default function Sidebar({
   onWifiClick,
   onMenuClick,
   onReportsClick,
-  onQRDownloadClick, // Add this prop
+  onQRDownloadClick,
   user,
   onLogout,
 }) {
@@ -50,6 +50,7 @@ export default function Sidebar({
             <i className="fas fa-times text-xl"></i>
           </button>
         </div>
+
         {/* Hotel Badge */}
         <div className="m-4 p-3 bg-white/5 border border-white/10 rounded-xl">
           <div className="text-white text-sm font-semibold truncate">
@@ -66,11 +67,13 @@ export default function Sidebar({
             {occupancyRate}% occupancy
           </div>
         </div>
-        {/* Navigation */}
-        <nav className="px-2 py-4">
+
+        {/* Navigation - Added pb-32 to prevent footer overlap */}
+        <nav className="px-2 py-4 pb-32">
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pb-2">
             Operations
           </div>
+
           <button
             onClick={() => onFilterChange("all")}
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition ${
@@ -82,6 +85,7 @@ export default function Sidebar({
             Rooms
             <span className="ml-auto text-white/30 text-xs">{roomCount}</span>
           </button>
+
           {stats.expiring + stats.expired > 0 && (
             <button
               onClick={() => onFilterChange("expiring")}
@@ -93,6 +97,7 @@ export default function Sidebar({
               </span>
             </button>
           )}
+
           <button
             onClick={onMessagesClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -104,6 +109,7 @@ export default function Sidebar({
               </span>
             )}
           </button>
+
           <button
             onClick={onActivityClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -114,6 +120,7 @@ export default function Sidebar({
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Utilities
           </div>
+
           <button
             onClick={onQRDownloadClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -127,6 +134,7 @@ export default function Sidebar({
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Reports
           </div>
+
           <button
             onClick={onReportsClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -136,24 +144,29 @@ export default function Sidebar({
               <i className="fas fa-print"></i>
             </span>
           </button>
+
           <button
             onClick={onSettingsClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-gear w-5 text-center"></i>
             Settings
           </button>
+
           <button
             onClick={onPriceClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-tag w-5 text-center"></i>
             Edit Prices
           </button>
+
           <button
             onClick={onWifiClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-wifi w-5 text-center"></i>
             WiFi Settings
           </button>
+
+          {/* Room Service Menu - Now visible with pb-32 padding */}
           <button
             onClick={onMenuClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -161,6 +174,7 @@ export default function Sidebar({
             Room Service Menu
           </button>
         </nav>
+
         {/* Footer */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-[#0f1b2d]">
           <div className="text-white/40 text-xs mb-2 truncate overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
