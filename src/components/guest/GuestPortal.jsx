@@ -24,9 +24,42 @@ export default function GuestPortal() {
   const subscriptionRef = useRef(null);
   const qrContainerRef = useRef(null);
   const messageIdsRef = useRef(new Set());
+  const timerIntervalRef = useRef(null);
 
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
+
+  // Parse room param helper
+  const parseRoomParam = (param) => {
+    if (!param) return null;
+
+    // Try to parse as JSON first (for QR codes)
+    try {
+      const parsed = JSON.parse(decodeURIComponent(param));
+      if (parsed.hotelId && parsed.roomId) {
+        return { hotelId: parsed.hotelId, roomId: parsed.roomId };
+      }
+    } catch (e) {
+      // Not JSON, continue
+    }
+
+    // Format: hotelId_roomId
+    if (param.includes("_")) {
+      const parts = param.split("_");
+      // If we have more than 2 parts, the hotel ID might contain underscores
+      if (parts.length === 2) {
+        return { hotelId: parts[0], roomId: parts[1] };
+      } else {
+        // Join all but the last part for hotel ID
+        const hotelId = parts.slice(0, parts.length - 1).join("_");
+        const roomId = parts[parts.length - 1];
+        return { hotelId, roomId };
+      }
+    }
+
+    // Just room ID
+    return { roomId: param };
+  };
 
   useEffect(() => {
     if (roomParam) {
@@ -36,6 +69,9 @@ export default function GuestPortal() {
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
       }
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
     };
   }, [roomParam]);
 
@@ -43,29 +79,26 @@ export default function GuestPortal() {
     try {
       setLoading(true);
 
-      // Parse room param - handle both formats: hotelId_roomId or just roomId
-      let hotelId, roomId;
-      if (roomParam.includes("_")) {
-        const parts = roomParam.split("_");
-        // The hotel ID might be the first part, or it might be combined
-        if (parts.length === 2) {
-          [hotelId, roomId] = parts;
-        } else {
-          // If more than 2 parts, join the first parts for hotel ID
-          hotelId = parts.slice(0, parts.length - 1).join("_");
-          roomId = parts[parts.length - 1];
-        }
-      } else {
-        // If no underscore, treat as room ID and try to find hotel
-        roomId = roomParam;
-        // Try to get hotel from room data
+      const parsed = parseRoomParam(roomParam);
+      console.log("Parsed room param:", parsed);
+
+      let hotelId = parsed?.hotelId;
+      let roomId = parsed?.roomId;
+
+      // If no hotelId, try to get it from room data
+      if (!hotelId && roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
           hotelId = roomData.hotel_id;
+          setRoom(roomData);
+        }
+      } else if (roomId) {
+        // Get room details
+        const roomData = await roomService.getRoom(roomId);
+        if (roomData) {
+          setRoom(roomData);
         }
       }
-
-      console.log("Hotel ID:", hotelId, "Room ID:", roomId);
 
       // Get hotel info
       if (hotelId) {
@@ -81,22 +114,22 @@ export default function GuestPortal() {
         }
       }
 
-      // Get room details
-      const roomData = await roomService.getRoom(roomId);
-      setRoom(roomData);
-
-      // Get hotel ID from room data if not set
-      if (!hotelId && roomData) {
-        hotelId = roomData.hotel_id;
-        if (hotelId) {
-          const { data: hotelData } = await supabase
-            .from("hotels")
-            .select("*")
-            .eq("id", hotelId)
-            .single();
-          if (hotelData) {
-            setHotel(hotelData);
-            setWifiPassword(hotelData.wifi_password || "");
+      // If we still don't have room data, try once more
+      if (!room && roomId) {
+        const roomData = await roomService.getRoom(roomId);
+        if (roomData) {
+          setRoom(roomData);
+          if (!hotelId && roomData.hotel_id) {
+            hotelId = roomData.hotel_id;
+            const { data: hotelData } = await supabase
+              .from("hotels")
+              .select("*")
+              .eq("id", hotelId)
+              .single();
+            if (hotelData) {
+              setHotel(hotelData);
+              setWifiPassword(hotelData.wifi_password || "");
+            }
           }
         }
       }
@@ -112,61 +145,62 @@ export default function GuestPortal() {
       }
 
       // Get active booking
-      const { data: bookings } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("room_id", roomId)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1);
+      if (roomId) {
+        const { data: bookings } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("room_id", roomId)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-      if (bookings && bookings.length > 0) {
-        const booking = bookings[0];
-        setTimeRemaining(new Date(booking.end_time).getTime() - Date.now());
-        setIsExpired(false);
-      } else {
-        setIsExpired(true);
-      }
-
-      // Get messages
-      const msgs = await messageService.getMessages(roomId);
-      // Deduplicate messages
-      const uniqueMsgs = [];
-      const seenIds = new Set();
-      msgs.forEach((msg) => {
-        if (!seenIds.has(msg.id)) {
-          seenIds.add(msg.id);
-          uniqueMsgs.push(msg);
+        if (bookings && bookings.length > 0) {
+          const booking = bookings[0];
+          // Update room with booking data
+          setRoom((prev) => ({ ...prev, booking }));
+          setTimeRemaining(new Date(booking.end_time).getTime() - Date.now());
+          setIsExpired(false);
+        } else {
+          setIsExpired(true);
         }
-      });
-      setMessages(uniqueMsgs);
-      // Store message IDs for deduplication
-      uniqueMsgs.forEach((msg) => messageIdsRef.current.add(msg.id));
 
-      // Create or get guest session
-      let token = localStorage.getItem(`guest_${roomId}_token`);
-      if (!token) {
-        const session = await messageService.createGuestSession(roomId);
-        token = session.token;
-        localStorage.setItem(`guest_${roomId}_token`, token);
-      }
-      setGuestToken(token);
-
-      // Setup realtime subscription with deduplication
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-      }
-      subscriptionRef.current = messageService.subscribeToRoom(
-        roomId,
-        (newMsg) => {
-          // Check if message already exists
-          if (!messageIdsRef.current.has(newMsg.id)) {
-            messageIdsRef.current.add(newMsg.id);
-            setMessages((prev) => [...prev, newMsg]);
-            chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        // Get messages
+        const msgs = await messageService.getMessages(roomId);
+        const uniqueMsgs = [];
+        const seenIds = new Set();
+        msgs.forEach((msg) => {
+          if (!seenIds.has(msg.id)) {
+            seenIds.add(msg.id);
+            uniqueMsgs.push(msg);
           }
-        },
-      );
+        });
+        setMessages(uniqueMsgs);
+        uniqueMsgs.forEach((msg) => messageIdsRef.current.add(msg.id));
+
+        // Create or get guest session
+        let token = localStorage.getItem(`guest_${roomId}_token`);
+        if (!token) {
+          const session = await messageService.createGuestSession(roomId);
+          token = session.token;
+          localStorage.setItem(`guest_${roomId}_token`, token);
+        }
+        setGuestToken(token);
+
+        // Setup realtime subscription
+        if (subscriptionRef.current) {
+          subscriptionRef.current.unsubscribe();
+        }
+        subscriptionRef.current = messageService.subscribeToRoom(
+          roomId,
+          (newMsg) => {
+            if (!messageIdsRef.current.has(newMsg.id)) {
+              messageIdsRef.current.add(newMsg.id);
+              setMessages((prev) => [...prev, newMsg]);
+              chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }
+          },
+        );
+      }
     } catch (error) {
       console.error("Error loading room:", error);
       toast.error("Failed to load room data");
@@ -182,31 +216,43 @@ export default function GuestPortal() {
       // Use the hotel ID from the hotel object
       const url = `${window.location.origin}/guest?room=${hotel.id}_${room.id}&name=${encodeURIComponent(room.name)}`;
       console.log("QR URL:", url);
-      new window.QRCode(qrContainerRef.current, {
-        text: url,
-        width: 120,
-        height: 120,
-      });
+      try {
+        new window.QRCode(qrContainerRef.current, {
+          text: url,
+          width: 120,
+          height: 120,
+        });
+      } catch (error) {
+        console.error("QR generation error:", error);
+      }
     }
   }, [room, hotel]);
 
-  // Timer effect
+  // Timer effect with cleanup
   useEffect(() => {
     if (timeRemaining <= 0) return;
 
-    const timer = setInterval(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+
+    timerIntervalRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         const newTime = prev - 1000;
         if (newTime <= 0) {
           setIsExpired(true);
-          clearInterval(timer);
+          clearInterval(timerIntervalRef.current);
           return 0;
         }
         return newTime;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
   }, [timeRemaining]);
 
   const formatTime = (ms) => {
@@ -232,27 +278,39 @@ export default function GuestPortal() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim()) {
+      toast.error("Please type a message");
+      return;
+    }
     if (!guestToken) {
       toast.error("No active session");
       return;
     }
 
     try {
-      const [hotelId, roomId] = roomParam.split("_");
+      // Get room ID from room object
+      const roomId = room?.id;
+      const hotelId = hotel?.id;
+
+      if (!roomId || !hotelId) {
+        toast.error("Missing room or hotel information");
+        return;
+      }
+
       const msg = await messageService.sendGuestMessage(
         roomId,
         hotelId,
         newMessage,
         guestToken,
       );
-      // Add message to state with deduplication
+
       if (!messageIdsRef.current.has(msg.id)) {
         messageIdsRef.current.add(msg.id);
         setMessages((prev) => [...prev, msg]);
       }
       setNewMessage("");
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      toast.success("Message sent!");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message");
@@ -274,6 +332,11 @@ export default function GuestPortal() {
           <i className="fas fa-door-open text-6xl text-gray-300 mb-4"></i>
           <p className="text-gray-500">Room not found</p>
           <p className="text-xs text-gray-400 mt-2">Room ID: {roomParam}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition">
+            Refresh
+          </button>
         </div>
       </div>
     );
@@ -361,6 +424,9 @@ export default function GuestPortal() {
               <div className="text-center py-6">
                 <i className="fas fa-door-open text-5xl text-gray-300 mb-3"></i>
                 <p className="text-gray-500">No active stay found</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Please check in at the front desk.
+                </p>
               </div>
             )}
 
@@ -466,8 +532,12 @@ export default function GuestPortal() {
                   <i className="fas fa-paper-plane"></i>
                 </button>
               </div>
+              <div
+                id="guest-message-status"
+                className="text-xs text-gray-400 mt-1"></div>
             </div>
 
+            {/* QR Code */}
             <div className="mt-4 text-center">
               <div
                 ref={qrContainerRef}
@@ -481,7 +551,7 @@ export default function GuestPortal() {
 
         <div className="text-center mt-4">
           <p className="text-xs text-gray-400">
-            Powered by StayDesk Lodge Management
+            Powered by StayKila Lodge Management
           </p>
         </div>
       </div>
