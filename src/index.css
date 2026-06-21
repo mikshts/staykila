@@ -1,3 +1,4 @@
+/* src/index.css - Fixed */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -180,5 +181,57 @@ body {
   }
   .menu-gallery img {
     height: 150px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .bg-\[\#0f1b2d\] {
+    background: #0f1b2d !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .bg-\[\#f7f3ee\] {
+    background: #f7f3ee !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .text-white {
+    color: white !important;
+  }
+
+  .border {
+    border-color: #e5e2db !important;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
   }
 }

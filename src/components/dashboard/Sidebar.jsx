@@ -17,6 +17,7 @@ export default function Sidebar({
   onPriceClick,
   onWifiClick,
   onMenuClick,
+  onReportsClick,
   user,
   onLogout,
 }) {
@@ -71,7 +72,6 @@ export default function Sidebar({
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pb-2">
             Operations
           </div>
-
           <button
             onClick={() => onFilterChange("all")}
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition ${
@@ -83,7 +83,6 @@ export default function Sidebar({
             Rooms
             <span className="ml-auto text-white/30 text-xs">{roomCount}</span>
           </button>
-
           {stats.expiring + stats.expired > 0 && (
             <button
               onClick={() => onFilterChange("expiring")}
@@ -95,7 +94,6 @@ export default function Sidebar({
               </span>
             </button>
           )}
-
           <button
             onClick={onMessagesClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -107,39 +105,42 @@ export default function Sidebar({
               </span>
             )}
           </button>
-
           <button
             onClick={onActivityClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-list-ul w-5 text-center"></i>
             Activity
           </button>
-
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
-            Property
+            Reports
           </div>
-
+          <button
+            onClick={onReportsClick}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+            <i className="fas fa-file-invoice w-5 text-center"></i>
+            Night Audit
+            <span className="ml-auto text-white/30 text-[9px]">
+              <i className="fas fa-print"></i>
+            </span>
+          </button>
           <button
             onClick={onSettingsClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-gear w-5 text-center"></i>
             Settings
           </button>
-
           <button
             onClick={onPriceClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-tag w-5 text-center"></i>
             Edit Prices
           </button>
-
           <button
             onClick={onWifiClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-wifi w-5 text-center"></i>
             WiFi Settings
           </button>
-
           <button
             onClick={onMenuClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">

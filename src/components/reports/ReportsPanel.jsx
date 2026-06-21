@@ -1,0 +1,329 @@
+// src/components/reports/ReportsPanel.jsx
+import React, { useState, useEffect, useRef } from "react";
+import { supabase } from "../../lib/supabase";
+import toast from "react-hot-toast";
+
+export default function ReportsPanel({ hotel, onClose }) {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({
+    start: new Date().toISOString().split("T")[0],
+    end: new Date().toISOString().split("T")[0],
+  });
+  const [summary, setSummary] = useState({
+    totalRevenue: 0,
+    totalBookings: 0,
+    totalHours: 0,
+    averageStay: 0,
+  });
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    fetchReports();
+  }, [dateRange]);
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(
+          `
+          *,
+          rooms(name)
+        `,
+        )
+        .eq("hotel_id", hotel.id)
+        .eq("status", "completed")
+        .gte("created_at", new Date(dateRange.start).toISOString())
+        .lte("created_at", new Date(dateRange.end + "T23:59:59").toISOString())
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setReports(data || []);
+
+      // Calculate summary
+      const totalRevenue =
+        data?.reduce((sum, b) => sum + (b.price || 0), 0) || 0;
+      const totalBookings = data?.length || 0;
+      const totalHours = data?.reduce((sum, b) => sum + (b.hours || 0), 0) || 0;
+      const averageStay =
+        totalBookings > 0 ? Math.round(totalHours / totalBookings) : 0;
+
+      setSummary({
+        totalRevenue,
+        totalBookings,
+        totalHours,
+        averageStay,
+      });
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      toast.error("Failed to load reports");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportCSV = () => {
+    if (reports.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const headers = ["Date", "Room", "Hours", "Price", "Guest Name"];
+    const rows = reports.map((b) => [
+      new Date(b.created_at).toLocaleDateString(),
+      b.rooms?.name || "Unknown",
+      b.hours,
+      b.price,
+      b.guest_name || "N/A",
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Night_Audit_Report_${dateRange.start}_to_${dateRange.end}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV downloaded!");
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
+        <div className="bg-white w-full max-w-4xl h-full overflow-y-auto flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
+      <div
+        ref={panelRef}
+        className="bg-white w-full max-w-4xl h-full overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-[#0f1b2d] text-white p-4 flex items-center justify-between">
+          <div>
+            <div className="font-bold text-lg">Night Audit Reports</div>
+            <div className="text-xs text-white/50">
+              {hotel?.name} • {new Date().toLocaleDateString()}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="no-print text-white/60 hover:text-white">
+            <i className="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <div className="p-4">
+          {/* Date Range Selector */}
+          <div className="bg-[#f7f3ee] rounded-xl p-4 mb-6">
+            <div className="no-print flex flex-wrap items-center gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#8a8278] mb-1">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) =>
+                    setDateRange({ ...dateRange, start: e.target.value })
+                  }
+                  className="px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:border-[#c9a84c] outline-none bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#8a8278] mb-1">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) =>
+                    setDateRange({ ...dateRange, end: e.target.value })
+                  }
+                  className="px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:border-[#c9a84c] outline-none bg-white"
+                />
+              </div>
+              <div className="flex gap-2 mt-auto">
+                <button
+                  onClick={fetchReports}
+                  className="px-4 py-2 bg-[#0f1b2d] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
+                  <i className="fas fa-search mr-1"></i> Refresh
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="no-print px-4 py-2 border border-[#e5e2db] rounded-lg text-sm hover:bg-[#f7f3ee] transition">
+                  <i className="fas fa-print mr-1"></i> Print
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  className="no-print px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
+                  <i className="fas fa-file-export mr-1"></i> Export CSV
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-[#0f1b2d]">
+                {formatCurrency(summary.totalRevenue)}
+              </div>
+              <div className="text-xs text-[#8a8278]">Total Revenue</div>
+            </div>
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-[#0f1b2d]">
+                {summary.totalBookings}
+              </div>
+              <div className="text-xs text-[#8a8278]">Total Bookings</div>
+            </div>
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-[#0f1b2d]">
+                {summary.totalHours}h
+              </div>
+              <div className="text-xs text-[#8a8278]">Total Hours</div>
+            </div>
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-[#0f1b2d]">
+                {summary.averageStay}h
+              </div>
+              <div className="text-xs text-[#8a8278]">Avg Stay Duration</div>
+            </div>
+          </div>
+
+          {/* Report Table */}
+          <div className="bg-white border border-[#e5e2db] rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[#fafafa] border-b border-[#e5e2db]">
+                    <th className="text-left p-3 font-semibold text-[#8a8278] text-xs uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="text-left p-3 font-semibold text-[#8a8278] text-xs uppercase tracking-wider">
+                      Room
+                    </th>
+                    <th className="text-left p-3 font-semibold text-[#8a8278] text-xs uppercase tracking-wider">
+                      Hours
+                    </th>
+                    <th className="text-left p-3 font-semibold text-[#8a8278] text-xs uppercase tracking-wider">
+                      Price
+                    </th>
+                    <th className="text-left p-3 font-semibold text-[#8a8278] text-xs uppercase tracking-wider">
+                      Guest
+                    </th>
+                    <th className="text-left p-3 font-semibold text-[#8a8278] text-xs uppercase tracking-wider">
+                      Check-in
+                    </th>
+                    <th className="text-left p-3 font-semibold text-[#8a8278] text-xs uppercase tracking-wider">
+                      Checkout
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reports.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="7"
+                        className="text-center py-8 text-[#8a8278]">
+                        No completed bookings found for this period
+                      </td>
+                    </tr>
+                  ) : (
+                    reports.map((booking) => (
+                      <tr
+                        key={booking.id}
+                        className="border-b border-[#e5e2db] hover:bg-[#f7f3ee] transition">
+                        <td className="p-3">
+                          {new Date(booking.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="p-3 font-medium">
+                          {booking.rooms?.name || "Unknown"}
+                        </td>
+                        <td className="p-3">{booking.hours}h</td>
+                        <td className="p-3 font-medium text-[#c9a84c]">
+                          ₱{booking.price}
+                        </td>
+                        <td className="p-3">{booking.guest_name || "N/A"}</td>
+                        <td className="p-3 text-xs">
+                          {new Date(booking.start_time).toLocaleTimeString()}
+                        </td>
+                        <td className="p-3 text-xs">
+                          {new Date(booking.end_time).toLocaleTimeString()}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                {reports.length > 0 && (
+                  <tfoot className="bg-[#fafafa] border-t border-[#e5e2db]">
+                    <tr>
+                      <td colSpan="3" className="p-3 font-semibold text-right">
+                        Total:
+                      </td>
+                      <td className="p-3 font-bold text-[#c9a84c]">
+                        {formatCurrency(summary.totalRevenue)}
+                      </td>
+                      <td colSpan="3" className="p-3">
+                        {summary.totalBookings} bookings • {summary.totalHours}h
+                        total
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-4 text-xs text-[#8a8278] text-center">
+            <p>Generated on {new Date().toLocaleString()}</p>
+            <p className="mt-1">
+              <i className="fas fa-print mr-1"></i> Click Print for PDF •
+              <i className="fas fa-file-export ml-2 mr-1"></i> Click Export CSV
+              for spreadsheet
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -8,6 +8,8 @@ import TopBar from "./TopBar";
 import StatsCards from "./StatsCards";
 import RoomGrid from "./RoomGrid";
 import RoomList from "./RoomList";
+import ReportsPanel from "../reports/ReportsPanel";
+
 import {
   CheckinModal,
   ExtendModal,
@@ -40,6 +42,8 @@ export default function Dashboard() {
   const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [showReportsPanel, setShowReportsPanel] = useState(false);
+
   const [activityLog, setActivityLog] = useState([]);
   const [messages, setMessages] = useState({});
   const [stats, setStats] = useState({
@@ -185,26 +189,30 @@ export default function Dashboard() {
     }
   };
 
+  // src/components/dashboard/Dashboard.jsx - Fixed fetchRooms
+
   const fetchRooms = async () => {
     try {
       setLoading(true);
+
+      // Fetch rooms with ALL bookings (not just active)
       const { data, error } = await supabase
         .from("rooms")
         .select(
           `
-          *,
-          bookings:bookings(
-            id,
-            start_time,
-            end_time,
-            hours,
-            price,
-            status,
-            guest_name,
-            guest_email,
-            guest_phone
-          )
-        `,
+        *,
+        bookings:bookings(
+          id,
+          start_time,
+          end_time,
+          hours,
+          price,
+          status,
+          guest_name,
+          guest_email,
+          guest_phone
+        )
+      `,
         )
         .eq("hotel_id", hotel.id)
         .order("room_number");
@@ -212,18 +220,27 @@ export default function Dashboard() {
       if (error) throw error;
 
       const processedRooms = (data || []).map((room) => {
+        // Find active booking for status display
         const activeBooking = room.bookings?.find((b) => b.status === "active");
         if (activeBooking) {
           room.booking = activeBooking;
           room.status = getRoomStatus(activeBooking.end_time);
         } else {
           room.booking = null;
+          // If no active booking, check if there's a completed booking
+          const completedBooking = room.bookings?.find(
+            (b) => b.status === "completed",
+          );
+          if (completedBooking) {
+            room.lastBooking = completedBooking;
+          }
         }
         return room;
       });
 
       setRooms(processedRooms);
 
+      // Calculate stats - only for current status
       const newStats = {
         available: 0,
         occupied: 0,
@@ -231,19 +248,33 @@ export default function Dashboard() {
         expired: 0,
         cleaning: 0,
       };
+
+      // Calculate revenue from ALL completed bookings
       let totalRevenue = 0;
       let totalCheckins = 0;
 
+      // Get all completed bookings for this hotel
+      const { data: completedBookings, error: revenueError } = await supabase
+        .from("bookings")
+        .select("price, status")
+        .eq("hotel_id", hotel.id)
+        .eq("status", "completed");
+
+      if (!revenueError && completedBookings) {
+        totalRevenue = completedBookings.reduce(
+          (sum, b) => sum + (b.price || 0),
+          0,
+        );
+        totalCheckins = completedBookings.length;
+      }
+
+      // Count current room statuses
       processedRooms.forEach((room) => {
         const status = room.booking
           ? getRoomStatus(room.booking.end_time)
           : room.status || "available";
         if (newStats[status] !== undefined) {
           newStats[status]++;
-        }
-        if (room.booking) {
-          totalRevenue += room.booking.price || 0;
-          totalCheckins++;
         }
       });
 
@@ -706,6 +737,10 @@ export default function Dashboard() {
           setShowPriceModal(true);
           setSidebarOpen(false);
         }}
+        onReportsClick={() => {
+          setShowReportsPanel(true);
+          setSidebarOpen(false);
+        }}
         onWifiClick={() => {
           setShowWifiModal(true);
           setSidebarOpen(false);
@@ -847,6 +882,12 @@ export default function Dashboard() {
           currentPassword={wifiPassword}
           onSave={updateWifiPassword}
           onClose={() => setShowWifiModal(false)}
+        />
+      )}
+      {showReportsPanel && (
+        <ReportsPanel
+          hotel={hotel}
+          onClose={() => setShowReportsPanel(false)}
         />
       )}
       {showMenuModal && (
