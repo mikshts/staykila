@@ -9,6 +9,7 @@ import StatsCards from "./StatsCards";
 import RoomGrid from "./RoomGrid";
 import RoomList from "./RoomList";
 import ReportsPanel from "../reports/ReportsPanel";
+import { DashboardSkeleton } from "../ui";
 
 import {
   CheckinModal,
@@ -697,11 +698,7 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f7f3ee] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#c9a84c]"></div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // src/components/dashboard/Dashboard.jsx - Fixed render section

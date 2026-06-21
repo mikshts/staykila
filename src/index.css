@@ -235,3 +235,55 @@ body {
     display: table-footer-group;
   }
 }
+/* src/index.css - Add these animation styles */
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+}
+
+/* Pulse animation for skeleton */
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+} /* src/index.css - Add these for Guest Portal */
+
+/* Guest Portal skeleton specific styles */
+.guest-skeleton .bg-indigo-300\/50 {
+  background-color: rgba(165, 180, 252, 0.5) !important;
+}
+
+/* Skeleton pulse animation for guest portal */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}

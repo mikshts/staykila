@@ -5,6 +5,11 @@ import toast from "react-hot-toast";
 import { roomService } from "../../services/roomService";
 import { messageService } from "../../services/messageService";
 import { supabase } from "../../lib/supabase";
+import {
+  GuestPortalSkeleton,
+  RoomNotFoundSkeleton,
+  GuestPortalLoading,
+} from "../ui";
 
 export default function GuestPortal() {
   const [searchParams] = useSearchParams();
@@ -316,30 +321,12 @@ export default function GuestPortal() {
       toast.error("Failed to send message");
     }
   };
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <GuestPortalLoading />;
   }
 
   if (!room) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center p-8">
-          <i className="fas fa-door-open text-6xl text-gray-300 mb-4"></i>
-          <p className="text-gray-500">Room not found</p>
-          <p className="text-xs text-gray-400 mt-2">Room ID: {roomParam}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition">
-            Refresh
-          </button>
-        </div>
-      </div>
-    );
+    return <RoomNotFoundSkeleton />;
   }
 
   return (
