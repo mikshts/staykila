@@ -8,6 +8,8 @@ import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
 import Dashboard from "./components/dashboard/Dashboard";
 import GuestPortal from "./components/guest/GuestPortal";
+import AuthCallback from "./components/auth/AuthCallback";
+import HotelSetup from "./components/auth/HotelSetup";
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/setup" element={<HotelSetup />} />
             <Route
               path="/"
               element={

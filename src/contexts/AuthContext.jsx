@@ -38,18 +38,26 @@ export function AuthProvider({ children }) {
   }, []);
 
   const fetchHotel = async (userId) => {
-    const { data, error } = await supabase
-      .from("users")
-      .select("hotel_id, hotels(*)")
-      .eq("id", userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("hotel_id, hotels(*)")
+        .eq("id", userId)
+        .single();
 
-    if (error) {
+      if (error) {
+        if (error.code === "PGRST116") {
+          setHotel(null);
+          return;
+        }
+        console.error("Error fetching hotel:", error);
+        return;
+      }
+
+      setHotel(data.hotels);
+    } catch (error) {
       console.error("Error fetching hotel:", error);
-      return;
     }
-
-    setHotel(data.hotels);
   };
 
   const login = async (email, password) => {
@@ -68,89 +76,136 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (email, password, hotelData) => {
-    // Start a transaction: create auth user, then hotel, then user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: hotelData.owner,
+    try {
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: hotelData.owner,
+          },
         },
-      },
-    });
+      });
 
-    if (authError) {
-      toast.error(authError.message);
-      return { error: authError };
-    }
+      if (authError) {
+        console.error("Auth error:", authError);
+        toast.error(authError.message);
+        return { error: authError };
+      }
 
-    // Create hotel
-    const { data: hotel, error: hotelError } = await supabase
-      .from("hotels")
-      .insert({
+      if (!authData.user) {
+        toast.error("Failed to create user account");
+        return { error: new Error("No user created") };
+      }
+
+      // 2. Create hotel with proper fields
+      const hotelPayload = {
         name: hotelData.name,
         owner: hotelData.owner,
         email: email,
-      })
-      .select()
-      .single();
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-    if (hotelError) {
-      toast.error("Failed to create hotel");
-      return { error: hotelError };
-    }
+      console.log("Creating hotel with payload:", hotelPayload);
 
-    // Create user record
-    const { error: userError } = await supabase.from("users").insert({
-      id: authData.user.id,
-      hotel_id: hotel.id,
-      full_name: hotelData.owner,
-      role: "admin",
-    });
+      const { data: hotel, error: hotelError } = await supabase
+        .from("hotels")
+        .insert([hotelPayload])
+        .select()
+        .single();
 
-    if (userError) {
-      toast.error("Failed to setup user");
-      return { error: userError };
-    }
+      if (hotelError) {
+        console.error("Hotel creation error:", hotelError);
+        toast.error(`Failed to create hotel: ${hotelError.message}`);
+        return { error: hotelError };
+      }
 
-    // Create rooms
-    const rooms = [];
-    for (let i = 1; i <= hotelData.rooms; i++) {
-      rooms.push({
+      console.log("Hotel created:", hotel);
+
+      // 3. Create user record with hotel_id
+      const userPayload = {
+        id: authData.user.id,
         hotel_id: hotel.id,
-        room_number: i,
-        name: `Room ${i}`,
-        status: "available",
-      });
+        full_name: hotelData.owner,
+        role: "admin",
+        email: email,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log("Creating user record with payload:", userPayload);
+
+      const { error: userError } = await supabase
+        .from("users")
+        .insert([userPayload]);
+
+      if (userError) {
+        console.error("User record creation error:", userError);
+        // Try to delete the hotel if user creation fails
+        await supabase.from("hotels").delete().eq("id", hotel.id);
+        toast.error(`Failed to setup user: ${userError.message}`);
+        return { error: userError };
+      }
+
+      // 4. Create rooms
+      const rooms = [];
+      const numRooms = Math.min(hotelData.rooms || 10, 300);
+
+      for (let i = 1; i <= numRooms; i++) {
+        rooms.push({
+          hotel_id: hotel.id,
+          room_number: i,
+          name: `Room ${i}`,
+          status: "available",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      console.log(`Creating ${rooms.length} rooms`);
+
+      if (rooms.length > 0) {
+        const { error: roomsError } = await supabase
+          .from("rooms")
+          .insert(rooms);
+
+        if (roomsError) {
+          console.error("Room creation error:", roomsError);
+          // Continue anyway, rooms can be created later
+          toast.warning("Rooms created partially. You can add more later.");
+        }
+      }
+
+      // 5. Create default pricing
+      const pricing = [
+        { hotel_id: hotel.id, duration_hours: 1, price: 100 },
+        { hotel_id: hotel.id, duration_hours: 3, price: 250 },
+        { hotel_id: hotel.id, duration_hours: 6, price: 450 },
+        { hotel_id: hotel.id, duration_hours: 12, price: 800 },
+        { hotel_id: hotel.id, duration_hours: 24, price: 1500 },
+      ];
+
+      const { error: pricingError } = await supabase
+        .from("pricing")
+        .insert(pricing);
+
+      if (pricingError) {
+        console.error("Pricing creation error:", pricingError);
+        // Continue anyway, pricing can be added later
+        toast.warning(
+          "Default pricing created partially. You can update later.",
+        );
+      }
+
+      toast.success("Hotel registered successfully!");
+      return { data: authData };
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast.error(error.message || "Failed to register hotel");
+      return { error };
     }
-
-    const { error: roomsError } = await supabase.from("rooms").insert(rooms);
-
-    if (roomsError) {
-      toast.error("Failed to create rooms");
-      return { error: roomsError };
-    }
-
-    // Create default pricing
-    const pricing = [
-      { hotel_id: hotel.id, duration_hours: 1, price: 100 },
-      { hotel_id: hotel.id, duration_hours: 3, price: 250 },
-      { hotel_id: hotel.id, duration_hours: 6, price: 450 },
-      { hotel_id: hotel.id, duration_hours: 12, price: 800 },
-      { hotel_id: hotel.id, duration_hours: 24, price: 1500 },
-    ];
-
-    const { error: pricingError } = await supabase
-      .from("pricing")
-      .insert(pricing);
-
-    if (pricingError) {
-      toast.error("Failed to setup pricing");
-      return { error: pricingError };
-    }
-
-    toast.success("Hotel registered successfully!");
-    return { data: authData };
   };
 
   const logout = async () => {
