@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { roomService } from "../../services/roomService";
 import { messageService } from "../../services/messageService";
 import { supabase } from "../../lib/supabase";
+import { buildGuestUrl, parseRoomParam } from "../../lib/guestUrl";
 import {
   GuestPortalSkeleton,
   RoomNotFoundSkeleton,
@@ -36,36 +37,16 @@ export default function GuestPortal() {
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
 
-  // Parse room param helper - IMPROVED
-  // src/components/guest/GuestPortal.jsx
-  // Update the parseRoomParam function:
+  // NOTE: parseRoomParam (src/lib/guestUrl.js) does NOT call
+  // decodeURIComponent on its own initiative — `searchParams.get("room")`
+  // from useSearchParams is ALREADY decoded. Manually decoding again here
+  // was the source of the "works on desktop, fails on mobile" bug: some
+  // mobile QR-scanner -> browser handoffs deliver a query string that's
+  // been percent-decoded once already by the OS before the router sees
+  // it, so decoding it a second time corrupted (or threw on) the value
+  // ONLY on that path, not on a manually-typed desktop URL. See guestUrl.js
+  // for the full explanation and the defensive fallback that replaces it.
 
-  // src/components/guest/GuestPortal.jsx
-  const parseRoomParam = (param) => {
-    if (!param) return null;
-
-    // DECODE the parameter first
-    const decoded = decodeURIComponent(param);
-    console.log("Decoded room param:", decoded);
-
-    // Format: hotelId_roomId
-    if (decoded.includes("_")) {
-      const parts = decoded.split("_");
-      console.log("Split parts:", parts);
-
-      if (parts.length === 2) {
-        return { hotelId: parts[0], roomId: parts[1] };
-      } else {
-        const hotelId = parts.slice(0, parts.length - 1).join("_");
-        const roomId = parts[parts.length - 1];
-        return { hotelId, roomId };
-      }
-    }
-
-    return { roomId: decoded };
-  };
-
-  // In loadRoomData, add more logging:
   const loadRoomData = async () => {
     try {
       setLoading(true);
@@ -230,17 +211,14 @@ export default function GuestPortal() {
     };
   }, [roomParam]);
 
-  // src/components/guest/GuestPortal.jsx
-  // src/components/guest/GuestPortal.jsx
-  // Update the QR generation useEffect:
-
   useEffect(() => {
     if (room && hotel && qrContainerRef.current) {
       // Clear previous QR
       qrContainerRef.current.innerHTML = "";
 
-      const roomParam = `${hotel.id}_${room.id}`;
-      const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
+      // buildGuestUrl uses URLSearchParams under the hood so encoding is
+      // always correct and consistent with how QRModal/QRDownload build it.
+      const url = buildGuestUrl(hotel.id, room.id, room.name);
       console.log("Guest Portal QR URL:", url);
 
       // Generate QR using npm package

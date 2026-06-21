@@ -11,6 +11,7 @@ import RoomList from "./RoomList";
 import ReportsPanel from "../reports/ReportsPanel";
 import { DashboardSkeleton } from "../ui";
 import QRDownload from "./QRDownload";
+import { buildGuestUrl } from "../../lib/guestUrl";
 
 import {
   CheckinModal,
@@ -746,9 +747,15 @@ export default function Dashboard() {
   };
 
   const generateQRUrl = (room) => {
-    const baseUrl = window.location.origin;
-    const roomParam = encodeURIComponent(`${hotel.id}_${room.id}`);
-    return `${baseUrl}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
+    // Shared helper — same URLSearchParams-based encoding used by
+    // GuestPortal.jsx, QRModal.jsx, and QRDownload.jsx. The previous
+    // version manually called encodeURIComponent on the combined
+    // "hotelId_roomId" string AND again on the name, which is a third,
+    // slightly different encoding path from the other three files.
+    // Three independent hand-rolled encoders is exactly how a "works on
+    // desktop, breaks on mobile" inconsistency creeps in — this removes
+    // that risk by routing every URL build through one function.
+    return buildGuestUrl(hotel.id, room.id, room.name);
   };
   if (loading) {
     return <DashboardSkeleton />;
