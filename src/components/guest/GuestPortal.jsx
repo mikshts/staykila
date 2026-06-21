@@ -25,7 +25,6 @@ export default function GuestPortal() {
   const [showWifi, setShowWifi] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const chatEndRef = useRef(null);
   const subscriptionRef = useRef(null);
   const qrContainerRef = useRef(null);
@@ -35,24 +34,35 @@ export default function GuestPortal() {
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
 
+  // Parse room param helper
   const parseRoomParam = (param) => {
     if (!param) return null;
+
+    // Try to parse as JSON first (for QR codes)
     try {
       const parsed = JSON.parse(decodeURIComponent(param));
       if (parsed.hotelId && parsed.roomId) {
         return { hotelId: parsed.hotelId, roomId: parsed.roomId };
       }
-    } catch (e) {}
+    } catch (e) {
+      // Not JSON, continue
+    }
+
+    // Format: hotelId_roomId
     if (param.includes("_")) {
       const parts = param.split("_");
+      // If we have more than 2 parts, the hotel ID might contain underscores
       if (parts.length === 2) {
         return { hotelId: parts[0], roomId: parts[1] };
       } else {
+        // Join all but the last part for hotel ID
         const hotelId = parts.slice(0, parts.length - 1).join("_");
         const roomId = parts[parts.length - 1];
         return { hotelId, roomId };
       }
     }
+
+    // Just room ID
     return { roomId: param };
   };
 
@@ -73,10 +83,14 @@ export default function GuestPortal() {
   const loadRoomData = async () => {
     try {
       setLoading(true);
+
       const parsed = parseRoomParam(roomParam);
+      console.log("Parsed room param:", parsed);
+
       let hotelId = parsed?.hotelId;
       let roomId = parsed?.roomId;
 
+      // If no hotelId, try to get it from room data
       if (!hotelId && roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
@@ -84,24 +98,28 @@ export default function GuestPortal() {
           setRoom(roomData);
         }
       } else if (roomId) {
+        // Get room details
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
           setRoom(roomData);
         }
       }
 
+      // Get hotel info
       if (hotelId) {
-        const { data: hotelData } = await supabase
+        const { data: hotelData, error: hotelError } = await supabase
           .from("hotels")
           .select("*")
           .eq("id", hotelId)
           .single();
-        if (hotelData) {
+
+        if (!hotelError && hotelData) {
           setHotel(hotelData);
           setWifiPassword(hotelData.wifi_password || "");
         }
       }
 
+      // If we still don't have room data, try once more
       if (!room && roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
@@ -121,6 +139,7 @@ export default function GuestPortal() {
         }
       }
 
+      // Get menu images
       if (hotelId) {
         const { data: menuData } = await supabase
           .from("menu_images")
@@ -130,6 +149,7 @@ export default function GuestPortal() {
         setMenuImages(menuData || []);
       }
 
+      // Get active booking
       if (roomId) {
         const { data: bookings } = await supabase
           .from("bookings")
@@ -141,6 +161,7 @@ export default function GuestPortal() {
 
         if (bookings && bookings.length > 0) {
           const booking = bookings[0];
+          // Update room with booking data
           setRoom((prev) => ({ ...prev, booking }));
           setTimeRemaining(new Date(booking.end_time).getTime() - Date.now());
           setIsExpired(false);
@@ -148,6 +169,7 @@ export default function GuestPortal() {
           setIsExpired(true);
         }
 
+        // Get messages
         const msgs = await messageService.getMessages(roomId);
         const uniqueMsgs = [];
         const seenIds = new Set();
@@ -160,6 +182,7 @@ export default function GuestPortal() {
         setMessages(uniqueMsgs);
         uniqueMsgs.forEach((msg) => messageIdsRef.current.add(msg.id));
 
+        // Create or get guest session
         let token = localStorage.getItem(`guest_${roomId}_token`);
         if (!token) {
           const session = await messageService.createGuestSession(roomId);
@@ -168,6 +191,7 @@ export default function GuestPortal() {
         }
         setGuestToken(token);
 
+        // Setup realtime subscription
         if (subscriptionRef.current) {
           subscriptionRef.current.unsubscribe();
         }
@@ -190,10 +214,13 @@ export default function GuestPortal() {
     }
   };
 
+  // Generate QR code after room and hotel are loaded
   useEffect(() => {
     if (room && hotel && qrContainerRef.current && window.QRCode) {
       qrContainerRef.current.innerHTML = "";
+      // Use the hotel ID from the hotel object
       const url = `${window.location.origin}/guest?room=${hotel.id}_${room.id}&name=${encodeURIComponent(room.name)}`;
+      console.log("QR URL:", url);
       try {
         new window.QRCode(qrContainerRef.current, {
           text: url,
@@ -206,11 +233,14 @@ export default function GuestPortal() {
     }
   }, [room, hotel]);
 
+  // Timer effect with cleanup
   useEffect(() => {
     if (timeRemaining <= 0) return;
+
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
+
     timerIntervalRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         const newTime = prev - 1000;
@@ -222,6 +252,7 @@ export default function GuestPortal() {
         return newTime;
       });
     }, 1000);
+
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
@@ -246,9 +277,9 @@ export default function GuestPortal() {
   };
 
   const getStatusText = () => {
-    if (isExpired) return "⏰ Stay has ended";
-    if (timeRemaining < 10 * 60 * 1000) return "⚠️ Expiring soon!";
-    return "✓ Active stay";
+    if (isExpired) return "Stay has ended";
+    if (timeRemaining < 10 * 60 * 1000) return "Expiring soon";
+    return "Active stay";
   };
 
   const sendMessage = async () => {
@@ -262,8 +293,10 @@ export default function GuestPortal() {
     }
 
     try {
+      // Get room ID from room object
       const roomId = room?.id;
       const hotelId = hotel?.id;
+
       if (!roomId || !hotelId) {
         toast.error("Missing room or hotel information");
         return;
@@ -297,395 +330,434 @@ export default function GuestPortal() {
     return <RoomNotFoundSkeleton />;
   }
 
-  const progressPercentage = room.booking
-    ? Math.max(
-        0,
-        Math.min(
-          100,
-          ((Date.now() - new Date(room.booking.start_time).getTime()) /
-            (new Date(room.booking.end_time).getTime() -
-              new Date(room.booking.start_time).getTime())) *
-            100,
-        ),
-      )
-    : 0;
+  const statusClass = getStatusClass();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      <div className="max-w-md mx-auto px-4 py-6">
-        {/* Header - Minimal Apple Style */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/25 mb-4">
-            <i className="fas fa-hotel text-white text-2xl"></i>
+    <div className="kc-page">
+      <style>{`
+        .kc-page {
+          min-height: 100vh;
+          background: #F7F5F1;
+          background-image:
+            radial-gradient(circle at 15% 10%, rgba(201,162,75,0.10) 0%, transparent 45%),
+            radial-gradient(circle at 85% 90%, rgba(20,33,61,0.06) 0%, transparent 45%);
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          color: #1F2430;
+          padding: 32px 16px 56px;
+        }
+        .kc-wrap { max-width: 420px; margin: 0 auto; }
+
+        .kc-brand { text-align: center; margin-bottom: 28px; }
+        .kc-brand-mark {
+          width: 52px; height: 52px; margin: 0 auto 14px;
+          background: #14213D;
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 8px 20px -8px rgba(20,33,61,0.5);
+        }
+        .kc-brand-mark i { color: #C9A24B; font-size: 22px; }
+        .kc-brand-name {
+          font-family: 'Fraunces', Georgia, serif;
+          font-size: 22px; font-weight: 600; letter-spacing: -0.01em;
+          color: #14213D; margin: 0;
+        }
+        .kc-brand-sub {
+          font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+          color: #9A917F; margin-top: 2px;
+        }
+
+        /* The keycard */
+        .kc-card {
+          background: #14213D;
+          border-radius: 22px;
+          position: relative;
+          box-shadow: 0 24px 48px -20px rgba(20,33,61,0.45);
+          overflow: visible;
+        }
+        .kc-card-top {
+          padding: 30px 26px 26px;
+          position: relative;
+          text-align: center;
+        }
+        .kc-card-top::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-image: radial-gradient(circle at 80% -10%, rgba(201,162,75,0.18), transparent 60%);
+          border-radius: 22px 22px 0 0;
+        }
+        .kc-eyebrow {
+          font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+          color: #C9A24B; font-weight: 600; position: relative; z-index: 1;
+        }
+        .kc-room-name {
+          font-family: 'Fraunces', Georgia, serif;
+          font-size: 42px; font-weight: 600; line-height: 1;
+          color: #F7F5F1; margin: 8px 0 6px; position: relative; z-index: 1;
+        }
+        .kc-room-token {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 12px; letter-spacing: 0.08em;
+          color: rgba(247,245,241,0.55); position: relative; z-index: 1;
+        }
+
+        /* Notch / perforation, like a keycard or ticket stub */
+        .kc-notch-row { display: flex; align-items: center; position: relative; }
+        .kc-notch-circle {
+          width: 26px; height: 26px; border-radius: 50%;
+          background: #F7F5F1;
+          margin-left: -13px; margin-right: -13px;
+          flex-shrink: 0;
+        }
+        .kc-perforation {
+          flex: 1; height: 0;
+          border-top: 2px dashed rgba(247,245,241,0.18);
+        }
+
+        .kc-card-body { background: #FFFFFF; border-radius: 0 0 22px 22px; padding: 26px; }
+
+        /* Timer */
+        .kc-timer-block { text-align: center; margin-bottom: 22px; }
+        .kc-timer-label {
+          font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+          color: #9A917F; margin-bottom: 10px;
+        }
+        .kc-timer-lcd {
+          display: inline-block;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 38px; font-weight: 700; letter-spacing: 0.04em;
+          padding: 14px 22px;
+          border-radius: 14px;
+          background: #14213D;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+        }
+        .kc-timer-lcd.ok { color: #7FCB9A; text-shadow: 0 0 18px rgba(127,203,154,0.45); }
+        .kc-timer-lcd.warn { color: #E0A23B; text-shadow: 0 0 18px rgba(224,162,59,0.5); }
+        .kc-timer-lcd.expired { color: #E0694B; text-shadow: 0 0 18px rgba(224,105,75,0.45); }
+        .kc-timer-status {
+          margin-top: 10px; font-size: 12.5px; font-weight: 600;
+          display: inline-flex; align-items: center; gap: 6px;
+        }
+        .kc-timer-status .dot { width: 7px; height: 7px; border-radius: 50%; }
+        .kc-timer-status.ok { color: #4C8A66; }
+        .kc-timer-status.ok .dot { background: #4C8A66; }
+        .kc-timer-status.warn { color: #B9852A; }
+        .kc-timer-status.warn .dot { background: #B9852A; }
+        .kc-timer-status.expired { color: #C0563B; }
+        .kc-timer-status.expired .dot { background: #C0563B; }
+
+        /* Booking details */
+        .kc-divider { border-top: 1px solid #ECE8DF; margin: 18px 0 14px; }
+        .kc-detail-row {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 7px 0; font-size: 14px;
+        }
+        .kc-detail-label { color: #8C8472; display: flex; align-items: center; gap: 7px; }
+        .kc-detail-label i { width: 14px; color: #C9A24B; font-size: 12px; }
+        .kc-detail-value { font-weight: 600; color: #1F2430; }
+        .kc-detail-value.price { color: #14213D; font-family: 'JetBrains Mono', monospace; }
+
+        .kc-empty { text-align: center; padding: 30px 10px; }
+        .kc-empty i { font-size: 40px; color: #DCD7CB; margin-bottom: 12px; display: block; }
+        .kc-empty p:first-of-type { color: #5C5648; font-weight: 600; font-size: 15px; }
+        .kc-empty p:last-of-type { color: #9A917F; font-size: 12.5px; margin-top: 4px; }
+
+        /* Action buttons */
+        .kc-action {
+          width: 100%; padding: 13px 16px; border-radius: 13px;
+          font-weight: 600; font-size: 14px; border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 9px;
+          transition: transform 0.12s ease, box-shadow 0.12s ease;
+          margin-top: 12px;
+        }
+        .kc-action:active { transform: scale(0.98); }
+        .kc-action.wifi { background: #EFF4F2; color: #2F5F49; }
+        .kc-action.wifi:hover { background: #E3ECE7; }
+        .kc-action.menu { background: #F4EEE3; color: #8A5A1F; }
+        .kc-action.menu:hover { background: #EFE5D2; }
+
+        .kc-reveal {
+          margin-top: 10px; padding: 14px; border-radius: 12px; text-align: center;
+        }
+        .kc-reveal.wifi-box { background: #EFF4F2; border: 1px dashed #BFD9CC; }
+        .kc-reveal .wifi-pass {
+          font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 17px;
+          letter-spacing: 0.05em; color: #2F5F49;
+        }
+        .kc-menu-grid {
+          margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        }
+        .kc-menu-grid img {
+          width: 100%; height: 120px; object-fit: cover; border-radius: 10px;
+          border: 1px solid #ECE8DF;
+        }
+
+        .kc-note {
+          margin-top: 16px; padding: 13px 14px; border-radius: 12px;
+          background: #FBF3E3; border: 1px solid #F0E0BC;
+        }
+        .kc-note-head {
+          display: flex; align-items: center; gap: 7px;
+          color: #8A5A1F; font-weight: 600; font-size: 13px; margin-bottom: 4px;
+        }
+        .kc-note p { color: #7A6A4A; font-size: 13.5px; margin: 0; line-height: 1.45; }
+
+        /* Chat */
+        .kc-chat { margin-top: 18px; padding: 16px; border-radius: 14px; background: #F7F5F1; border: 1px solid #ECE8DF; }
+        .kc-chat-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .kc-chat-head i { color: #14213D; font-size: 14px; }
+        .kc-chat-head span { font-weight: 600; font-size: 13.5px; color: #1F2430; }
+
+        .kc-chat-log {
+          background: #FFFFFF; border-radius: 10px; padding: 10px;
+          max-height: 150px; overflow-y: auto; border: 1px solid #ECE8DF;
+        }
+        .kc-chat-empty { text-align: center; color: #BCB5A4; font-size: 13px; padding: 14px 0; }
+        .kc-bubble {
+          font-size: 13.5px; padding: 7px 11px; border-radius: 12px; margin-bottom: 6px;
+          max-width: 82%; line-height: 1.4; word-break: break-word;
+        }
+        .kc-bubble.admin { background: #14213D; color: #F7F5F1; margin-left: auto; }
+        .kc-bubble.guest { background: #EFEBE2; color: #2D2A22; margin-right: auto; }
+        .kc-bubble-time { font-size: 10px; opacity: 0.6; margin-left: 8px; }
+
+        .kc-chat-input-row { display: flex; gap: 8px; margin-top: 10px; }
+        .kc-chat-input {
+          flex: 1; padding: 10px 13px; border-radius: 10px; font-size: 13.5px;
+          border: 1px solid #E0DACC; outline: none; background: #FFFFFF;
+        }
+        .kc-chat-input:focus { border-color: #C9A24B; box-shadow: 0 0 0 3px rgba(201,162,75,0.15); }
+        .kc-send-btn {
+          width: 40px; height: 40px; border-radius: 10px; background: #14213D; color: #C9A24B;
+          border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .kc-send-btn:hover { background: #1C2D52; }
+        .kc-send-btn:active { transform: scale(0.95); }
+
+        /* QR */
+        .kc-qr { margin-top: 18px; text-align: center; }
+        .kc-qr-frame {
+          display: inline-block; padding: 10px; background: #FFFFFF;
+          border: 1px solid #ECE8DF; border-radius: 12px;
+        }
+        .kc-qr-caption { font-size: 11.5px; color: #B0A998; margin-top: 8px; }
+
+        .kc-footer { text-align: center; margin-top: 22px; }
+        .kc-footer p { font-size: 11px; color: #B0A998; letter-spacing: 0.03em; }
+
+        @media (prefers-reduced-motion: no-preference) {
+          .kc-card { animation: kc-rise 0.4s ease-out; }
+          @keyframes kc-rise {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        }
+
+        .kc-action:focus-visible,
+        .kc-chat-input:focus-visible,
+        .kc-send-btn:focus-visible {
+          outline: 2px solid #C9A24B; outline-offset: 2px;
+        }
+      `}</style>
+
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+      />
+
+      <div className="kc-wrap">
+        {/* Brand header */}
+        <div className="kc-brand">
+          <div className="kc-brand-mark">
+            <i className="fas fa-hotel"></i>
           </div>
-          <h1 className="text-2xl font-semibold text-slate-800 tracking-tight">
-            {hotel?.name || "StayDesk"}
-          </h1>
-          <p className="text-slate-400 text-sm font-medium tracking-wide">
-            Guest Portal
-          </p>
+          <h1 className="kc-brand-name">{hotel?.name || "StayDesk"}</h1>
+          <div className="kc-brand-sub">Guest Portal</div>
         </div>
 
-        {/* Room Card - Glassmorphism */}
-        <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl shadow-slate-200/50 border border-white/50 overflow-hidden">
-          {/* Gradient Accent Bar */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400" />
-
-          {/* Room Header */}
-          <div className="px-6 pt-8 pb-6 text-center bg-gradient-to-br from-indigo-600/5 to-purple-600/5">
-            <p className="text-indigo-400 text-[10px] font-semibold tracking-[0.2em] uppercase">
-              Your Room
-            </p>
-            <h2 className="text-3xl font-bold text-slate-800 mt-1 tracking-tight">
-              {room.name}
-            </h2>
-            <p className="text-slate-400 text-xs font-mono mt-1">
-              {room.token}
-            </p>
+        {/* Keycard */}
+        <div className="kc-card">
+          <div className="kc-card-top">
+            <div className="kc-eyebrow">Your Room</div>
+            <div className="kc-room-name">{room.name}</div>
+            <div className="kc-room-token">{room.token}</div>
           </div>
 
-          <div className="p-6">
+          {/* Perforated notch divider, like a keycard edge */}
+          <div className="kc-notch-row">
+            <div className="kc-notch-circle" />
+            <div className="kc-perforation" />
+            <div className="kc-notch-circle" />
+          </div>
+
+          <div className="kc-card-body">
             {/* Timer & Booking Info */}
             {!isExpired && room.booking ? (
               <>
-                <div className="text-center mb-6">
-                  <p className="text-slate-400 text-[10px] font-medium tracking-widest uppercase">
-                    Time Remaining
-                  </p>
-                  <div
-                    className={`timer-display text-5xl font-bold tracking-tight mt-1 ${
-                      getStatusClass() === "warn"
-                        ? "text-amber-500"
-                        : getStatusClass() === "expired"
-                          ? "text-red-500"
-                          : "text-emerald-500"
-                    }`}>
+                <div className="kc-timer-block">
+                  <div className="kc-timer-label">Time Remaining</div>
+                  <div className={`kc-timer-lcd ${statusClass}`}>
                     {formatTime(timeRemaining)}
                   </div>
-                  <div className="mt-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                        getStatusClass() === "warn"
-                          ? "bg-amber-50 text-amber-600"
-                          : getStatusClass() === "expired"
-                            ? "bg-red-50 text-red-600"
-                            : "bg-emerald-50 text-emerald-600"
-                      }`}>
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          getStatusClass() === "warn"
-                            ? "bg-amber-400 animate-pulse"
-                            : getStatusClass() === "expired"
-                              ? "bg-red-400"
-                              : "bg-emerald-400"
-                        }`}
-                      />
-                      {getStatusText()}
-                    </span>
+                  <div className={`kc-timer-status ${statusClass}`}>
+                    <span className="dot"></span>
+                    {getStatusText()}
                   </div>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="mb-6">
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000"
-                      style={{ width: `${progressPercentage}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-slate-400 mt-1.5">
-                    <span>Check-in</span>
-                    <span>{Math.round(progressPercentage)}%</span>
-                    <span>Check-out</span>
-                  </div>
-                </div>
+                <div className="kc-divider"></div>
 
-                {/* Booking Details Grid */}
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <div className="bg-slate-50/80 rounded-2xl p-3 text-center backdrop-blur-sm">
-                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                      Check-in
-                    </p>
-                    <p className="text-sm font-semibold text-slate-700 mt-0.5">
-                      {new Date(room.booking.start_time).toLocaleTimeString(
-                        [],
-                        { hour: "2-digit", minute: "2-digit" },
-                      )}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50/80 rounded-2xl p-3 text-center backdrop-blur-sm">
-                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                      Check-out
-                    </p>
-                    <p className="text-sm font-semibold text-slate-700 mt-0.5">
-                      {new Date(room.booking.end_time).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50/80 rounded-2xl p-3 text-center backdrop-blur-sm">
-                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                      Duration
-                    </p>
-                    <p className="text-sm font-semibold text-slate-700 mt-0.5">
-                      {room.booking.hours}h
-                    </p>
-                  </div>
-                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-3 text-center">
-                    <p className="text-[10px] text-indigo-400 font-medium uppercase tracking-wider">
-                      Price
-                    </p>
-                    <p className="text-sm font-bold text-indigo-600 mt-0.5">
-                      ₱{room.booking.price}
-                    </p>
-                  </div>
+                <div className="kc-detail-row">
+                  <span className="kc-detail-label">
+                    <i className="far fa-clock"></i>Check-in
+                  </span>
+                  <span className="kc-detail-value">
+                    {new Date(room.booking.start_time).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="kc-detail-row">
+                  <span className="kc-detail-label">
+                    <i className="far fa-hourglass-half"></i>Check-out
+                  </span>
+                  <span className="kc-detail-value">
+                    {new Date(room.booking.end_time).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="kc-detail-row">
+                  <span className="kc-detail-label">
+                    <i className="fas fa-chart-line"></i>Duration
+                  </span>
+                  <span className="kc-detail-value">
+                    {room.booking.hours} hours
+                  </span>
+                </div>
+                <div className="kc-detail-row">
+                  <span className="kc-detail-label">
+                    <i className="fas fa-tag"></i>Price
+                  </span>
+                  <span className="kc-detail-value price">
+                    ₱{room.booking.price}
+                  </span>
                 </div>
               </>
             ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <i className="fas fa-door-open text-2xl text-slate-300"></i>
-                </div>
-                <p className="text-slate-500 font-medium">No Active Stay</p>
-                <p className="text-slate-400 text-sm mt-1">
-                  Please check in at the front desk.
-                </p>
+              <div className="kc-empty">
+                <i className="fas fa-door-open"></i>
+                <p>No active stay found</p>
+                <p>Please check in at the front desk.</p>
               </div>
             )}
 
-            {/* WiFi Button - Apple Style */}
+            {/* WiFi */}
             {wifiPassword && (
-              <div className="mt-4">
+              <>
                 <button
-                  onClick={() => setShowWifi(!showWifi)}
-                  className={`w-full group relative overflow-hidden rounded-2xl py-3.5 px-4 font-medium transition-all duration-300 ${
-                    showWifi
-                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
-                      : "bg-white border border-slate-200 text-slate-700 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10"
-                  }`}>
-                  <span className="relative flex items-center justify-center gap-2.5">
-                    <i
-                      className={`fas fa-wifi ${showWifi ? "text-white" : "text-blue-500"}`}></i>
-                    {showWifi ? "Hide WiFi Password" : "Show WiFi Password"}
-                    {!showWifi && (
-                      <i className="fas fa-chevron-right text-xs text-slate-400 group-hover:translate-x-0.5 transition-transform"></i>
-                    )}
-                  </span>
+                  className="kc-action wifi"
+                  onClick={() => setShowWifi(!showWifi)}>
+                  <i className="fas fa-wifi"></i>
+                  {showWifi ? "Hide WiFi Password" : "Show WiFi Password"}
                 </button>
                 {showWifi && (
-                  <div className="mt-3 p-4 bg-blue-50/80 backdrop-blur-sm rounded-2xl border border-blue-100/50 text-center animate-[fadeIn_0.3s_ease]">
-                    <i className="fas fa-key text-blue-400 mr-2"></i>
-                    <span className="font-mono font-semibold text-blue-700 text-lg tracking-wider select-all">
-                      {wifiPassword}
-                    </span>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(wifiPassword);
-                        toast.success("Password copied!");
-                      }}
-                      className="ml-3 text-blue-400 hover:text-blue-600 transition-colors">
-                      <i className="fas fa-copy text-sm"></i>
-                    </button>
+                  <div className="kc-reveal wifi-box">
+                    <i
+                      className="fas fa-key"
+                      style={{ color: "#2F5F49", marginRight: 8 }}></i>
+                    <span className="wifi-pass">{wifiPassword}</span>
                   </div>
                 )}
-              </div>
+              </>
             )}
 
-            {/* Menu Button - Apple Style */}
+            {/* Menu */}
             {menuImages.length > 0 && (
-              <div className="mt-3">
+              <>
                 <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className={`w-full group relative overflow-hidden rounded-2xl py-3.5 px-4 font-medium transition-all duration-300 ${
-                    showMenu
-                      ? "bg-purple-500 text-white shadow-lg shadow-purple-500/25"
-                      : "bg-white border border-slate-200 text-slate-700 hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/10"
-                  }`}>
-                  <span className="relative flex items-center justify-center gap-2.5">
-                    <i
-                      className={`fas fa-utensils ${showMenu ? "text-white" : "text-purple-500"}`}></i>
-                    {showMenu
-                      ? "Hide Menu"
-                      : `View Menu (${menuImages.length})`}
-                  </span>
+                  className="kc-action menu"
+                  onClick={() => setShowMenu(!showMenu)}>
+                  <i className="fas fa-utensils"></i>
+                  {showMenu ? "Hide Menu" : `View Menu (${menuImages.length})`}
                 </button>
                 {showMenu && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 animate-[fadeIn_0.3s_ease]">
+                  <div className="kc-menu-grid">
                     {menuImages.map((img, i) => (
-                      <div
-                        key={i}
-                        className="group relative rounded-xl overflow-hidden bg-slate-100 aspect-square">
-                        <img
-                          src={img.image_url}
-                          alt={`Menu ${i + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
+                      <img key={i} src={img.image_url} alt={`Menu ${i + 1}`} />
                     ))}
                   </div>
                 )}
-              </div>
+              </>
             )}
 
-            {/* Notes - Apple Style */}
+            {/* Notes */}
             {room.notes && (
-              <div className="mt-4 p-4 bg-amber-50/80 backdrop-blur-sm rounded-2xl border border-amber-100/50">
-                <div className="flex items-start gap-2.5">
-                  <i className="fas fa-note-sticky text-amber-400 mt-0.5"></i>
-                  <div>
-                    <p className="text-amber-700 text-sm font-medium">
-                      Hotel Note
-                    </p>
-                    <p className="text-amber-600/80 text-sm mt-0.5">
-                      {room.notes}
-                    </p>
-                  </div>
+              <div className="kc-note">
+                <div className="kc-note-head">
+                  <i className="fas fa-note-sticky"></i> Hotel Note
                 </div>
+                <p>{room.notes}</p>
               </div>
             )}
 
-            {/* Chat - Apple Style with Expandable Design */}
-            <div className="mt-4">
-              <button
-                onClick={() => setIsChatOpen(!isChatOpen)}
-                className="w-full bg-slate-50/80 backdrop-blur-sm rounded-2xl py-3.5 px-4 border border-slate-100 hover:bg-slate-100/80 transition-all duration-300 flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                    <i className="fas fa-comment-dots text-white text-sm"></i>
-                  </div>
-                  <div>
-                    <p className="text-slate-700 font-medium text-sm">
-                      Chat with Front Desk
-                    </p>
-                    <p className="text-slate-400 text-xs">
-                      {messages.length} messages
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {messages.filter((m) => m.sender === "admin" && !m.is_read)
-                    .length > 0 && (
-                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  )}
-                  <i
-                    className={`fas fa-chevron-down text-slate-400 text-xs transition-transform duration-300 ${
-                      isChatOpen ? "rotate-180" : ""
-                    }`}></i>
-                </div>
-              </button>
+            {/* Chat */}
+            <div className="kc-chat">
+              <div className="kc-chat-head">
+                <i className="fas fa-comment-dots"></i>
+                <span>Chat with Front Desk</span>
+              </div>
 
-              {isChatOpen && (
-                <div className="mt-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-100/50 overflow-hidden animate-[fadeIn_0.3s_ease]">
-                  <div className="p-4 max-h-48 overflow-y-auto space-y-2">
-                    {messages.length === 0 ? (
-                      <div className="text-center py-6">
-                        <i className="fas fa-comment-slash text-slate-300 text-2xl mb-2 block"></i>
-                        <p className="text-slate-400 text-sm">
-                          No messages yet
-                        </p>
-                        <p className="text-slate-300 text-xs">
-                          Say hello to the front desk!
-                        </p>
-                      </div>
-                    ) : (
-                      messages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`flex ${msg.sender === "admin" ? "justify-start" : "justify-end"}`}>
-                          <div
-                            className={`max-w-[80%] px-4 py-2.5 rounded-2xl ${
-                              msg.sender === "admin"
-                                ? "bg-slate-100 text-slate-700 rounded-tl-none"
-                                : "bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-tr-none shadow-md shadow-indigo-500/20"
-                            }`}>
-                            <p className="text-sm leading-relaxed">
-                              {msg.message}
-                            </p>
-                            <p
-                              className={`text-[10px] mt-1 ${
-                                msg.sender === "admin"
-                                  ? "text-slate-400"
-                                  : "text-indigo-200"
-                              }`}>
-                              {new Date(msg.created_at).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                              {msg.sender === "admin"
-                                ? " · Front Desk"
-                                : " · You"}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                    <div ref={chatEndRef} />
-                  </div>
-
-                  <div className="p-3 border-t border-slate-100 bg-slate-50/50">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                        placeholder="Type a message..."
-                        className="flex-1 px-4 py-2.5 bg-white rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                      />
-                      <button
-                        onClick={sendMessage}
-                        className="px-4 py-2.5 bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all duration-300 flex items-center gap-2">
-                        <i className="fas fa-paper-plane text-sm"></i>
-                        <span className="hidden sm:inline text-sm font-medium">
-                          Send
-                        </span>
-                      </button>
+              <div className="kc-chat-log">
+                {messages.length === 0 ? (
+                  <div className="kc-chat-empty">No messages yet</div>
+                ) : (
+                  messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`kc-bubble ${msg.sender === "admin" ? "admin" : "guest"}`}>
+                      {msg.message}
+                      <span className="kc-bubble-time">
+                        {new Date(msg.created_at).toLocaleTimeString()}
+                      </span>
                     </div>
-                  </div>
-                </div>
-              )}
+                  ))
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              <div className="kc-chat-input-row">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder="Type a message..."
+                  className="kc-chat-input"
+                />
+                <button className="kc-send-btn" onClick={sendMessage}>
+                  <i className="fas fa-paper-plane"></i>
+                </button>
+              </div>
+              <div
+                id="guest-message-status"
+                style={{ fontSize: 11, color: "#B0A998", marginTop: 6 }}></div>
             </div>
 
-            {/* QR Code - Minimal Apple Style */}
-            <div className="mt-6 pt-6 border-t border-slate-100">
-              <div className="text-center">
-                <div className="inline-block p-3 bg-white rounded-2xl shadow-sm border border-slate-100">
-                  <div
-                    ref={qrContainerRef}
-                    className="flex justify-center"></div>
-                </div>
-                <p className="text-slate-400 text-xs mt-2 flex items-center justify-center gap-1.5">
-                  <i className="fas fa-qrcode text-indigo-400"></i>
-                  Scan to refresh your stay information
-                </p>
+            {/* QR Code */}
+            <div className="kc-qr">
+              <div className="kc-qr-frame">
+                <div ref={qrContainerRef}></div>
               </div>
+              <p className="kc-qr-caption">
+                <i className="fas fa-qrcode" style={{ marginRight: 5 }}></i>
+                Scan to refresh
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Footer - Minimal */}
-        <div className="text-center mt-6">
-          <p className="text-slate-400 text-[10px] font-medium tracking-wider">
-            Powered by StayKila Lodge Management
-          </p>
+        <div className="kc-footer">
+          <p>Powered by StayKila Lodge Management</p>
         </div>
       </div>
-
-      {/* Add fade-in animation */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
