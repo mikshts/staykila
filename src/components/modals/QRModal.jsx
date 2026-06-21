@@ -8,17 +8,18 @@ export default function QRModal({ room, onClose, hotelId }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
+    // Guard: room/hotelId can be momentarily undefined if this modal is
+    // opened and closed in quick succession, or if the parent panel
+    // unmounts (clearing selectedRoom) while this is still mid-render.
+    // Without this guard, buildGuestUrl(hotelId, room.id, room.name)
+    // throws on `room.id` when room is undefined, which is the real
+    // source of the "Cannot read properties of undefined" crash.
+    if (!room || !hotelId) return;
+
     if (canvasRef.current) {
-      // buildGuestUrl uses URLSearchParams, which guarantees the same
-      // encoding here as in GuestPortal.jsx and QRDownload.jsx. Previously
-      // each file hand-built this string slightly differently
-      // (`room=${hotelId}_${room.id}&name=${encodeURIComponent(room.name)}`),
-      // which is how subtly different encodings ended up in different QR
-      // codes depending on which component generated them.
       const url = buildGuestUrl(hotelId, room.id, room.name);
       console.log("QR URL generated:", url);
 
-      // Generate QR code using npm package
       QRCode.toCanvas(
         canvasRef.current,
         url,
@@ -42,6 +43,10 @@ export default function QRModal({ room, onClose, hotelId }) {
   }, [room, hotelId]);
 
   const downloadQR = () => {
+    if (!room) {
+      toast.error("QR code not ready");
+      return;
+    }
     const canvas = canvasRef.current;
     if (canvas) {
       try {
@@ -58,6 +63,13 @@ export default function QRModal({ room, onClose, hotelId }) {
       toast.error("QR code not ready");
     }
   };
+
+  // Guard the render itself: if room hasn't arrived yet (or vanished
+  // because the parent closed mid-mount), render nothing instead of
+  // letting `room.name` below throw during render.
+  if (!room) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
