@@ -39,24 +39,22 @@ export default function GuestPortal() {
   // src/components/guest/GuestPortal.jsx
   // Update the parseRoomParam function:
 
+  // src/components/guest/GuestPortal.jsx
   const parseRoomParam = (param) => {
     if (!param) return null;
 
-    // Don't decode if it's already a plain string
-    const decoded = param;
-    console.log("Room param:", decoded);
+    // DECODE the parameter first
+    const decoded = decodeURIComponent(param);
+    console.log("Decoded room param:", decoded);
 
     // Format: hotelId_roomId
     if (decoded.includes("_")) {
       const parts = decoded.split("_");
       console.log("Split parts:", parts);
 
-      // For UUID format, the hotel ID is the first part and room ID is the second
-      // But if there are more underscores, we need to handle it differently
       if (parts.length === 2) {
         return { hotelId: parts[0], roomId: parts[1] };
       } else {
-        // If more than 2 parts, the hotel ID is everything except the last part
         const hotelId = parts.slice(0, parts.length - 1).join("_");
         const roomId = parts[parts.length - 1];
         return { hotelId, roomId };
@@ -232,10 +230,12 @@ export default function GuestPortal() {
   }, [roomParam]);
 
   // src/components/guest/GuestPortal.jsx
+  // src/components/guest/GuestPortal.jsx
+  // Update the QR generation useEffect:
   useEffect(() => {
     if (room && hotel && qrContainerRef.current && window.QRCode) {
       qrContainerRef.current.innerHTML = "";
-      const roomParam = `${hotel.id}_${room.id}`;
+      const roomParam = encodeURIComponent(`${hotel.id}_${room.id}`);
       const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
       console.log("Guest Portal QR URL:", url);
       try {

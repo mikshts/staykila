@@ -9,10 +9,13 @@ export default function QRModal({ room, onClose, hotelId }) {
     if (qrRef.current && window.QRCode) {
       qrRef.current.innerHTML = "";
 
-      // Build the URL WITHOUT encoding the room param (it's already safe)
       const baseUrl = window.location.origin;
-      const roomParam = `${hotelId}_${room.id}`;
-      const url = `${baseUrl}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
+      // ENCODE the room parameter properly
+      // src/components/dashboard/QRDownload.jsx
+      // In the downloadAllQRs function, update the URL generation:
+
+      const roomParam = encodeURIComponent(`${hotel.id}_${room.id}`);
+      const url = `${window.location.origin}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
       console.log("QR URL generated:", url);
 
       try {

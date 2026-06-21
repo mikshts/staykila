@@ -43,9 +43,10 @@ export default function RoomDetailPanel({
     setReply("");
   };
   // src/components/settings/RoomDetailPanel.jsx
+  // src/components/settings/RoomDetailPanel.jsx
   const copyQRUrl = () => {
     const baseUrl = window.location.origin;
-    const roomParam = `${hotelId}_${room.id}`;
+    const roomParam = encodeURIComponent(`${hotelId}_${room.id}`);
     const url = `${baseUrl}/guest?room=${roomParam}&name=${encodeURIComponent(room.name)}`;
     navigator.clipboard.writeText(url);
     toast.success("QR URL copied to clipboard");
