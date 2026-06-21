@@ -22,6 +22,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/setup" element={<HotelSetup />} />
+            <Route path="/guest" element={<GuestPortal />} />
             <Route
               path="/"
               element={
@@ -30,7 +31,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/guest" element={<GuestPortal />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </HotelProvider>

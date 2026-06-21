@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabase";
 export default function GuestPortal() {
   const [searchParams] = useSearchParams();
   const [room, setRoom] = useState(null);
+  const [hotel, setHotel] = useState(null); // Add hotel state
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -21,6 +22,7 @@ export default function GuestPortal() {
   const [loading, setLoading] = useState(true);
   const chatEndRef = useRef(null);
   const subscriptionRef = useRef(null);
+  const qrContainerRef = useRef(null);
 
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
@@ -40,6 +42,16 @@ export default function GuestPortal() {
     try {
       setLoading(true);
       const [hotelId, roomId] = roomParam.split("_");
+
+      // Get hotel info first
+      const { data: hotelData, error: hotelError } = await supabase
+        .from("hotels")
+        .select("*")
+        .eq("id", hotelId)
+        .single();
+
+      if (hotelError) throw hotelError;
+      setHotel(hotelData);
 
       // Get room details
       const roomData = await roomService.getRoom(roomId);
@@ -66,16 +78,16 @@ export default function GuestPortal() {
       const msgs = await messageService.getMessages(roomId);
       setMessages(msgs);
 
-      // Get WiFi password
-      const { data: hotel } = await supabase
-        .from("hotels")
-        .select("wifi_password, menu_images(*)")
-        .eq("id", hotelId)
-        .single();
-
-      if (hotel) {
-        setWifiPassword(hotel.wifi_password || "");
-        setMenuImages(hotel.menu_images || []);
+      // Get WiFi password and menu images from hotel data
+      if (hotelData) {
+        setWifiPassword(hotelData.wifi_password || "");
+        // Get menu images
+        const { data: menuData } = await supabase
+          .from("menu_images")
+          .select("*")
+          .eq("hotel_id", hotelId)
+          .order("display_order");
+        setMenuImages(menuData || []);
       }
 
       // Create or get guest session
@@ -105,6 +117,20 @@ export default function GuestPortal() {
       setLoading(false);
     }
   };
+
+  // Generate QR code after room and hotel are loaded
+  useEffect(() => {
+    if (room && hotel && qrContainerRef.current && window.QRCode) {
+      // Clear previous QR
+      qrContainerRef.current.innerHTML = "";
+      const url = `${window.location.origin}/guest?room=${hotel.id}_${room.id}&name=${encodeURIComponent(room.name)}`;
+      new window.QRCode(qrContainerRef.current, {
+        text: url,
+        width: 120,
+        height: 120,
+      });
+    }
+  }, [room, hotel]);
 
   // Timer effect
   useEffect(() => {
@@ -198,7 +224,9 @@ export default function GuestPortal() {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl shadow-lg mb-3">
             <i className="fas fa-hotel text-white text-2xl"></i>
           </div>
-          <h1 className="text-xl font-bold text-gray-800">StayDesk</h1>
+          <h1 className="text-xl font-bold text-gray-800">
+            {hotel?.name || "StayDesk"}
+          </h1>
           <p className="text-gray-500 text-sm">Guest Portal</p>
         </div>
 
@@ -378,8 +406,11 @@ export default function GuestPortal() {
             </div>
 
             <div className="mt-4 text-center">
+              <div
+                ref={qrContainerRef}
+                className="flex justify-center my-2"></div>
               <p className="text-xs text-gray-400">
-                <i className="fas fa-qrcode mr-1"></i> Scan QR code to refresh
+                <i className="fas fa-qrcode mr-1"></i> Scan to refresh
               </p>
             </div>
           </div>
