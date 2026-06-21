@@ -22,25 +22,33 @@ export default function Login() {
       navigate("/");
     }
   };
-
+  // src/components/auth/Login.jsx
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Get the current URL (works for both local and production)
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      console.log("Redirect URL:", redirectUrl);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
 
       if (error) {
-        toast.error(error.message);
+        console.error("Google login error:", error);
+        toast.error(error.message || "Failed to sign in with Google");
         setGoogleLoading(false);
       }
-      // Note: No need to set loading false here as the user will be redirected
     } catch (error) {
       console.error("Google login error:", error);
-      toast.error("Failed to sign in with Google");
+      toast.error("Failed to sign in with Google. Please try again.");
       setGoogleLoading(false);
     }
   };
