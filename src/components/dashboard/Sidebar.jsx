@@ -38,11 +38,20 @@ export default function Sidebar({
         } overflow-y-auto overflow-x-hidden`}>
         {/* Logo */}
         <div className="p-6 border-b border-white/10 flex-shrink-0">
-          <div className="text-white text-lg font-bold">
-            Stay<span className="text-[#c9a84c]">Kila</span>
-          </div>
-          <div className="text-white/40 text-[10px] uppercase tracking-wider">
-            Lodge Management
+          <div className="flex items-center gap-3">
+            <img
+              src="/favicon1.png"
+              alt="StayKila"
+              className="w-8 h-8 rounded-lg object-contain"
+            />
+            <div>
+              <div className="text-white text-lg font-bold">
+                Stay<span className="text-[#c9a84c]">Kila</span>
+              </div>
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Lodge Management
+              </div>
+            </div>
           </div>
           <button
             className="lg:hidden absolute top-4 right-4 text-white/60 hover:text-white"
