@@ -690,6 +690,7 @@ export default function GuestPortal() {
               {/* Chat Tab */}
               {/* Chat Tab */}
               {/* Chat Tab */}
+              {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
                   {/* Messages */}
@@ -749,7 +750,7 @@ export default function GuestPortal() {
                     <div ref={chatEndRef} />
                   </div>
 
-                  {/* Quick Actions - 2 Column Scrollable */}
+                  {/* Quick Actions - 2 Rows Horizontal Scrollable */}
                   {showQuickActions && (
                     <div className="p-3 border-t border-white/5 bg-black/10">
                       <div className="flex items-center justify-between mb-2">
@@ -762,22 +763,41 @@ export default function GuestPortal() {
                           <i className="fas fa-times"></i>
                         </button>
                       </div>
-                      {/* Scrollable container with 2 columns */}
+                      {/* Horizontal scrollable container with 2 rows */}
                       <div className="overflow-x-auto overflow-y-visible pb-2 -mx-1 px-1">
-                        <div className="grid grid-cols-2 gap-2 min-w-min">
-                          {quickActions.map((action, index) => (
-                            <button
-                              key={index}
-                              onClick={() => sendQuickMessage(action.message)}
-                              className="group relative overflow-hidden px-3 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap">
-                              <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
-                                <i
-                                  className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
-                                {action.label}
-                              </span>
-                              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                            </button>
-                          ))}
+                        <div className="flex flex-col gap-2 min-w-max">
+                          {/* Row 1 - First 5 items */}
+                          <div className="flex gap-2">
+                            {quickActions.slice(0, 5).map((action, index) => (
+                              <button
+                                key={index}
+                                onClick={() => sendQuickMessage(action.message)}
+                                className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0">
+                                <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
+                                  <i
+                                    className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
+                                  {action.label}
+                                </span>
+                                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                              </button>
+                            ))}
+                          </div>
+                          {/* Row 2 - Last 5 items */}
+                          <div className="flex gap-2">
+                            {quickActions.slice(5, 10).map((action, index) => (
+                              <button
+                                key={index + 5}
+                                onClick={() => sendQuickMessage(action.message)}
+                                className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0">
+                                <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
+                                  <i
+                                    className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
+                                  {action.label}
+                                </span>
+                                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       {/* Scroll indicator */}
