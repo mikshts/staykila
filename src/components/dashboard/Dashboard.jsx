@@ -1,4 +1,4 @@
-// src/components/dashboard/Dashboard.jsx
+/ src/components/dashboard/Dashboard.jsx
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
@@ -19,6 +19,7 @@ import {
   PriceModal,
   WifiModal,
   MenuModal,
+  CheckoutModal, // Added here
 } from "../modals";
 import {
   ActivityPanel,
@@ -48,7 +49,9 @@ export default function Dashboard() {
   const [showReportsPanel, setShowReportsPanel] = useState(false);
   const [uploading, setUploading] = useState(false); // <-- ADD THIS LINE
   const [showQRDownload, setShowQRDownload] = useState(false);
-
+  // Add this state with your other useState declarations
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutRoom, setCheckoutRoom] = useState(null);
   const [activityLog, setActivityLog] = useState([]);
   const [messages, setMessages] = useState({});
   const [stats, setStats] = useState({
@@ -508,6 +511,7 @@ export default function Dashboard() {
     }
   };
 
+  // Replace the handleCheckout function
   const handleCheckout = async (roomId) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
@@ -543,12 +547,20 @@ export default function Dashboard() {
       );
 
       toast.success(`${room.name} checked out successfully`);
+      setShowCheckoutModal(false);
+      setCheckoutRoom(null);
       fetchRooms();
       fetchMessages();
     } catch (error) {
       console.error("Checkout error:", error);
       toast.error("Failed to checkout");
     }
+  };
+
+  // Add a function to open the checkout modal
+  const openCheckoutModal = (room) => {
+    setCheckoutRoom(room);
+    setShowCheckoutModal(true);
   };
 
   const handleMarkAvailable = async (roomId) => {
@@ -884,9 +896,7 @@ export default function Dashboard() {
                 else if (action === "extend") setShowExtendModal(true);
                 else if (action === "detail") setShowRoomDetail(true);
                 else if (action === "checkout") {
-                  if (window.confirm(`Check out ${room.name}?`)) {
-                    handleCheckout(room.id);
-                  }
+                  openCheckoutModal(room); // Replace window.confirm
                 }
               }}
               onMarkAvailable={handleMarkAvailable}
@@ -905,9 +915,7 @@ export default function Dashboard() {
                 else if (action === "extend") setShowExtendModal(true);
                 else if (action === "detail") setShowRoomDetail(true);
                 else if (action === "checkout") {
-                  if (window.confirm(`Check out ${room.name}?`)) {
-                    handleCheckout(room.id);
-                  }
+                  openCheckoutModal(room); // Replace window.confirm
                 }
               }}
               onMarkAvailable={handleMarkAvailable}
@@ -962,6 +970,17 @@ export default function Dashboard() {
           currentPassword={wifiPassword}
           onSave={updateWifiPassword}
           onClose={() => setShowWifiModal(false)}
+        />
+      )}
+      {/* Checkout Modal */}
+      {showCheckoutModal && checkoutRoom && (
+        <CheckoutModal
+          room={checkoutRoom}
+          onConfirm={() => handleCheckout(checkoutRoom.id)}
+          onClose={() => {
+            setShowCheckoutModal(false);
+            setCheckoutRoom(null);
+          }}
         />
       )}
       {showReportsPanel && (
@@ -1037,10 +1056,8 @@ export default function Dashboard() {
             setShowExtendModal(true);
           }}
           onCheckout={() => {
-            if (window.confirm(`Check out ${selectedRoom.name}?`)) {
-              handleCheckout(selectedRoom.id);
-              setShowRoomDetail(false);
-            }
+            setShowRoomDetail(false);
+            openCheckoutModal(selectedRoom); // Replace window.confirm
           }}
           onMarkAvailable={() => {
             handleMarkAvailable(selectedRoom.id);
