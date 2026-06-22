@@ -1,5 +1,5 @@
 // src/components/modals/CheckinModal.jsx
-import React from "react";
+import React, { useState } from "react";
 
 export default function CheckinModal({
   room,
@@ -8,6 +8,33 @@ export default function CheckinModal({
   onClose,
   formatTime,
 }) {
+  const [selectedRoomType, setSelectedRoomType] = useState("single");
+
+  // Room type definitions with base prices
+  const roomTypes = [
+    {
+      id: "single",
+      label: "Single Bed",
+      icon: "🛏️",
+      description: "1 person · Standard room",
+      multiplier: 1,
+    },
+    {
+      id: "double",
+      label: "Double Bed",
+      icon: "🛏️🛏️",
+      description: "2 persons · Queen/King bed",
+      multiplier: 1.5,
+    },
+    {
+      id: "family",
+      label: "Family Room",
+      icon: "🏠",
+      description: "4-6 persons · Multiple beds",
+      multiplier: 2.5,
+    },
+  ];
+
   const durations = [
     { hours: 1, label: "1 Hour", note: "Quick rest", icon: "🌙" },
     { hours: 3, label: "3 Hours", note: "Short stay", icon: "☕" },
@@ -15,6 +42,25 @@ export default function CheckinModal({
     { hours: 12, label: "12 Hours", note: "Day use", icon: "🌅" },
     { hours: 24, label: "Overnight", note: "24 hours", icon: "🌛" },
   ];
+
+  // Get base price for duration
+  const getBasePrice = (hours) => {
+    return prices[hours] || hours * 100;
+  };
+
+  // Calculate price with room type multiplier
+  const getCalculatedPrice = (hours) => {
+    const basePrice = getBasePrice(hours);
+    const selectedType = roomTypes.find((t) => t.id === selectedRoomType);
+    const multiplier = selectedType ? selectedType.multiplier : 1;
+    return Math.round(basePrice * multiplier);
+  };
+
+  // Get room type label for display
+  const getRoomTypeLabel = () => {
+    const selected = roomTypes.find((t) => t.id === selectedRoomType);
+    return selected ? selected.label : "Single Bed";
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -29,30 +75,78 @@ export default function CheckinModal({
           </div>
         </div>
 
+        {/* Room Type Selection */}
+        <div className="mb-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#8a8278] mb-2">
+            Select Room Type
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {roomTypes.map((type) => (
+              <button
+                key={type.id}
+                onClick={() => setSelectedRoomType(type.id)}
+                className={`p-3 rounded-xl border-2 text-center transition-all duration-200 ${
+                  selectedRoomType === type.id
+                    ? "border-[#c9a84c] bg-[#c9a84c]/10 shadow-md"
+                    : "border-[#e5e2db] hover:border-[#c9a84c] hover:bg-[#f7f3ee]"
+                }`}>
+                <div className="text-2xl">{type.icon}</div>
+                <div className="text-[10px] font-semibold mt-1">
+                  {type.label}
+                </div>
+                <div className="text-[8px] text-[#8a8278] mt-0.5">
+                  {type.description}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-2">
-          {durations.map((d) => (
-            <button
-              key={d.hours}
-              onClick={() => onCheckin(room.id, d.hours)}
-              className="w-full flex items-center gap-3 p-3 bg-[#f7f3ee] rounded-xl hover:border-[#c9a84c] border-2 border-transparent transition">
-              <span className="text-xl">{d.icon}</span>
-              <div className="flex-1 text-left">
-                <div className="font-medium">{d.label}</div>
-                <div className="text-xs text-[#8a8278]">{d.note}</div>
-              </div>
-              <div className="text-right">
-                <div className="font-bold text-[#c9a84c]">
-                  ₱{prices[d.hours] || d.hours * 100}
+          {durations.map((d) => {
+            const calculatedPrice = getCalculatedPrice(d.hours);
+            const basePrice = getBasePrice(d.hours);
+            const selectedType = roomTypes.find(
+              (t) => t.id === selectedRoomType,
+            );
+            const hasMultiplier = selectedType && selectedType.multiplier > 1;
+
+            return (
+              <button
+                key={d.hours}
+                onClick={() =>
+                  onCheckin(room.id, d.hours, calculatedPrice, selectedRoomType)
+                }
+                className="w-full flex items-center gap-3 p-3 bg-[#f7f3ee] rounded-xl hover:border-[#c9a84c] border-2 border-transparent transition">
+                <span className="text-xl">{d.icon}</span>
+                <div className="flex-1 text-left">
+                  <div className="font-medium">{d.label}</div>
+                  <div className="text-xs text-[#8a8278]">{d.note}</div>
+                  <div className="text-[10px] text-[#0f1b2d] mt-0.5">
+                    <span className="bg-[#c9a84c]/20 px-2 py-0.5 rounded-full">
+                      {getRoomTypeLabel()}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-[10px] text-[#8a8278]">
-                  {formatTime(new Date().toISOString())} →{" "}
-                  {formatTime(
-                    new Date(Date.now() + d.hours * 3600000).toISOString(),
+                <div className="text-right">
+                  <div className="font-bold text-[#c9a84c]">
+                    ₱{calculatedPrice}
+                  </div>
+                  {hasMultiplier && (
+                    <div className="text-[8px] text-[#8a8278] line-through">
+                      ₱{basePrice}
+                    </div>
                   )}
+                  <div className="text-[10px] text-[#8a8278] mt-0.5">
+                    {formatTime(new Date().toISOString())} →{" "}
+                    {formatTime(
+                      new Date(Date.now() + d.hours * 3600000).toISOString(),
+                    )}
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
 
         <button

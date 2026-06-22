@@ -415,12 +415,12 @@ export default function Dashboard() {
   };
 
   // Room actions
-  const handleCheckin = async (roomId, hours) => {
+  // src/components/dashboard/Dashboard.jsx - Updated handleCheckin
+  const handleCheckin = async (roomId, hours, calculatedPrice, roomType) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
       if (!room) return;
 
-      const price = prices[hours] || hours * 100;
       const startTime = new Date();
       const endTime = new Date(startTime.getTime() + hours * 3600000);
 
@@ -429,12 +429,17 @@ export default function Dashboard() {
         .insert({
           room_id: roomId,
           hotel_id: hotel.id,
+          guest_name: roomType
+            ? `${roomType.charAt(0).toUpperCase() + roomType.slice(1)} Room`
+            : "Guest",
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           hours: hours,
-          price: price,
+          price: calculatedPrice,
           status: "active",
           checked_in_at: startTime.toISOString(),
+          // Store room type in metadata if needed
+          metadata: { room_type: roomType || "single" },
         })
         .select()
         .single();
@@ -448,12 +453,18 @@ export default function Dashboard() {
 
       if (roomError) throw roomError;
 
+      const roomTypeLabel = roomType
+        ? roomType.charAt(0).toUpperCase() + roomType.slice(1)
+        : "Single";
+
       await logActivity(
         "checkin",
-        `Checked into ${room.name} for ${hours}h (₱${price})`,
+        `${room.name} checked in (${roomTypeLabel}) for ${hours}h (₱${calculatedPrice})`,
       );
 
-      toast.success(`${room.name} checked in for ${hours} hours`);
+      toast.success(
+        `${room.name} checked in for ${hours} hours (${roomTypeLabel})`,
+      );
       setShowCheckinModal(false);
       fetchRooms();
       fetchMessages();
@@ -911,6 +922,7 @@ export default function Dashboard() {
       </main>
 
       {/* Modals and Panels */}
+      {/* Updated CheckinModal call */}
       {showCheckinModal && selectedRoom && (
         <CheckinModal
           room={selectedRoom}
