@@ -12,6 +12,7 @@ import {
   GuestPortalLoading,
 } from "../ui";
 import QRCode from "qrcode";
+import ImageViewer from "./ImageViewer"; // Import the new component
 
 export default function GuestPortal() {
   const [searchParams] = useSearchParams();
@@ -301,11 +302,20 @@ export default function GuestPortal() {
     }
   }, [room, hotel]);
 
+  // Timer effect - Runs continuously
   useEffect(() => {
-    if (timeRemaining <= 0) return;
+    if (timeRemaining <= 0) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      return;
+    }
+
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
+
     timerIntervalRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         const newTime = prev - 1000;
@@ -317,9 +327,11 @@ export default function GuestPortal() {
         return newTime;
       });
     }, 1000);
+
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
       }
     };
   }, [timeRemaining]);
@@ -387,58 +399,6 @@ export default function GuestPortal() {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard!");
-  };
-
-  // Image Viewer Component - Fixed
-  const ImageViewer = ({ imageUrl, onClose }) => {
-    useEffect(() => {
-      const handleEscape = (e) => {
-        if (e.key === "Escape") onClose();
-      };
-      document.addEventListener("keydown", handleEscape);
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.removeEventListener("keydown", handleEscape);
-        document.body.style.overflow = "unset";
-      };
-    }, [onClose]);
-
-    // Prevent click propagation to avoid closing when clicking inside
-    const handleImageClick = (e) => {
-      e.stopPropagation();
-    };
-
-    return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fadeIn"
-        onClick={onClose}>
-        <div
-          className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center"
-          onClick={handleImageClick}>
-          <img
-            src={imageUrl}
-            alt="Menu full view"
-            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-            loading="lazy"
-          />
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-all duration-300 hover:scale-110">
-            <i className="fas fa-times text-xl"></i>
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(imageUrl, "_blank");
-            }}
-            className="absolute bottom-4 right-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm flex items-center gap-2 transition-all duration-300 backdrop-blur-sm border border-white/10">
-            <i className="fas fa-external-link-alt"></i>
-            Open in new tab
-          </button>
-        </div>
-      </div>
-    );
   };
 
   if (loading) {
@@ -884,39 +844,49 @@ export default function GuestPortal() {
                 </div>
               )}
 
-              {/* Menu Tab - FIXED */}
+              {/* Menu Tab */}
+              {/* Menu Tab */}
               {activeTab === "menu" && (
                 <div className="animate-fadeIn">
                   {menuImages.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      {menuImages.map((img, i) => (
-                        <div
-                          key={i}
-                          className="group relative rounded-2xl overflow-hidden bg-white/5 aspect-square cursor-pointer hover:shadow-xl hover:shadow-black/30 transition-all duration-300 border border-white/5"
-                          onClick={() => setSelectedImage(img.image_url)}>
-                          <img
-                            src={img.image_url}
-                            alt={`Menu ${i + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
-                          {/* Overlay gradient - always visible at bottom */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          {/* Center expand icon - appears on hover */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="bg-black/60 rounded-full p-3 backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-300">
-                              <i className="fas fa-expand text-white text-lg"></i>
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        {menuImages.map((img, i) => (
+                          <div
+                            key={i}
+                            className="group relative rounded-2xl overflow-hidden bg-white/5 aspect-square cursor-pointer hover:shadow-xl hover:shadow-black/30 transition-all duration-300 border border-white/5"
+                            onClick={() => setSelectedImage(img.image_url)}>
+                            <img
+                              src={img.image_url}
+                              alt={`Menu ${i + 1}`}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                            {/* Overlay gradient - always visible at bottom */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            {/* Center expand icon - appears on hover */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <div className="bg-black/60 rounded-full p-3 backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                                <i className="fas fa-expand text-white text-lg"></i>
+                              </div>
+                            </div>
+                            {/* Bottom text - always visible with gradient background */}
+                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                              <p className="text-[10px] font-medium text-white/80 text-center group-hover:text-white transition-colors duration-300">
+                                <i className="fas fa-eye text-[#c9a84c] mr-1.5 text-[8px]"></i>
+                                Tap to view full size
+                              </p>
                             </div>
                           </div>
-                          {/* Bottom text - always visible with gradient background */}
-                          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                            <p className="text-[10px] font-medium text-white/80 text-center group-hover:text-white transition-colors duration-300">
-                              <i className="fas fa-eye text-[#c9a84c] mr-1.5 text-[8px]"></i>
-                              Tap to view full size
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                      {/* Image count indicator */}
+                      <div className="text-center mt-3">
+                        <p className="text-[10px] text-gray-500">
+                          <i className="fas fa-images text-[#c9a84c] mr-1"></i>
+                          {menuImages.length} menu items available
+                        </p>
+                      </div>
+                    </>
                   ) : (
                     <div className="text-center py-8 bg-white/5 rounded-2xl border border-white/5">
                       <i className="fas fa-utensils text-gray-600 text-3xl mb-3 block"></i>
@@ -946,30 +916,23 @@ export default function GuestPortal() {
         </div>
       </div>
 
-      {/* Image Viewer Modal */}
+      {/* Image Viewer Modal - Using imported component */}
       {selectedImage && (
         <ImageViewer
-          imageUrl={selectedImage}
+          images={menuImages.map((img) => img.image_url)}
+          currentIndex={menuImages.findIndex(
+            (img) => img.image_url === selectedImage,
+          )}
           onClose={() => setSelectedImage(null)}
+          onIndexChange={(newIndex) =>
+            setSelectedImage(menuImages[newIndex].image_url)
+          }
         />
       )}
 
       {/* Animations */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-
+      {/* Animations - using regular style tag since animations are in tailwind.config */}
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }
