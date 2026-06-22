@@ -441,10 +441,13 @@ export default function GuestPortal() {
 
       <div className="relative max-w-md mx-auto px-4 py-6 min-h-screen flex flex-col">
         {/* Header - Matching Landing Page */}
+        {/* GuestPortal.jsx - Header section */}
         <div className="text-center mb-8 pt-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/5 border border-[#c9a84c]/30 shadow-lg shadow-black/30 mb-4">
-            <i className="fas fa-hotel text-[#c9a84c] text-2xl"></i>
-          </div>
+          <img
+            src="/favicon1.png"
+            alt="StayKila"
+            className="w-16 h-16 rounded-2xl mx-auto mb-4 object-contain bg-white/5 border border-[#c9a84c]/30 shadow-lg shadow-black/30 p-2"
+          />
           <h1
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
             className="text-3xl font-medium text-white tracking-tight">

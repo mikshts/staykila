@@ -175,9 +175,11 @@ function Navbar() {
       }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-[#c9a84c]/40 flex items-center justify-center shrink-0">
-            <i className="fas fa-hotel text-[#c9a84c] text-sm"></i>
-          </div>
+          <img
+            src="/favicon1.png"
+            alt="StayKila"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain"
+          />
           <span
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
             className="text-lg sm:text-xl text-white font-medium">
@@ -681,12 +683,20 @@ function QRSystem() {
               viewport={{ once: true }}
               transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
               className="absolute inset-0 rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#16243a] to-[#0c1522] border border-white/10 shadow-2xl shadow-black/50 p-5 sm:p-7 flex flex-col">
+              {/* QRSystem component - Key card header */}
               <div className="flex items-center justify-between">
-                <span
-                  style={{ fontFamily: "'Cormorant Garamond', serif" }}
-                  className="text-white text-base sm:text-lg">
-                  StayKila
-                </span>
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/favicon1.png"
+                    alt="StayKila"
+                    className="w-6 h-6 object-contain"
+                  />
+                  <span
+                    style={{ fontFamily: "'Cormorant Garamond', serif" }}
+                    className="text-white text-base sm:text-lg">
+                    StayKila
+                  </span>
+                </div>
                 <i className="fas fa-hotel text-[#c9a84c] text-sm"></i>
               </div>
               <p className="text-[10px] sm:text-[11px] tracking-widest uppercase text-gray-500 mt-1">
@@ -1501,13 +1511,16 @@ function Footer() {
   return (
     <footer className="relative bg-[#0c1522] border-t border-white/10 py-10 md:py-12 snap-none">
       <div className="max-w-7xl mx-auto px-5 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        {/* Navbar component - Updated logo section */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-white/5 border border-[#c9a84c]/40 flex items-center justify-center shrink-0">
-            <i className="fas fa-hotel text-[#c9a84c] text-xs"></i>
-          </div>
+          <img
+            src="/favicon1.png"
+            alt="StayKila"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain"
+          />
           <span
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-lg text-white">
+            className="text-lg sm:text-xl text-white font-medium">
             StayKila
           </span>
         </div>
