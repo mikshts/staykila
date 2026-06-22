@@ -146,10 +146,12 @@ function Counter({ value, suffix = "", duration = 1.6 }) {
 
 /* ------------------------------------------------------------------ */
 /*  Sticky nav — transparent over the hero, solidifies on scroll.     */
+/*  Mobile gets a slide-down menu instead of relying on hidden links. */
 /* ------------------------------------------------------------------ */
 function Navbar() {
   const navigate = useNavigate();
   const [solid, setSolid] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setSolid(window.scrollY > 40);
@@ -157,41 +159,44 @@ function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const navLinks = [
+    { href: "#rooms", label: "Rooms" },
+    { href: "#qr", label: "QR System" },
+    { href: "#analytics", label: "Analytics" },
+    { href: "#pricing", label: "Pricing" },
+  ];
+
   return (
     <header
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-        solid
-          ? "bg-[#0f1b2d]/80 backdrop-blur-md border-b border-white/10 py-3"
-          : "bg-transparent py-5"
+        solid || menuOpen
+          ? "bg-[#0f1b2d]/95 backdrop-blur-md border-b border-white/10 py-3"
+          : "bg-gradient-to-b from-[#0f1b2d]/70 to-transparent py-4 md:py-5"
       }`}>
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-white/5 border border-[#c9a84c]/40 flex items-center justify-center">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-[#c9a84c]/40 flex items-center justify-center shrink-0">
             <i className="fas fa-hotel text-[#c9a84c] text-sm"></i>
           </div>
           <span
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-xl text-white font-medium">
+            className="text-lg sm:text-xl text-white font-medium">
             StayKila
           </span>
         </div>
 
         <nav className="hidden md:flex items-center gap-8 text-sm text-gray-300">
-          <a href="#rooms" className="hover:text-white transition-colors">
-            Rooms
-          </a>
-          <a href="#qr" className="hover:text-white transition-colors">
-            QR System
-          </a>
-          <a href="#analytics" className="hover:text-white transition-colors">
-            Analytics
-          </a>
-          <a href="#pricing" className="hover:text-white transition-colors">
-            Pricing
-          </a>
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="hover:text-white transition-colors">
+              {link.label}
+            </a>
+          ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           <button
             onClick={() => navigate("/signin")}
             className="text-sm font-semibold text-white px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">
@@ -203,7 +208,56 @@ function Navbar() {
             Start Free Trial
           </button>
         </div>
+
+        {/* Mobile: compact CTA + hamburger toggle */}
+        <div className="flex items-center gap-2 md:hidden">
+          <button
+            onClick={() => navigate("/signin")}
+            className="text-xs font-semibold text-[#0f1b2d] bg-gradient-to-r from-[#c9a84c] to-[#e8d189] px-3.5 py-2 rounded-lg whitespace-nowrap">
+            Try Free
+          </button>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Toggle menu"
+            aria-expanded={menuOpen}
+            className="w-9 h-9 rounded-lg border border-white/15 flex items-center justify-center text-white shrink-0">
+            <i
+              className={`fas ${menuOpen ? "fa-xmark" : "fa-bars"} text-sm`}></i>
+          </button>
+        </div>
       </div>
+
+      {/* Mobile dropdown menu */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="md:hidden overflow-hidden border-t border-white/10 bg-[#0f1b2d]">
+            <nav className="flex flex-col px-4 sm:px-6 py-3">
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="py-3 text-sm text-gray-300 border-b border-white/5 last:border-b-0">
+                  {link.label}
+                </a>
+              ))}
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate("/signin");
+                }}
+                className="mt-3 text-sm font-semibold text-white py-2.5 rounded-lg border border-white/15">
+                Login
+              </button>
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
@@ -270,7 +324,7 @@ function Hero() {
   return (
     <section
       ref={sectionRef}
-      className="relative h-screen min-h-[720px] w-full snap-start snap-always overflow-hidden flex items-center justify-center">
+      className="relative min-h-screen w-full snap-start snap-always overflow-hidden flex items-center justify-center pt-24 pb-12 md:pt-28">
       {/* Parallax backdrop with actual hotel image */}
       <motion.div style={{ y: bgY }} className="absolute inset-0">
         {/* Hero background image */}
@@ -310,8 +364,8 @@ function Hero() {
 
       <motion.div
         style={{ opacity: contentOpacity }}
-        className="relative z-10 max-w-7xl mx-auto px-6 w-full pt-24">
-        <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-16 items-center">
+        className="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 w-full">
+        <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-16 items-center">
           {/* Copy */}
           <motion.div
             initial="hidden"
@@ -325,7 +379,7 @@ function Hero() {
             <motion.h1
               variants={fadeUp}
               style={{ fontFamily: "'Cormorant Garamond', serif" }}
-              className="text-5xl sm:text-6xl lg:text-[4.2rem] text-white font-medium leading-[1.05] mb-6">
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.2rem] text-white font-medium leading-[1.1] lg:leading-[1.05] mb-5 sm:mb-6">
               Run Every Room
               <br />
               From <span className="italic text-[#c9a84c]">One Dashboard.</span>
@@ -333,7 +387,7 @@ function Hero() {
 
             <motion.p
               variants={fadeUp}
-              className="text-gray-300 text-lg leading-relaxed max-w-xl mx-auto lg:mx-0 mb-9">
+              className="text-gray-300 text-base sm:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8 sm:mb-9">
               StayKila helps hotels, lodges, inns, and resorts manage room
               occupancy, QR check-ins, guest messaging, revenue, and daily
               operations — all in real time.
@@ -341,7 +395,7 @@ function Hero() {
 
             <motion.div
               variants={fadeUp}
-              className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4">
+              className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 sm:gap-4">
               <button
                 onClick={() => navigate("/signin")}
                 className="w-full sm:w-auto text-[#0f1b2d] font-semibold bg-gradient-to-r from-[#c9a84c] to-[#e8d189] px-7 py-3.5 rounded-xl hover:shadow-[0_12px_32px_-8px_rgba(201,168,76,0.55)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">
@@ -355,7 +409,10 @@ function Hero() {
             </motion.div>
           </motion.div>
 
-          {/* Floating dashboard preview */}
+          {/* Floating dashboard preview — desktop/tablet only, the
+              floating absolute-positioned cards don't have a clean
+              mobile layout, so we show a simplified static version
+              below instead of clipping/overlapping them. */}
           <motion.div
             variants={scaleIn}
             initial="hidden"
@@ -424,13 +481,69 @@ function Hero() {
               floatDuration={6.5}
             />
           </motion.div>
+
+          {/* Compact mobile/tablet stat row — replaces the floating
+              dashboard so nothing overlaps or spills off-screen. */}
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            transition={{ delay: 0.4 }}
+            className="lg:hidden grid grid-cols-2 gap-3 max-w-md mx-auto w-full">
+            {[
+              {
+                label: "Available",
+                value: "18",
+                accent: "#34d399",
+                icon: "fa-door-open",
+              },
+              {
+                label: "Occupied",
+                value: "42",
+                accent: "#c9a84c",
+                icon: "fa-bed",
+              },
+              {
+                label: "Revenue Today",
+                value: "$6,240",
+                accent: "#60a5fa",
+                icon: "fa-sack-dollar",
+              },
+              {
+                label: "Occupancy",
+                value: "70%",
+                accent: "#e8d189",
+                icon: "fa-chart-pie",
+              },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-xl border border-white/10 bg-white/[0.05] backdrop-blur-sm p-4 flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${s.accent}1f` }}>
+                  <i
+                    className={`fas ${s.icon} text-xs`}
+                    style={{ color: s.accent }}></i>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-gray-500 leading-none mb-1 truncate">
+                    {s.label}
+                  </p>
+                  <p className="text-sm font-semibold text-white leading-none">
+                    {s.value}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </motion.div>
         </div>
       </motion.div>
 
       {/* Scroll cue */}
       <motion.div
         style={{ opacity: contentOpacity }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-gray-400">
+        className="hidden sm:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex-col items-center gap-2 text-gray-400">
         <span className="text-[11px] tracking-[0.2em] uppercase">Scroll</span>
         <motion.span
           animate={{ y: [0, 6, 0] }}
@@ -488,18 +601,18 @@ function RoomManagement() {
   return (
     <section
       id="rooms"
-      className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden">
+      className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(201,168,76,0.08),transparent_55%)]" />
-      <div className="relative max-w-7xl mx-auto px-6">
-        <Reveal className="text-center max-w-2xl mx-auto mb-16">
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-16">
           <Eyebrow>The Front Desk</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight mb-5">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-4 md:mb-5">
             Manage Every Room{" "}
             <span className="italic text-[#c9a84c]">Instantly.</span>
           </h2>
-          <p className="text-gray-400 text-base leading-relaxed">
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
             See status, availability, and turnover across your entire property
             the moment it changes — no walking the halls required.
           </p>
@@ -510,7 +623,7 @@ function RoomManagement() {
           whileInView="show"
           viewport={{ once: true, amount: 0.15 }}
           variants={staggerContainer}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {ROOMS.map((room) => {
             const s = ROOM_STATUS_STYLES[room.status];
             return (
@@ -519,18 +632,20 @@ function RoomManagement() {
                 variants={fadeUp}
                 whileHover={{ y: -6 }}
                 transition={{ duration: 0.25 }}
-                className={`relative rounded-2xl border ${s.border} bg-white/[0.04] backdrop-blur-sm p-5 cursor-default`}
+                className={`relative rounded-2xl border ${s.border} bg-white/[0.04] backdrop-blur-sm p-4 sm:p-5 cursor-default`}
                 style={{ boxShadow: `0 12px 30px -10px ${s.glow}` }}>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <span className="text-xs uppercase tracking-wide text-gray-500">
                     Room
                   </span>
                   <span className={`w-2 h-2 rounded-full ${s.dot}`} />
                 </div>
-                <p className="text-2xl font-semibold text-white mb-1">
+                <p className="text-xl sm:text-2xl font-semibold text-white mb-1">
                   {room.id}
                 </p>
-                <p className={`text-sm font-medium ${s.text}`}>{room.status}</p>
+                <p className={`text-xs sm:text-sm font-medium ${s.text}`}>
+                  {room.status}
+                </p>
               </motion.div>
             );
           })}
@@ -551,30 +666,30 @@ function QRSystem() {
   return (
     <section
       id="qr"
-      className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden">
+      className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_60%,rgba(201,168,76,0.1),transparent_50%)]" />
-      <div className="relative max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center w-full">
         {/* Key-card visual */}
         <Reveal
           variants={scaleIn}
           className="order-2 lg:order-1 flex justify-center">
-          <div className="relative w-[300px] h-[420px]">
+          <div className="relative w-[240px] sm:w-[280px] md:w-[300px] h-[340px] sm:h-[400px] md:h-[420px]">
             {/* Key card body */}
             <motion.div
               initial={{ rotate: -6 }}
               whileInView={{ rotate: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-[#16243a] to-[#0c1522] border border-white/10 shadow-2xl shadow-black/50 p-7 flex flex-col">
+              className="absolute inset-0 rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#16243a] to-[#0c1522] border border-white/10 shadow-2xl shadow-black/50 p-5 sm:p-7 flex flex-col">
               <div className="flex items-center justify-between">
                 <span
                   style={{ fontFamily: "'Cormorant Garamond', serif" }}
-                  className="text-white text-lg">
+                  className="text-white text-base sm:text-lg">
                   StayKila
                 </span>
                 <i className="fas fa-hotel text-[#c9a84c] text-sm"></i>
               </div>
-              <p className="text-[11px] tracking-widest uppercase text-gray-500 mt-1">
+              <p className="text-[10px] sm:text-[11px] tracking-widest uppercase text-gray-500 mt-1">
                 Room 214 · Key Access
               </p>
 
@@ -586,7 +701,7 @@ function QRSystem() {
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
-                  className="w-44 h-44 rounded-xl bg-white p-3 shadow-[0_0_40px_-10px_rgba(201,168,76,0.5)]">
+                  className="w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-xl bg-white p-3 shadow-[0_0_40px_-10px_rgba(201,168,76,0.5)]">
                   <div
                     className="w-full h-full rounded-md"
                     style={{
@@ -598,12 +713,13 @@ function QRSystem() {
                 </motion.div>
               </div>
 
-              <p className="text-center text-[11px] text-gray-500">
+              <p className="text-center text-[10px] sm:text-[11px] text-gray-500">
                 Scan to unlock your stay
               </p>
             </motion.div>
 
-            {/* Phone mockup, peeking from behind */}
+            {/* Phone mockup, peeking from behind. Hidden on small phones
+                where there isn't room for it without overlapping. */}
             <motion.div
               initial={{ opacity: 0, x: 30, rotate: 8 }}
               whileInView={{ opacity: 1, x: 0, rotate: 8 }}
@@ -613,7 +729,7 @@ function QRSystem() {
                 delay: 0.3,
                 ease: [0.16, 1, 0.3, 1],
               }}
-              className="absolute -right-16 bottom-[-2rem] w-32 h-64 rounded-[22px] bg-[#0f1b2d] border-4 border-[#1d2c42] shadow-2xl shadow-black/60 p-2 hidden sm:block">
+              className="absolute -right-10 sm:-right-14 md:-right-16 bottom-[-1.5rem] sm:bottom-[-2rem] w-24 sm:w-28 md:w-32 h-48 sm:h-56 md:h-64 rounded-[18px] sm:rounded-[22px] bg-[#0f1b2d] border-4 border-[#1d2c42] shadow-2xl shadow-black/60 p-2 hidden md:block">
               <div className="w-full h-full rounded-2xl bg-gradient-to-b from-white/10 to-transparent flex flex-col items-center justify-center gap-2 px-3">
                 <i className="fas fa-wifi text-[#c9a84c] text-sm"></i>
                 <p className="text-[9px] text-gray-300 text-center leading-tight">
@@ -634,16 +750,16 @@ function QRSystem() {
           <Eyebrow>Contactless by design</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight mb-5">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-4 md:mb-5">
             A QR Code For{" "}
             <span className="italic text-[#c9a84c]">Every Room.</span>
           </h2>
-          <p className="text-gray-400 text-base leading-relaxed max-w-md mb-7">
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-md mb-6 md:mb-7">
             StayKila generates a unique QR code for every room automatically.
             One scan gives guests everything they need, without a single app
             download.
           </p>
-          <ul className="space-y-3.5">
+          <ul className="space-y-3 sm:space-y-3.5">
             {[
               {
                 icon: "fa-circle-info",
@@ -688,18 +804,18 @@ const CHAT_MESSAGES = [
 
 function GuestMessaging() {
   return (
-    <section className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden">
+    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_30%,rgba(201,168,76,0.08),transparent_55%)]" />
-      <div className="relative max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center w-full">
         <Reveal>
           <Eyebrow>Always reachable</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight mb-5">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-4 md:mb-5">
             Chat With Guests{" "}
             <span className="italic text-[#c9a84c]">In Real Time.</span>
           </h2>
-          <p className="text-gray-400 text-base leading-relaxed max-w-md">
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-md">
             Every room's QR code opens a direct line to your front desk, so
             requests get answered in minutes, not after a missed phone call.
           </p>
@@ -710,13 +826,13 @@ function GuestMessaging() {
           whileInView="show"
           viewport={{ once: true, amount: 0.3 }}
           variants={staggerContainer}
-          className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-2xl shadow-black/30 p-5 max-w-md mx-auto w-full">
+          className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-2xl shadow-black/30 p-4 sm:p-5 max-w-md mx-auto w-full">
           <div className="flex items-center gap-3 pb-4 mb-4 border-b border-white/10">
-            <div className="w-9 h-9 rounded-full bg-[#c9a84c]/20 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-full bg-[#c9a84c]/20 flex items-center justify-center shrink-0">
               <i className="fas fa-concierge-bell text-[#c9a84c] text-xs"></i>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-white leading-none">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white leading-none truncate">
                 Room 214 · Front Desk
               </p>
               <p className="text-[11px] text-emerald-400 mt-1">Online</p>
@@ -761,20 +877,20 @@ const CHECKIN_STEPS = [
 
 function CheckInSystem() {
   return (
-    <section className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden">
+    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,168,76,0.1),transparent_50%)]" />
-      <div className="relative max-w-6xl mx-auto px-6">
-        <Reveal className="text-center max-w-2xl mx-auto mb-16">
+      <div className="relative max-w-6xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-16">
           <Eyebrow>Frictionless arrivals</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight mb-5">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-4 md:mb-5">
             Fast{" "}
             <span className="italic text-[#c9a84c]">
               Check-ins & Checkouts.
             </span>
           </h2>
-          <p className="text-gray-400 text-base leading-relaxed">
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
             One workflow takes a guest from arrival to departure, with stay
             timers that keep the whole property in sync.
           </p>
@@ -786,33 +902,33 @@ function CheckInSystem() {
           whileInView="show"
           viewport={{ once: true, amount: 0.2 }}
           variants={staggerContainer}
-          className="relative flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6">
+          className="relative grid grid-cols-3 sm:grid-cols-5 md:flex md:items-center md:justify-between gap-4 sm:gap-3 md:gap-6">
           <div className="hidden md:block absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#c9a84c]/40 to-transparent -translate-y-1/2 z-0" />
-          {CHECKIN_STEPS.map((step, i) => (
+          {CHECKIN_STEPS.map((step) => (
             <motion.div
               key={step.label}
               variants={scaleIn}
-              className="relative z-10 flex flex-col items-center text-center gap-3 flex-1">
-              <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-[#c9a84c]/30 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/30">
-                <i className={`fas ${step.icon} text-[#c9a84c] text-lg`}></i>
+              className="relative z-10 flex flex-col items-center text-center gap-2 sm:gap-3 md:flex-1">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-2xl bg-white/[0.05] border border-[#c9a84c]/30 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/30">
+                <i
+                  className={`fas ${step.icon} text-[#c9a84c] text-base md:text-lg`}></i>
               </div>
-              <p className="text-sm font-medium text-white">{step.label}</p>
-              {i < CHECKIN_STEPS.length - 1 && (
-                <i className="fas fa-chevron-down md:fa-chevron-right text-gray-600 text-xs md:hidden"></i>
-              )}
+              <p className="text-xs sm:text-sm font-medium text-white leading-snug">
+                {step.label}
+              </p>
             </motion.div>
           ))}
         </motion.div>
 
         {/* Live stay timer card */}
-        <Reveal className="mt-16 max-w-md mx-auto">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl p-6 text-center shadow-xl shadow-black/30">
+        <Reveal className="mt-10 md:mt-16 max-w-md mx-auto">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl p-5 sm:p-6 text-center shadow-xl shadow-black/30">
             <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">
               Room 214 · Stay Timer
             </p>
             <p
               style={{ fontFamily: "'Cormorant Garamond', serif" }}
-              className="text-4xl text-[#e8d189] font-medium tabular-nums">
+              className="text-3xl sm:text-4xl text-[#e8d189] font-medium tabular-nums">
               14h 22m remaining
             </p>
             <p className="text-xs text-gray-500 mt-2">
@@ -834,28 +950,28 @@ function RevenueAnalytics() {
   return (
     <section
       id="analytics"
-      className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden">
+      className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_40%,rgba(201,168,76,0.08),transparent_55%)]" />
-      <div className="relative max-w-7xl mx-auto px-6">
-        <Reveal className="text-center max-w-2xl mx-auto mb-16">
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-16">
           <Eyebrow>The back office</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight mb-5">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-4 md:mb-5">
             Track Revenue{" "}
             <span className="italic text-[#c9a84c]">And Occupancy.</span>
           </h2>
-          <p className="text-gray-400 text-base leading-relaxed">
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
             One dashboard for every number that matters, updating itself as the
             day unfolds.
           </p>
         </Reveal>
 
-        <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8">
+        <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6 lg:gap-8">
           {/* Chart card */}
           <Reveal
             variants={scaleIn}
-            className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl p-7 shadow-2xl shadow-black/30">
+            className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl p-5 sm:p-7 shadow-2xl shadow-black/30">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs tracking-widest uppercase text-gray-400">
                 Monthly Revenue Trend
@@ -864,10 +980,10 @@ function RevenueAnalytics() {
                 +18.4%
               </span>
             </div>
-            <p className="text-[11px] text-gray-500 mb-6">
+            <p className="text-[11px] text-gray-500 mb-5 md:mb-6">
               Compared to the previous 12 months
             </p>
-            <div className="flex items-end gap-2.5 h-44">
+            <div className="flex items-end gap-1.5 sm:gap-2.5 h-32 sm:h-44">
               {ANALYTICS_CHART.map((h, i) => {
                 const isPeak = h === Math.max(...ANALYTICS_CHART);
                 return (
@@ -898,7 +1014,7 @@ function RevenueAnalytics() {
             whileInView="show"
             viewport={{ once: true, amount: 0.3 }}
             variants={staggerContainer}
-            className="grid grid-cols-2 gap-4">
+            className="grid grid-cols-2 gap-3 sm:gap-4">
             {[
               {
                 label: "Revenue (MTD)",
@@ -919,16 +1035,16 @@ function RevenueAnalytics() {
                 key={stat.label}
                 variants={fadeUp}
                 whileHover={{ y: -4 }}
-                className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-sm p-5 flex flex-col justify-between">
+                className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-sm p-4 sm:p-5 flex flex-col justify-between">
                 <i
-                  className={`fas ${stat.icon} text-[#c9a84c] text-sm mb-3`}></i>
+                  className={`fas ${stat.icon} text-[#c9a84c] text-sm mb-2 sm:mb-3`}></i>
                 <p
                   style={{ fontFamily: "'Cormorant Garamond', serif" }}
-                  className="text-2xl text-white font-medium">
+                  className="text-xl sm:text-2xl text-white font-medium">
                   {stat.prefix}
                   <Counter value={stat.value} suffix={stat.suffix} />
                 </p>
-                <p className="text-[11px] uppercase tracking-wide text-gray-500 mt-1">
+                <p className="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-500 mt-1">
                   {stat.label}
                 </p>
               </motion.div>
@@ -956,14 +1072,14 @@ const OPS_FEATURES = [
 
 function Operations() {
   return (
-    <section className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden">
+    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(201,168,76,0.08),transparent_55%)]" />
-      <div className="relative max-w-7xl mx-auto px-6">
-        <Reveal className="text-center max-w-2xl mx-auto mb-16">
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-16">
           <Eyebrow>Everything in one place</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight">
             Built For Daily{" "}
             <span className="italic text-[#c9a84c]">Operations.</span>
           </h2>
@@ -974,18 +1090,21 @@ function Operations() {
           whileInView="show"
           viewport={{ once: true, amount: 0.1 }}
           variants={staggerContainer}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {OPS_FEATURES.map((f) => (
             <motion.div
               key={f.label}
               variants={fadeUp}
               whileHover={{ y: -5, borderColor: "rgba(201,168,76,0.4)" }}
               transition={{ duration: 0.2 }}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm p-6 flex flex-col items-center text-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-[#c9a84c]/15 flex items-center justify-center">
-                <i className={`fas ${f.icon} text-[#c9a84c] text-base`}></i>
+              className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm p-4 sm:p-6 flex flex-col items-center text-center gap-2 sm:gap-3">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#c9a84c]/15 flex items-center justify-center shrink-0">
+                <i
+                  className={`fas ${f.icon} text-[#c9a84c] text-sm sm:text-base`}></i>
               </div>
-              <p className="text-sm font-medium text-white">{f.label}</p>
+              <p className="text-xs sm:text-sm font-medium text-white leading-snug">
+                {f.label}
+              </p>
             </motion.div>
           ))}
         </motion.div>
@@ -1051,17 +1170,17 @@ function Pricing() {
   return (
     <section
       id="pricing"
-      className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden">
+      className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.06),transparent_60%)]" />
-      <div className="relative max-w-7xl mx-auto px-6 py-12">
-        <Reveal className="text-center max-w-2xl mx-auto mb-12">
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 py-8 md:py-12 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-8 md:mb-12">
           <Eyebrow>Simple, transparent pricing</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight mb-4">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-3 md:mb-4">
             Choose Your <span className="italic text-[#c9a84c]">Plan.</span>
           </h2>
-          <p className="text-gray-400 text-base leading-relaxed">
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
             Start with what you need — upgrade as you grow.
           </p>
         </Reveal>
@@ -1071,8 +1190,8 @@ function Pricing() {
           whileInView="show"
           viewport={{ once: true, amount: 0.15 }}
           variants={staggerContainer}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map((plan, index) => (
+          className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 max-w-5xl mx-auto">
+          {plans.map((plan) => (
             <motion.div
               key={plan.name}
               variants={fadeUp}
@@ -1084,7 +1203,7 @@ function Pricing() {
                   : "bg-white/5 border border-white/10 hover:border-[#c9a84c]/30"
               }`}>
               {plan.recommended && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#c9a84c] text-[#0f1b2d] text-xs font-semibold px-4 py-1 rounded-full">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#c9a84c] text-[#0f1b2d] text-xs font-semibold px-4 py-1 rounded-full whitespace-nowrap">
                   Most Popular
                 </div>
               )}
@@ -1150,14 +1269,14 @@ const HOW_IT_WORKS_STEPS = [
 
 function HowItWorks() {
   return (
-    <section className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden">
+    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.06),transparent_60%)]" />
-      <div className="relative max-w-5xl mx-auto px-6">
-        <Reveal className="text-center max-w-2xl mx-auto mb-16">
+      <div className="relative max-w-5xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-16">
           <Eyebrow>From signup to scale</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight">
             How It <span className="italic text-[#c9a84c]">Works.</span>
           </h2>
         </Reveal>
@@ -1171,14 +1290,14 @@ function HowItWorks() {
           {/* Vertical line for mobile, horizontal-ish rhythm for desktop via spacing */}
           <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#c9a84c]/30 to-transparent md:-translate-x-1/2" />
 
-          <div className="space-y-10 md:space-y-0">
+          <div className="space-y-6 md:space-y-0">
             {HOW_IT_WORKS_STEPS.map((step, i) => {
               const isEven = i % 2 === 0;
               return (
                 <motion.div
                   key={step.n}
                   variants={fadeUp}
-                  className={`relative flex items-center gap-6 md:gap-0 md:py-8 ${
+                  className={`relative flex items-center gap-5 md:gap-0 md:py-7 ${
                     isEven ? "md:flex-row" : "md:flex-row-reverse"
                   }`}>
                   <div
@@ -1190,7 +1309,7 @@ function HowItWorks() {
                     </p>
                   </div>
 
-                  <div className="relative z-10 w-12 h-12 rounded-full bg-[#0f1b2d] border border-[#c9a84c]/50 flex items-center justify-center shrink-0 shadow-[0_0_20px_-4px_rgba(201,168,76,0.4)]">
+                  <div className="relative z-10 w-11 h-11 md:w-12 md:h-12 rounded-full bg-[#0f1b2d] border border-[#c9a84c]/50 flex items-center justify-center shrink-0 shadow-[0_0_20px_-4px_rgba(201,168,76,0.4)]">
                     <i
                       className={`fas ${step.icon} text-[#c9a84c] text-sm`}></i>
                   </div>
@@ -1255,14 +1374,14 @@ function Testimonials() {
   }, []);
 
   return (
-    <section className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden">
+    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden pt-24 pb-12 md:pt-28">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,168,76,0.08),transparent_55%)]" />
-      <div className="relative max-w-3xl mx-auto px-6 text-center">
+      <div className="relative max-w-3xl mx-auto px-5 sm:px-6 text-center w-full">
         <Reveal>
           <Eyebrow>Trusted by hoteliers</Eyebrow>
           <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-4xl sm:text-5xl text-white font-medium leading-tight mb-14">
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-10 md:mb-14">
             What Owners{" "}
             <span className="italic text-[#c9a84c]">Are Saying.</span>
           </h2>
@@ -1280,7 +1399,7 @@ function Testimonials() {
               <i className="fas fa-quote-left text-[#c9a84c]/40 text-2xl mb-5"></i>
               <p
                 style={{ fontFamily: "'Cormorant Garamond', serif" }}
-                className="text-2xl text-white italic leading-relaxed mb-6">
+                className="text-xl sm:text-2xl text-white italic leading-relaxed mb-6">
                 "{TESTIMONIALS[index].quote}"
               </p>
               <p className="text-sm font-semibold text-white">
@@ -1316,7 +1435,7 @@ function Testimonials() {
 function FinalCTA() {
   const navigate = useNavigate();
   return (
-    <section className="relative h-screen min-h-[720px] w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden">
+    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
       {/* Background with resort image */}
       <div
         className="absolute inset-0 bg-cover bg-center opacity-20"
@@ -1340,30 +1459,30 @@ function FinalCTA() {
           backgroundSize: "64px 64px",
         }}
       />
-      <Reveal className="relative max-w-3xl mx-auto px-6 text-center">
+      <Reveal className="relative max-w-3xl mx-auto px-5 sm:px-6 text-center w-full">
         <Eyebrow>
           <span className="mx-auto">Ready when you are</span>
         </Eyebrow>
         <h2
           style={{ fontFamily: "'Cormorant Garamond', serif" }}
-          className="text-4xl sm:text-5xl md:text-6xl text-white font-medium leading-tight mb-6">
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white font-medium leading-tight mb-5 md:mb-6">
           Modern Hotel Management
           <br />
           <span className="italic text-[#c9a84c]">Starts Here.</span>
         </h2>
-        <p className="text-gray-300 text-lg leading-relaxed max-w-xl mx-auto mb-10">
+        <p className="text-gray-300 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-8 md:mb-10">
           Join hotels and lodges using StayKila to manage rooms smarter, one
           property at a time.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
           <button
             onClick={() => navigate("/signin")}
-            className="w-full sm:w-auto text-[#0f1b2d] font-semibold bg-gradient-to-r from-[#c9a84c] to-[#e8d189] px-8 py-4 rounded-xl hover:shadow-[0_16px_40px_-10px_rgba(201,168,76,0.6)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">
+            className="w-full sm:w-auto text-[#0f1b2d] font-semibold bg-gradient-to-r from-[#c9a84c] to-[#e8d189] px-8 py-3.5 sm:py-4 rounded-xl hover:shadow-[0_16px_40px_-10px_rgba(201,168,76,0.6)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">
             Start Free Trial
           </button>
           <button
             onClick={() => navigate("/signin")}
-            className="w-full sm:w-auto text-white font-semibold border border-white/20 px-8 py-4 rounded-xl hover:bg-white/10 hover:border-white/30 transition-all duration-200">
+            className="w-full sm:w-auto text-white font-semibold border border-white/20 px-8 py-3.5 sm:py-4 rounded-xl hover:bg-white/10 hover:border-white/30 transition-all duration-200">
             Login
           </button>
         </div>
@@ -1374,13 +1493,16 @@ function FinalCTA() {
 
 /* ============================================================ */
 /*  FOOTER                                                        */
+/*  Lives outside the snap-scroll flow as its own non-snapped,    */
+/*  natural-height block so it never gets clipped by h-screen     */
+/*  or fought over by snap-mandatory on short mobile viewports.   */
 /* ============================================================ */
 function Footer() {
   return (
-    <footer className="relative bg-[#0c1522] border-t border-white/10 py-12">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+    <footer className="relative bg-[#0c1522] border-t border-white/10 py-10 md:py-12 snap-none">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-white/5 border border-[#c9a84c]/40 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-white/5 border border-[#c9a84c]/40 flex items-center justify-center shrink-0">
             <i className="fas fa-hotel text-[#c9a84c] text-xs"></i>
           </div>
           <span
@@ -1390,7 +1512,7 @@ function Footer() {
           </span>
         </div>
 
-        <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
+        <nav className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-gray-400">
           <a href="#rooms" className="hover:text-white transition-colors">
             Features
           </a>
@@ -1408,7 +1530,7 @@ function Footer() {
           </a>
         </nav>
 
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 text-center">
           © {new Date().getFullYear()} StayKila. All rights reserved.
         </p>
       </div>
