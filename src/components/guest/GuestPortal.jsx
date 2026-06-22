@@ -688,42 +688,11 @@ export default function GuestPortal() {
               )}
 
               {/* Chat Tab */}
+              {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
-                  {/* Quick Actions - Glassmorphism */}
-                  {showQuickActions && messages.length === 0 && (
-                    <div className="p-4 border-b border-white/5">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">
-                          Quick Requests
-                        </p>
-                        <button
-                          onClick={() => setShowQuickActions(false)}
-                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors">
-                          <i className="fas fa-times"></i>
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {quickActions.map((action, index) => (
-                          <button
-                            key={index}
-                            onClick={() => sendQuickMessage(action.message)}
-                            className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10">
-                            <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
-                              <i
-                                className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
-                              {action.label}
-                            </span>
-                            {/* Glass reflection effect */}
-                            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Messages */}
-                  <div className="p-4 max-h-64 overflow-y-auto space-y-3 custom-scrollbar">
+                  <div className="p-4 max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
                     {messages.length === 0 ? (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
@@ -735,12 +704,10 @@ export default function GuestPortal() {
                         <p className="text-gray-500 text-sm mt-1">
                           Start a conversation with the front desk
                         </p>
-                        {showQuickActions && (
-                          <p className="text-[10px] text-gray-500 mt-3">
-                            <i className="fas fa-arrow-up text-[#c9a84c] mr-1"></i>
-                            Try one of the quick requests above
-                          </p>
-                        )}
+                        <p className="text-[10px] text-gray-500 mt-3">
+                          <i className="fas fa-arrow-up text-[#c9a84c] mr-1"></i>
+                          Try one of the quick requests below
+                        </p>
                       </div>
                     ) : (
                       messages.map((msg) => (
@@ -780,6 +747,69 @@ export default function GuestPortal() {
                     )}
                     <div ref={chatEndRef} />
                   </div>
+
+                  {/* Quick Actions - Always Visible */}
+                  {showQuickActions && (
+                    <div className="p-3 border-t border-white/5 bg-black/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">
+                          Quick Requests
+                        </p>
+                        <button
+                          onClick={() => setShowQuickActions(false)}
+                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors">
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {quickActions.slice(0, 6).map((action, index) => (
+                          <button
+                            key={index}
+                            onClick={() => sendQuickMessage(action.message)}
+                            className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10">
+                            <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
+                              <i
+                                className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
+                              {action.label}
+                            </span>
+                            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                          </button>
+                        ))}
+                      </div>
+                      {quickActions.length > 6 && (
+                        <button
+                          onClick={() => {
+                            const allActions = document.getElementById(
+                              "all-quick-actions-chat",
+                            );
+                            if (allActions) {
+                              allActions.classList.toggle("hidden");
+                            }
+                          }}
+                          className="mt-2 text-[10px] text-[#c9a84c] hover:text-[#e8d189] transition-colors">
+                          <i className="fas fa-chevron-down mr-1"></i>
+                          Show more
+                        </button>
+                      )}
+                      <div
+                        id="all-quick-actions-chat"
+                        className="hidden flex-wrap gap-2 mt-2">
+                        {quickActions.slice(6).map((action, index) => (
+                          <button
+                            key={index + 6}
+                            onClick={() => sendQuickMessage(action.message)}
+                            className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10">
+                            <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
+                              <i
+                                className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
+                              {action.label}
+                            </span>
+                            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Message Input */}
                   <div className="p-3 border-t border-white/10 bg-black/20">
