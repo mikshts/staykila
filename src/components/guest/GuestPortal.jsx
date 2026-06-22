@@ -27,6 +27,7 @@ export default function GuestPortal() {
   const [showWifi, setShowWifi] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("info");
+  const [selectedImage, setSelectedImage] = useState(null);
   const chatEndRef = useRef(null);
   const subscriptionRef = useRef(null);
   const qrContainerRef = useRef(null);
@@ -388,6 +389,47 @@ export default function GuestPortal() {
     toast.success("Copied to clipboard!");
   };
 
+  // Image Viewer Component
+  const ImageViewer = ({ imageUrl, onClose }) => {
+    useEffect(() => {
+      const handleEscape = (e) => {
+        if (e.key === "Escape") onClose();
+      };
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
+    }, [onClose]);
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fadeIn"
+        onClick={onClose}>
+        <div
+          className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center"
+          onClick={(e) => e.stopPropagation()}>
+          <img
+            src={imageUrl}
+            alt="Menu full view"
+            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+          />
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-all duration-300 hover:scale-110">
+            <i className="fas fa-times text-xl"></i>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(imageUrl, "_blank");
+            }}
+            className="absolute bottom-4 right-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm flex items-center gap-2 transition-all duration-300 backdrop-blur-sm border border-white/10">
+            <i className="fas fa-external-link-alt"></i>
+            Open in new tab
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return <GuestPortalLoading />;
   }
@@ -688,9 +730,6 @@ export default function GuestPortal() {
               )}
 
               {/* Chat Tab */}
-              {/* Chat Tab */}
-              {/* Chat Tab */}
-              {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
                   {/* Messages */}
@@ -750,7 +789,6 @@ export default function GuestPortal() {
                     <div ref={chatEndRef} />
                   </div>
 
-                  {/* Quick Actions - 2 Rows Horizontal Scrollable */}
                   {/* Quick Actions - 2 Rows Horizontal Scrollable */}
                   {showQuickActions ? (
                     <div className="p-3 border-t border-white/5 bg-black/10">
@@ -843,23 +881,26 @@ export default function GuestPortal() {
                       {menuImages.map((img, i) => (
                         <div
                           key={i}
-                          className="group relative rounded-2xl overflow-hidden bg-white/5 aspect-square cursor-pointer hover:shadow-xl hover:shadow-black/30 transition-all duration-300 border border-white/5">
+                          className="group relative rounded-2xl overflow-hidden bg-white/5 aspect-square cursor-pointer hover:shadow-xl hover:shadow-black/30 transition-all duration-300 border border-white/5"
+                          onClick={() => setSelectedImage(img.image_url)}>
                           <img
                             src={img.image_url}
                             alt={`Menu ${i + 1}`}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            onClick={() => {
-                              window.open(img.image_url, "_blank");
-                            }}
                           />
+                          {/* Overlay gradient */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          {/* Center expand icon */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-black/50 rounded-full p-3 backdrop-blur-sm">
+                              <i className="fas fa-expand text-white text-lg"></i>
+                            </div>
+                          </div>
+                          {/* Bottom text */}
                           <div className="absolute bottom-0 left-0 right-0 p-3 text-white translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                             <p className="text-xs font-medium text-center">
-                              View full size
+                              Tap to view full size
                             </p>
-                          </div>
-                          <div className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <i className="fas fa-expand text-white text-[10px]"></i>
                           </div>
                         </div>
                       ))}
@@ -892,6 +933,14 @@ export default function GuestPortal() {
           </div>
         </div>
       </div>
+
+      {/* Image Viewer Modal */}
+      {selectedImage && (
+        <ImageViewer
+          imageUrl={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
+      )}
 
       {/* Animations */}
       <style jsx>{`
