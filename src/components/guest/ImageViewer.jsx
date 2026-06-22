@@ -85,37 +85,35 @@ export default function ImageViewer({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}>
-      {/* Close button - top right */}
+      {/* Close button - top right, small and clean */}
       <button
         onClick={(e) => {
           e.stopPropagation();
-          e.preventDefault();
           onClose();
         }}
-        className="absolute top-4 right-4 z-30 w-10 h-10 rounded-full bg-red-500/80 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg shadow-red-500/30"
-        aria-label="Close image viewer"
-        type="button">
-        <i className="fas fa-times text-xl"></i>
+        className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white/70 hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-110 border border-white/10"
+        aria-label="Close image viewer">
+        <i className="fas fa-times text-sm"></i>
       </button>
 
-      {/* Counter - top left */}
-      <div className="absolute top-4 left-4 z-20 text-white/60 text-sm font-medium bg-black/50 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+      {/* Counter - small, subtle */}
+      <div className="absolute top-4 left-4 z-20 text-white/40 text-xs font-medium bg-black/40 px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/5">
         {index + 1} / {images.length}
       </div>
 
-      {/* Main Image Container */}
+      {/* Main Image - larger */}
       <div
         className="relative w-full max-w-5xl max-h-[85vh] flex items-center justify-center px-2"
         onClick={(e) => e.stopPropagation()}>
         <img
           src={images[index]}
           alt={`Menu ${index + 1}`}
-          className="w-full h-full max-h-[85vh] object-contain rounded-lg shadow-2xl select-none"
+          className="w-full h-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
           loading="lazy"
           draggable="false"
         />
 
-        {/* Navigation Arrows */}
+        {/* Navigation Arrows - Desktop */}
         {images.length > 1 && (
           <>
             {index > 0 && (
@@ -124,10 +122,9 @@ export default function ImageViewer({
                   e.stopPropagation();
                   handlePrev();
                 }}
-                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/50 hover:bg-black/80 text-white/70 hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-110 border border-white/20 backdrop-blur-sm z-20"
-                aria-label="Previous image"
-                type="button">
-                <i className="fas fa-chevron-left text-sm sm:text-base"></i>
+                className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 text-white/60 hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-110 border border-white/10 backdrop-blur-sm"
+                aria-label="Previous image">
+                <i className="fas fa-chevron-left text-xs sm:text-sm"></i>
               </button>
             )}
             {index < images.length - 1 && (
@@ -136,20 +133,19 @@ export default function ImageViewer({
                   e.stopPropagation();
                   handleNext();
                 }}
-                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/50 hover:bg-black/80 text-white/70 hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-110 border border-white/20 backdrop-blur-sm z-20"
-                aria-label="Next image"
-                type="button">
-                <i className="fas fa-chevron-right text-sm sm:text-base"></i>
+                className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 text-white/60 hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-110 border border-white/10 backdrop-blur-sm"
+                aria-label="Next image">
+                <i className="fas fa-chevron-right text-xs sm:text-sm"></i>
               </button>
             )}
           </>
         )}
       </div>
 
-      {/* Thumbnail Strip */}
+      {/* Thumbnail Strip - at bottom */}
       {images.length > 1 && (
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center px-4 z-20">
-          <div className="flex gap-2 overflow-x-auto max-w-[90%] px-2 py-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4">
+          <div className="flex gap-1.5 overflow-x-auto max-w-[90%] px-2 py-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
             {images.map((img, i) => (
               <button
                 key={i}
@@ -158,13 +154,12 @@ export default function ImageViewer({
                   setIndex(i);
                   onIndexChange?.(i);
                 }}
-                className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+                className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
                   i === index
                     ? "border-[#c9a84c] scale-110 shadow-lg shadow-[#c9a84c]/30"
                     : "border-white/20 hover:border-white/50 hover:scale-105"
                 }`}
-                aria-label={`Go to image ${i + 1}`}
-                type="button">
+                aria-label={`Go to image ${i + 1}`}>
                 <img
                   src={img}
                   alt={`Thumbnail ${i + 1}`}

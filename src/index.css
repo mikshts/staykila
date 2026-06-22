@@ -51,26 +51,6 @@ body {
   padding: 8px 0 4px;
 }
 
-/* Make sure panels are clickable */
-.z-50 {
-  z-index: 50 !important;
-}
-
-/* Ensure buttons inside panels work */
-.bg-\[\#0f1b2d\] {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-/* Fix for panel overlays */
-.fixed.inset-0 {
-  pointer-events: none;
-}
-
-.fixed.inset-0 > div {
-  pointer-events: auto;
-}
-
 .timer-display.ok {
   color: var(--green);
 }
@@ -372,4 +352,40 @@ body {
 
 .light-scroll::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* ============================================
+   FIX: Ensure all fixed elements are clickable
+   ============================================ */
+
+/* All fixed overlays should be clickable by default */
+.fixed.inset-0,
+.fixed.inset-0 * {
+  pointer-events: auto !important;
+}
+
+/* Make sure panels are clickable */
+.z-50 {
+  z-index: 50 !important;
+}
+
+/* Ensure buttons inside panels work */
+.bg-\[\#0f1b2d\] {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Specifically for the image viewer close button */
+.z-\[99999\] {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Force all fixed elements to be clickable */
+.fixed {
+  pointer-events: auto !important;
+}
+
+.fixed.inset-0 > * {
+  pointer-events: auto !important;
 }
