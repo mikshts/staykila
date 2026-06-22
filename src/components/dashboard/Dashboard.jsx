@@ -416,6 +416,7 @@ export default function Dashboard() {
 
   // Room actions
   // src/components/dashboard/Dashboard.jsx - Updated handleCheckin
+  // src/components/dashboard/Dashboard.jsx - Updated handleCheckin (without metadata)
   const handleCheckin = async (roomId, hours, calculatedPrice, roomType) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
@@ -438,8 +439,7 @@ export default function Dashboard() {
           price: calculatedPrice,
           status: "active",
           checked_in_at: startTime.toISOString(),
-          // Store room type in metadata if needed
-          metadata: { room_type: roomType || "single" },
+          // REMOVED: metadata: { room_type: roomType || "single" },
         })
         .select()
         .single();

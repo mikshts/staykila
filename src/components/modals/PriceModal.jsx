@@ -1,5 +1,5 @@
 // src/components/modals/PriceModal.jsx
-import React from "react";
+import React, { useState } from "react";
 
 export default function PriceModal({
   prices,
@@ -7,6 +7,14 @@ export default function PriceModal({
   onSave,
   onClose,
 }) {
+  const [selectedRoomType, setSelectedRoomType] = useState("single");
+
+  const roomTypes = [
+    { id: "single", label: "Single Bed", icon: "🛏️" },
+    { id: "double", label: "Double Bed", icon: "🛏️🛏️" },
+    { id: "family", label: "Family Room", icon: "🏠" },
+  ];
+
   const durations = [
     { hours: 1, label: "Quick rest" },
     { hours: 3, label: "Short stay" },
@@ -15,31 +23,32 @@ export default function PriceModal({
     { hours: 24, label: "Overnight" },
   ];
 
-  const handlePriceChange = (hours, value) => {
-    // Remove leading zeros and handle empty input
-    let newValue = value;
+  // Get price for specific room type
+  const getPriceForType = (hours, type) => {
+    const key = `${type}_${hours}`;
+    return prices[key] || prices[hours] || hours * 100;
+  };
 
-    // If value starts with 0 and length > 1, remove the leading zero
+  const handlePriceChange = (hours, value) => {
+    let newValue = value;
     if (newValue.startsWith("0") && newValue.length > 1) {
       newValue = newValue.replace(/^0+/, "");
     }
-
-    // Convert to number or keep as empty string
     const numValue = newValue === "" ? "" : parseFloat(newValue);
 
+    // Store with room type prefix
+    const key = `${selectedRoomType}_${hours}`;
     onPricesChange({
       ...prices,
-      [hours]: numValue,
+      [key]: numValue,
     });
   };
 
   const getDisplayValue = (hours) => {
-    const val = prices[hours];
-    // If price is undefined or null, show empty string
+    const key = `${selectedRoomType}_${hours}`;
+    const val = prices[key];
     if (val === undefined || val === null) return "";
-    // If price is 0, show empty string (so user can type)
     if (val === 0) return "";
-    // Otherwise show the value
     return val;
   };
 
@@ -50,8 +59,25 @@ export default function PriceModal({
           Edit Room Prices
         </h3>
         <p className="text-xs text-[#8a8278] mb-4">
-          Set your custom prices for each duration
+          Set custom prices for each room type and duration
         </p>
+
+        {/* Room Type Selection */}
+        <div className="flex gap-2 mb-4">
+          {roomTypes.map((type) => (
+            <button
+              key={type.id}
+              onClick={() => setSelectedRoomType(type.id)}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${
+                selectedRoomType === type.id
+                  ? "bg-[#c9a84c] text-white shadow-md"
+                  : "bg-[#f7f3ee] text-[#8a8278] hover:bg-[#e5e2db]"
+              }`}>
+              <span className="mr-1">{type.icon}</span>
+              {type.label}
+            </button>
+          ))}
+        </div>
 
         <div className="space-y-2">
           {durations.map((d) => {
@@ -71,11 +97,9 @@ export default function PriceModal({
                     value={displayValue}
                     onChange={(e) => {
                       const val = e.target.value;
-                      // Allow empty string for user to type
                       if (val === "") {
                         handlePriceChange(d.hours, "");
                       } else {
-                        // Remove leading zeros
                         const cleanVal = val.replace(/^0+/, "");
                         if (cleanVal === "") {
                           handlePriceChange(d.hours, "");
@@ -85,7 +109,6 @@ export default function PriceModal({
                       }
                     }}
                     onBlur={(e) => {
-                      // When user leaves the field, ensure it has a value
                       const val = e.target.value;
                       if (val === "" || val === "0") {
                         handlePriceChange(d.hours, 0);

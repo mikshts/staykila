@@ -44,7 +44,14 @@ export default function CheckinModal({
   ];
 
   // Get base price for duration
+  // In CheckinModal.jsx - Updated getBasePrice
   const getBasePrice = (hours) => {
+    // Try to get room type specific price first
+    const key = `${selectedRoomType}_${hours}`;
+    if (prices[key] !== undefined && prices[key] !== null) {
+      return prices[key];
+    }
+    // Fallback to base price
     return prices[hours] || hours * 100;
   };
 
