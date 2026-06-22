@@ -389,15 +389,25 @@ export default function GuestPortal() {
     toast.success("Copied to clipboard!");
   };
 
-  // Image Viewer Component
+  // Image Viewer Component - Fixed
   const ImageViewer = ({ imageUrl, onClose }) => {
     useEffect(() => {
       const handleEscape = (e) => {
         if (e.key === "Escape") onClose();
       };
       document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.removeEventListener("keydown", handleEscape);
+        document.body.style.overflow = "unset";
+      };
     }, [onClose]);
+
+    // Prevent click propagation to avoid closing when clicking inside
+    const handleImageClick = (e) => {
+      e.stopPropagation();
+    };
 
     return (
       <div
@@ -405,11 +415,12 @@ export default function GuestPortal() {
         onClick={onClose}>
         <div
           className="relative max-w-4xl w-full max-h-[90vh] flex items-center justify-center"
-          onClick={(e) => e.stopPropagation()}>
+          onClick={handleImageClick}>
           <img
             src={imageUrl}
             alt="Menu full view"
             className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            loading="lazy"
           />
           <button
             onClick={onClose}
@@ -873,7 +884,7 @@ export default function GuestPortal() {
                 </div>
               )}
 
-              {/* Menu Tab */}
+              {/* Menu Tab - FIXED */}
               {activeTab === "menu" && (
                 <div className="animate-fadeIn">
                   {menuImages.length > 0 ? (
@@ -888,17 +899,18 @@ export default function GuestPortal() {
                             alt={`Menu ${i + 1}`}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
-                          {/* Overlay gradient */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          {/* Center expand icon */}
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="bg-black/50 rounded-full p-3 backdrop-blur-sm">
+                          {/* Overlay gradient - always visible at bottom */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          {/* Center expand icon - appears on hover */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="bg-black/60 rounded-full p-3 backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-300">
                               <i className="fas fa-expand text-white text-lg"></i>
                             </div>
                           </div>
-                          {/* Bottom text */}
-                          <div className="absolute bottom-0 left-0 right-0 p-3 text-white translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                            <p className="text-xs font-medium text-center">
+                          {/* Bottom text - always visible with gradient background */}
+                          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+                            <p className="text-[10px] font-medium text-white/80 text-center group-hover:text-white transition-colors duration-300">
+                              <i className="fas fa-eye text-[#c9a84c] mr-1.5 text-[8px]"></i>
                               Tap to view full size
                             </p>
                           </div>
