@@ -751,7 +751,8 @@ export default function GuestPortal() {
                   </div>
 
                   {/* Quick Actions - 2 Rows Horizontal Scrollable */}
-                  {showQuickActions && (
+                  {/* Quick Actions - 2 Rows Horizontal Scrollable */}
+                  {showQuickActions ? (
                     <div className="p-3 border-t border-white/5 bg-black/10">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">
@@ -800,16 +801,16 @@ export default function GuestPortal() {
                           </div>
                         </div>
                       </div>
-                      {/* Scroll indicator */}
-                      <div className="flex justify-center mt-1">
-                        <div className="flex gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#c9a84c]/60"></span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                        </div>
-                      </div>
+                    </div>
+                  ) : (
+                    /* Show Quick Actions Button - appears when hidden */
+                    <div className="p-2 border-t border-white/5 bg-black/10">
+                      <button
+                        onClick={() => setShowQuickActions(true)}
+                        className="w-full py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center justify-center gap-2">
+                        <i className="fas fa-plus-circle text-[#c9a84c]"></i>
+                        Show Quick Requests
+                      </button>
                     </div>
                   )}
 
