@@ -1,4 +1,4 @@
-/ src/components/dashboard/Dashboard.jsx
+//src/components/dashboard/Dashboard.jsx
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
