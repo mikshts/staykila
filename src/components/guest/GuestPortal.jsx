@@ -253,7 +253,7 @@ export default function GuestPortal() {
   const getStatusText = () => {
     if (isExpired) return "⏰ Stay has ended";
     if (timeRemaining < 10 * 60 * 1000) return "⚠️ Expiring soon!";
-    return "✓ Active stay";
+    return " Active stay";
   };
 
   const sendMessage = async () => {
