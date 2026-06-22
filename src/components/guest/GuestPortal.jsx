@@ -32,6 +32,7 @@ export default function GuestPortal() {
   const qrContainerRef = useRef(null);
   const messageIdsRef = useRef(new Set());
   const timerIntervalRef = useRef(null);
+  const [showQuickActions, setShowQuickActions] = useState(true);
 
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
@@ -169,6 +170,94 @@ export default function GuestPortal() {
       setLoading(false);
     }
   };
+
+  // Function to handle quick message sending
+  const sendQuickMessage = async (messageText) => {
+    if (!guestToken) {
+      toast.error("No active session");
+      return;
+    }
+
+    try {
+      const roomId = room?.id;
+      const hotelId = hotel?.id;
+      if (!roomId || !hotelId) {
+        toast.error("Missing room or hotel information");
+        return;
+      }
+
+      const msg = await messageService.sendGuestMessage(
+        roomId,
+        hotelId,
+        messageText,
+        guestToken,
+      );
+
+      if (!messageIdsRef.current.has(msg.id)) {
+        messageIdsRef.current.add(msg.id);
+        setMessages((prev) => [...prev, msg]);
+      }
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      toast.success("Message sent!");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
+    }
+  };
+
+  // Most common hotel requests
+  const quickActions = [
+    {
+      icon: "fa-towel",
+      label: "Towels",
+      message: "Can I get extra towels please?",
+    },
+    {
+      icon: "fa-broom",
+      label: "Housekeeping",
+      message: "Can we get housekeeping service?",
+    },
+    {
+      icon: "fa-utensils",
+      label: "Room Service",
+      message: "I'd like to order room service",
+    },
+    {
+      icon: "fa-wifi",
+      label: "WiFi Help",
+      message: "Having trouble with the WiFi",
+    },
+    {
+      icon: "fa-clock",
+      label: "Late Checkout",
+      message: "Can I request a late checkout?",
+    },
+    {
+      icon: "fa-car",
+      label: "Parking",
+      message: "Where can I park my car?",
+    },
+    {
+      icon: "fa-mug-saucer",
+      label: "Coffee",
+      message: "Can I get coffee in my room?",
+    },
+    {
+      icon: "fa-plug",
+      label: "Charger",
+      message: "Do you have phone chargers available?",
+    },
+    {
+      icon: "fa-snowflake",
+      label: "AC Issue",
+      message: "The AC isn't working properly",
+    },
+    {
+      icon: "fa-tv",
+      label: "TV Issue",
+      message: "Having trouble with the TV",
+    },
+  ];
 
   useEffect(() => {
     if (roomParam) {
@@ -587,8 +676,6 @@ export default function GuestPortal() {
                   )}
 
                   {/* Refresh Button */}
-                  {/* Refresh Button with Loading */}
-                  {/* Refresh Button - Minimal */}
                   <div className="text-center pt-2">
                     <button
                       onClick={() => window.location.reload()}
@@ -603,16 +690,57 @@ export default function GuestPortal() {
               {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
+                  {/* Quick Actions - Glassmorphism */}
+                  {showQuickActions && messages.length === 0 && (
+                    <div className="p-4 border-b border-white/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">
+                          Quick Requests
+                        </p>
+                        <button
+                          onClick={() => setShowQuickActions(false)}
+                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors">
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {quickActions.map((action, index) => (
+                          <button
+                            key={index}
+                            onClick={() => sendQuickMessage(action.message)}
+                            className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10">
+                            <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
+                              <i
+                                className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
+                              {action.label}
+                            </span>
+                            {/* Glass reflection effect */}
+                            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Messages */}
                   <div className="p-4 max-h-64 overflow-y-auto space-y-3 custom-scrollbar">
                     {messages.length === 0 ? (
                       <div className="text-center py-8">
-                        <i className="fas fa-comment-slash text-gray-600 text-3xl mb-3 block"></i>
+                        <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
+                          <i className="fas fa-comment-dots text-[#c9a84c] text-xl"></i>
+                        </div>
                         <p className="text-gray-400 font-medium">
                           No messages yet
                         </p>
-                        <p className="text-gray-500 text-sm">
-                          Say hello to the front desk!
+                        <p className="text-gray-500 text-sm mt-1">
+                          Start a conversation with the front desk
                         </p>
+                        {showQuickActions && (
+                          <p className="text-[10px] text-gray-500 mt-3">
+                            <i className="fas fa-arrow-up text-[#c9a84c] mr-1"></i>
+                            Try one of the quick requests above
+                          </p>
+                        )}
                       </div>
                     ) : (
                       messages.map((msg) => (
@@ -653,6 +781,7 @@ export default function GuestPortal() {
                     <div ref={chatEndRef} />
                   </div>
 
+                  {/* Message Input */}
                   <div className="p-3 border-t border-white/10 bg-black/20">
                     <div className="flex gap-2">
                       <input
