@@ -586,17 +586,16 @@ export default function GuestPortal() {
                     </div>
                   )}
 
-                  {/* QR Code */}
+                  {/* Refresh Button */}
+                  {/* Refresh Button with Loading */}
+                  {/* Refresh Button - Minimal */}
                   <div className="text-center pt-2">
-                    <div className="inline-block p-3 bg-white rounded-2xl shadow-lg shadow-black/30">
-                      <div
-                        ref={qrContainerRef}
-                        className="flex justify-center"></div>
-                    </div>
-                    <p className="text-gray-500 text-xs mt-2 flex items-center justify-center gap-1.5">
-                      <i className="fas fa-qrcode text-[#c9a84c]"></i>
-                      Scan to refresh stay information
-                    </p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors group">
+                      <i className="fas fa-sync-alt text-[#c9a84c] group-hover:rotate-180 transition-transform duration-500"></i>
+                      <span className="text-xs">Refresh stay information</span>
+                    </button>
                   </div>
                 </div>
               )}
