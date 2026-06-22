@@ -5,6 +5,8 @@ import { AuthProvider } from "./contexts/AuthContext.jsx";
 import { HotelProvider } from "./contexts/HotelContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Login from "./components/auth/Login";
+import LandingPage from "./pages/LandingPage";
+
 import Register from "./components/auth/Register";
 import Dashboard from "./components/dashboard/Dashboard";
 import GuestPortal from "./components/guest/GuestPortal";
@@ -18,7 +20,8 @@ function App() {
         <HotelProvider>
           <Toaster position="bottom-center" />
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={<LandingPage />} />
+            <Route path="/signin" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/setup" element={<HotelSetup />} />
