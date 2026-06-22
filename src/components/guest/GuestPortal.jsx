@@ -462,7 +462,6 @@ export default function GuestPortal() {
           </div>
         </div>
 
-        {/* Main Card - Dark Theme with Gold Accents */}
         <div className="relative bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl shadow-black/40 overflow-hidden flex-1">
           {/* Gold Accent Bar */}
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#c9a84c] to-transparent" />
