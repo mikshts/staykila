@@ -689,6 +689,7 @@ export default function GuestPortal() {
 
               {/* Chat Tab */}
               {/* Chat Tab */}
+              {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
                   {/* Messages */}
@@ -705,8 +706,8 @@ export default function GuestPortal() {
                           Start a conversation with the front desk
                         </p>
                         <p className="text-[10px] text-gray-500 mt-3">
-                          <i className="fas fa-arrow-up text-[#c9a84c] mr-1"></i>
-                          Try one of the quick requests below
+                          <i className="fas fa-arrow-left text-[#c9a84c] mr-1"></i>
+                          Swipe to see more quick requests
                         </p>
                       </div>
                     ) : (
@@ -748,7 +749,7 @@ export default function GuestPortal() {
                     <div ref={chatEndRef} />
                   </div>
 
-                  {/* Quick Actions - Always Visible */}
+                  {/* Quick Actions - 2 Column Scrollable */}
                   {showQuickActions && (
                     <div className="p-3 border-t border-white/5 bg-black/10">
                       <div className="flex items-center justify-between mb-2">
@@ -761,52 +762,33 @@ export default function GuestPortal() {
                           <i className="fas fa-times"></i>
                         </button>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {quickActions.slice(0, 6).map((action, index) => (
-                          <button
-                            key={index}
-                            onClick={() => sendQuickMessage(action.message)}
-                            className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10">
-                            <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
-                              <i
-                                className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
-                              {action.label}
-                            </span>
-                            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                          </button>
-                        ))}
+                      {/* Scrollable container with 2 columns */}
+                      <div className="overflow-x-auto overflow-y-visible pb-2 -mx-1 px-1">
+                        <div className="grid grid-cols-2 gap-2 min-w-min">
+                          {quickActions.map((action, index) => (
+                            <button
+                              key={index}
+                              onClick={() => sendQuickMessage(action.message)}
+                              className="group relative overflow-hidden px-3 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap">
+                              <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
+                                <i
+                                  className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
+                                {action.label}
+                              </span>
+                              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      {quickActions.length > 6 && (
-                        <button
-                          onClick={() => {
-                            const allActions = document.getElementById(
-                              "all-quick-actions-chat",
-                            );
-                            if (allActions) {
-                              allActions.classList.toggle("hidden");
-                            }
-                          }}
-                          className="mt-2 text-[10px] text-[#c9a84c] hover:text-[#e8d189] transition-colors">
-                          <i className="fas fa-chevron-down mr-1"></i>
-                          Show more
-                        </button>
-                      )}
-                      <div
-                        id="all-quick-actions-chat"
-                        className="hidden flex-wrap gap-2 mt-2">
-                        {quickActions.slice(6).map((action, index) => (
-                          <button
-                            key={index + 6}
-                            onClick={() => sendQuickMessage(action.message)}
-                            className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10">
-                            <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
-                              <i
-                                className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
-                              {action.label}
-                            </span>
-                            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                          </button>
-                        ))}
+                      {/* Scroll indicator */}
+                      <div className="flex justify-center mt-1">
+                        <div className="flex gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#c9a84c]/60"></span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
+                        </div>
                       </div>
                     </div>
                   )}
