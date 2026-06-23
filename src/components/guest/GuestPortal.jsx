@@ -173,6 +173,30 @@ export default function GuestPortal() {
     }
   };
 
+  const getRoomTypeInfo = (roomType) => {
+    const types = {
+      single: {
+        label: "Single Bed Room",
+        icon: "🛏️",
+        description: "1 person · Standard room",
+        color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+      },
+      double: {
+        label: "Double Bed Room",
+        icon: "🛏️🛏️",
+        description: "2 persons · Queen/King bed",
+        color: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      },
+      family: {
+        label: "Family Room",
+        icon: "🏠",
+        description: "4-6 persons · Multiple beds",
+        color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+      },
+    };
+    return types[roomType] || types.single;
+  };
+
   // Function to handle quick message sending
   const sendQuickMessage = async (messageText) => {
     if (!guestToken) {
@@ -467,6 +491,8 @@ export default function GuestPortal() {
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#c9a84c] to-transparent" />
 
           {/* Room Header - Key Card Style */}
+
+          {/* Room Header - Key Card Style */}
           <div className="px-6 pt-8 pb-6 text-center border-b border-white/5 bg-gradient-to-b from-[#c9a84c]/5 to-transparent">
             <p className="text-[#c9a84c] text-[10px] font-semibold tracking-[0.2em] uppercase">
               Your Room
@@ -476,6 +502,16 @@ export default function GuestPortal() {
               className="text-4xl font-medium text-white mt-1">
               {room.name}
             </h2>
+
+            {/* ADD ROOM TYPE DISPLAY HERE */}
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getRoomTypeInfo(room.room_type).color}`}>
+                <span>{getRoomTypeInfo(room.room_type).icon}</span>
+                {getRoomTypeInfo(room.room_type).label}
+              </span>
+            </div>
+
             <div className="flex items-center justify-center gap-2 mt-2">
               <span className="text-xs font-mono text-gray-500">
                 {room.token}
@@ -633,6 +669,26 @@ export default function GuestPortal() {
               {/* Info Tab */}
               {activeTab === "info" && (
                 <div className="space-y-4 animate-fadeIn">
+                  {/* Room Type Card */}
+                  <div
+                    className={`bg-white/5 rounded-2xl p-4 border border-white/10`}>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${getRoomTypeInfo(room.room_type).color.replace("text-", "bg-").replace("border-", "border-")}`}>
+                        <span className="text-xl">
+                          {getRoomTypeInfo(room.room_type).icon}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {getRoomTypeInfo(room.room_type).label}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {getRoomTypeInfo(room.room_type).description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                   {/* WiFi */}
                   {wifiPassword && (
                     <div className="bg-white/5 rounded-2xl p-4 border border-white/10">

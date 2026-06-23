@@ -51,6 +51,7 @@ export default function HotelSetup() {
           room_number: i,
           name: `Room ${i}`,
           status: "available",
+          room_type: "single", // Default room type
         });
       }
 
@@ -58,14 +59,27 @@ export default function HotelSetup() {
 
       if (roomsError) throw roomsError;
 
-      // Create default pricing
-      const pricing = [
-        { hotel_id: hotel.id, duration_hours: 1, price: 100 },
-        { hotel_id: hotel.id, duration_hours: 3, price: 250 },
-        { hotel_id: hotel.id, duration_hours: 6, price: 450 },
-        { hotel_id: hotel.id, duration_hours: 12, price: 800 },
-        { hotel_id: hotel.id, duration_hours: 24, price: 1500 },
-      ];
+      // ======================================================
+      // UPDATED: Create default pricing for ALL room types
+      // ======================================================
+      const roomTypes = ["single", "double", "family"];
+      const defaultPrices = {
+        single: { 1: 100, 3: 250, 6: 450, 12: 800, 24: 1500 },
+        double: { 1: 150, 3: 350, 6: 600, 12: 1000, 24: 1800 },
+        family: { 1: 250, 3: 500, 6: 800, 12: 1300, 24: 2200 },
+      };
+
+      const pricing = [];
+      roomTypes.forEach((roomType) => {
+        Object.entries(defaultPrices[roomType]).forEach(([hours, price]) => {
+          pricing.push({
+            hotel_id: hotel.id,
+            duration_hours: parseInt(hours),
+            price: price,
+            room_type: roomType,
+          });
+        });
+      });
 
       const { error: pricingError } = await supabase
         .from("pricing")

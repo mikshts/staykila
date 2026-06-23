@@ -12,6 +12,28 @@ function StatusPill({ status, getStatusMeta }) {
   );
 }
 
+// Helper function to get room type info
+const getRoomTypeInfo = (roomType) => {
+  const types = {
+    single: {
+      label: "Single Bed",
+      icon: "🛏️",
+      color: "text-blue-600 bg-blue-50",
+    },
+    double: {
+      label: "Double Bed",
+      icon: "🛏️🛏️",
+      color: "text-purple-600 bg-purple-50",
+    },
+    family: {
+      label: "Family Room",
+      icon: "🏠",
+      color: "text-amber-600 bg-amber-50",
+    },
+  };
+  return types[roomType] || types.single;
+};
+
 export default function RoomGrid({
   rooms,
   onRoomAction,
@@ -41,6 +63,7 @@ export default function RoomGrid({
         const countdown = room.booking
           ? formatCountdown(room.booking.end_time)
           : null;
+        const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
         return (
           <div
@@ -52,9 +75,17 @@ export default function RoomGrid({
                 <div className="font-bold text-[#0f1b2d] text-base">
                   {room.name || `Room ${room.room_number}`}
                 </div>
+                {/* Room Type Badge */}
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${roomTypeInfo.color}`}>
+                    <span>{roomTypeInfo.icon}</span>
+                    {roomTypeInfo.label}
+                  </span>
+                </div>
                 <button
                   onClick={() => onRoomAction("detail", room)}
-                  className="text-[10px] text-[#8a8278] hover:text-[#c9a84c]">
+                  className="text-[10px] text-[#8a8278] hover:text-[#c9a84c] mt-0.5">
                   <i className="fas fa-pen text-[9px] mr-1"></i>Rename
                 </button>
               </div>
@@ -118,6 +149,14 @@ export default function RoomGrid({
                       ? "Being cleaned"
                       : "Ready for check-in"}
                   </p>
+                  {/* Show room type when empty */}
+                  <div className="mt-1">
+                    <span
+                      className={`inline-flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full ${roomTypeInfo.color}`}>
+                      <span>{roomTypeInfo.icon}</span>
+                      {roomTypeInfo.label}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>

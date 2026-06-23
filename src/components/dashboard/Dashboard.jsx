@@ -114,6 +114,9 @@ export default function Dashboard() {
   }, [rooms]);
 
   // Fetch functions
+  // src/components/dashboard/Dashboard.jsx
+  // Replace the fetchHotelSettings function with this:
+
   const fetchHotelSettings = async () => {
     try {
       const { data: hotelData, error: hotelError } = await supabase
@@ -136,6 +139,7 @@ export default function Dashboard() {
         setMenuImages(menuData);
       }
 
+      // UPDATED: Fetch pricing with room_type
       const { data: pricingData, error: pricingError } = await supabase
         .from("pricing")
         .select("*")
@@ -144,7 +148,9 @@ export default function Dashboard() {
       if (!pricingError && pricingData) {
         const priceMap = {};
         pricingData.forEach((p) => {
-          priceMap[p.duration_hours] = p.price;
+          // FIX: Create key with room_type and duration
+          const key = `${p.room_type || "single"}_${p.duration_hours}`;
+          priceMap[key] = p.price;
         });
         setPrices(priceMap);
         setEditPrices(priceMap);
@@ -705,23 +711,52 @@ export default function Dashboard() {
     }
   };
 
+  // src/components/dashboard/Dashboard.jsx
+  // Replace the savePrices function with this:
+
   const savePrices = async () => {
     try {
-      const promises = Object.entries(editPrices).map(([hours, price]) =>
-        supabase.from("pricing").upsert({
-          hotel_id: hotel.id,
-          duration_hours: parseInt(hours),
-          price: price,
-        }),
-      );
-      await Promise.all(promises);
+      // Convert the editPrices object to array format for saving
+      const pricingData = [];
+      Object.entries(editPrices).forEach(([key, price]) => {
+        // Skip if price is empty or zero
+        if (price === undefined || price === null || price === "") return;
+
+        // Extract room_type and duration from key (e.g., "single_1")
+        const parts = key.split("_");
+        if (parts.length === 2) {
+          const roomType = parts[0];
+          const duration = parseInt(parts[1]);
+          if (roomType && duration && price > 0) {
+            pricingData.push({
+              hotel_id: hotel.id,
+              duration_hours: duration,
+              price: parseFloat(price),
+              room_type: roomType,
+            });
+          }
+        }
+      });
+
+      if (pricingData.length === 0) {
+        toast.error("No valid prices to save");
+        return;
+      }
+
+      // Upsert the pricing data
+      const { error } = await supabase.from("pricing").upsert(pricingData, {
+        onConflict: "hotel_id,duration_hours,room_type",
+      });
+
+      if (error) throw error;
+
       setPrices(editPrices);
-      toast.success("Prices updated");
+      toast.success("Prices updated successfully!");
       setShowPriceModal(false);
       fetchRooms();
     } catch (error) {
       console.error("Error saving prices:", error);
-      toast.error("Failed to save prices");
+      toast.error("Failed to save prices: " + error.message);
     }
   };
 

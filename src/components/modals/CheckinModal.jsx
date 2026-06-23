@@ -10,28 +10,25 @@ export default function CheckinModal({
 }) {
   const [selectedRoomType, setSelectedRoomType] = useState("single");
 
-  // Room type definitions with base prices
+  // Room type definitions (no multiplier)
   const roomTypes = [
     {
       id: "single",
       label: "Single Bed",
       icon: "🛏️",
       description: "1 person · Standard room",
-      multiplier: 1,
     },
     {
       id: "double",
       label: "Double Bed",
       icon: "🛏️🛏️",
       description: "2 persons · Queen/King bed",
-      multiplier: 1.5,
     },
     {
       id: "family",
       label: "Family Room",
       icon: "🏠",
       description: "4-6 persons · Multiple beds",
-      multiplier: 2.5,
     },
   ];
 
@@ -43,24 +40,15 @@ export default function CheckinModal({
     { hours: 24, label: "Overnight", note: "24 hours", icon: "🌛" },
   ];
 
-  // Get base price for duration
-  // In CheckinModal.jsx - Updated getBasePrice
-  const getBasePrice = (hours) => {
+  // Get price for specific room type and duration
+  const getPrice = (hours) => {
     // Try to get room type specific price first
     const key = `${selectedRoomType}_${hours}`;
-    if (prices[key] !== undefined && prices[key] !== null) {
+    if (prices[key] !== undefined && prices[key] !== null && prices[key] > 0) {
       return prices[key];
     }
-    // Fallback to base price
+    // Fallback to base price (for backward compatibility)
     return prices[hours] || hours * 100;
-  };
-
-  // Calculate price with room type multiplier
-  const getCalculatedPrice = (hours) => {
-    const basePrice = getBasePrice(hours);
-    const selectedType = roomTypes.find((t) => t.id === selectedRoomType);
-    const multiplier = selectedType ? selectedType.multiplier : 1;
-    return Math.round(basePrice * multiplier);
   };
 
   // Get room type label for display
@@ -111,18 +99,13 @@ export default function CheckinModal({
 
         <div className="space-y-2">
           {durations.map((d) => {
-            const calculatedPrice = getCalculatedPrice(d.hours);
-            const basePrice = getBasePrice(d.hours);
-            const selectedType = roomTypes.find(
-              (t) => t.id === selectedRoomType,
-            );
-            const hasMultiplier = selectedType && selectedType.multiplier > 1;
+            const price = getPrice(d.hours);
 
             return (
               <button
                 key={d.hours}
                 onClick={() =>
-                  onCheckin(room.id, d.hours, calculatedPrice, selectedRoomType)
+                  onCheckin(room.id, d.hours, price, selectedRoomType)
                 }
                 className="w-full flex items-center gap-3 p-3 bg-[#f7f3ee] rounded-xl hover:border-[#c9a84c] border-2 border-transparent transition">
                 <span className="text-xl">{d.icon}</span>
@@ -136,14 +119,7 @@ export default function CheckinModal({
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-[#c9a84c]">
-                    ₱{calculatedPrice}
-                  </div>
-                  {hasMultiplier && (
-                    <div className="text-[8px] text-[#8a8278] line-through">
-                      ₱{basePrice}
-                    </div>
-                  )}
+                  <div className="font-bold text-[#c9a84c]">₱{price}</div>
                   <div className="text-[10px] text-[#8a8278] mt-0.5">
                     {formatTime(new Date().toISOString())} →{" "}
                     {formatTime(

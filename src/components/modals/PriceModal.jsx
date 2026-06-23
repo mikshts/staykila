@@ -29,6 +29,8 @@ export default function PriceModal({
     return prices[key] || prices[hours] || hours * 100;
   };
 
+  // src/components/modals/PriceModal.jsx
+  // This part is already correct - it uses ${selectedRoomType}_${hours} as the key
   const handlePriceChange = (hours, value) => {
     let newValue = value;
     if (newValue.startsWith("0") && newValue.length > 1) {
@@ -36,7 +38,7 @@ export default function PriceModal({
     }
     const numValue = newValue === "" ? "" : parseFloat(newValue);
 
-    // Store with room type prefix
+    // Store with room type prefix - THIS IS CORRECT
     const key = `${selectedRoomType}_${hours}`;
     onPricesChange({
       ...prices,
