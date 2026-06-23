@@ -82,7 +82,11 @@ export default function Dashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const timerIntervalRef = useRef(null);
-
+  const roomsRef = useRef(rooms); // Add this line
+  // Keep roomsRef in sync with rooms state
+  useEffect(() => {
+    roomsRef.current = rooms;
+  }, [rooms]);
   // Fetch data on mount
   useEffect(() => {
     if (hotel?.id) {
@@ -103,15 +107,38 @@ export default function Dashboard() {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
+
     timerIntervalRef.current = setInterval(() => {
-      updateTimers();
+      // Use roomsRef.current to get the latest rooms
+      const currentRooms = roomsRef.current;
+
+      document.querySelectorAll("[data-timer]").forEach((el) => {
+        const roomId = el.dataset.timer;
+        const room = currentRooms.find((r) => r.id === parseInt(roomId));
+        if (room?.booking) {
+          const countdown = formatCountdown(room.booking.end_time);
+          if (el.textContent !== countdown) {
+            el.textContent = countdown;
+          }
+          const status = getRoomStatus(room.booking.end_time);
+          el.className =
+            `timer-display text-2xl font-bold font-mono ` +
+            (status === "expiring"
+              ? "text-orange-500 animate-pulse"
+              : status === "expired"
+                ? "text-red-500"
+                : "text-green-600");
+        }
+      });
     }, 1000);
+
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
       }
     };
-  }, [rooms]);
+  }, []); // Empty array - only set up once
 
   // Fetch functions
   // src/components/dashboard/Dashboard.jsx
@@ -345,27 +372,6 @@ export default function Dashboard() {
     return [hours, minutes, seconds]
       .map((v) => String(v).padStart(2, "0"))
       .join(":");
-  };
-
-  const updateTimers = () => {
-    document.querySelectorAll("[data-timer]").forEach((el) => {
-      const roomId = el.dataset.timer;
-      const room = rooms.find((r) => r.id === parseInt(roomId));
-      if (room?.booking) {
-        const countdown = formatCountdown(room.booking.end_time);
-        if (el.textContent !== countdown) {
-          el.textContent = countdown;
-        }
-        const status = getRoomStatus(room.booking.end_time);
-        el.className =
-          `timer-display text-2xl font-bold font-mono ` +
-          (status === "expiring"
-            ? "text-orange-500 animate-pulse"
-            : status === "expired"
-              ? "text-red-500"
-              : "text-green-600");
-      }
-    });
   };
 
   const getStatusMeta = (status) => {
