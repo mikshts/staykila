@@ -354,7 +354,7 @@ export default function Dashboard() {
         .from("bookings")
         .select("price, status")
         .eq("hotel_id", hotel.id)
-        .eq("status", "completed");
+        .eq("status", "active"); // <-- ITO NA
 
       if (!revenueError && completedBookings) {
         totalRevenue = completedBookings.reduce(
@@ -636,7 +636,7 @@ export default function Dashboard() {
         .from("bookings")
         .select("id")
         .eq("hotel_id", hotel.id)
-        .eq("status", "completed");
+        .eq("status", "active"); // <-- ITO NA
 
       if (fetchError) throw fetchError;
 
@@ -645,7 +645,7 @@ export default function Dashboard() {
           .from("bookings")
           .delete()
           .eq("hotel_id", hotel.id)
-          .eq("status", "completed");
+          .eq("status", "active"); // <-- ITO NA
 
         if (deleteError) throw deleteError;
 
