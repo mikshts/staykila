@@ -122,7 +122,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
     setShowBookingModal(true);
   };
-
   const handleBlockDate = async () => {
     if (!selectedRoomId) {
       toast.error("Please select a room");
@@ -151,7 +150,9 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       };
 
       const guestName = sourceLabels[bookingSource] || "Booked";
-      const { error } = await supabase.from("bookings").insert({
+
+      // Ensure all fields are properly formatted
+      const bookingData = {
         room_id: selectedRoomId,
         hotel_id: hotel.id,
         guest_name: guestName,
@@ -160,17 +161,37 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
         hours: 24,
         price: 0,
         status: "booked",
+        booking_source: bookingSource,
         notes:
           notes || `Blocked via calendar on ${new Date().toLocaleDateString()}`,
-      });
+      };
 
-      if (error) throw error;
+      console.log("Inserting booking:", bookingData);
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .insert([bookingData]) // Note: using array syntax
+        .select();
+
+      if (error) {
+        console.error("Supabase error:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        toast.error(`Failed to block date: ${error.message}`);
+        return;
+      }
 
       toast.success(
         `✅ ${room.name} blocked for ${selectedDate.toLocaleDateString()}`,
       );
 
+      // Refresh the calendar data
       await fetchAllBookings();
+
+      // Reset modal state
       setShowBookingModal(false);
       setNotes("");
       setBookingSource("agoda");

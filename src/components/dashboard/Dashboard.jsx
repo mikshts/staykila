@@ -256,7 +256,6 @@ export default function Dashboard() {
         )
         .eq("hotel_id", hotel.id)
         .order("room_number");
-
       if (error) throw error;
 
       const processedRooms = (data || []).map((room) => {
