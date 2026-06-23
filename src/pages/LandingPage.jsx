@@ -175,11 +175,15 @@ function Navbar() {
       }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <img
-            src="/favicon1.png"
-            alt="StayKila"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain"
-          />
+          {/* Updated logo with border and glow effect to match login page */}
+          <div className="relative">
+            <img
+              src="/favicon1.png"
+              alt="StayKila"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[#c9a84c]/30 shadow-xl object-cover"
+            />
+            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#c9a84c]/20 rounded-full blur-sm"></div>
+          </div>
           <span
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
             className="text-lg sm:text-xl text-white font-medium">
@@ -686,11 +690,15 @@ function QRSystem() {
               {/* QRSystem component - Key card header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img
-                    src="/favicon1.png"
-                    alt="StayKila"
-                    className="w-6 h-6 object-contain"
-                  />
+                  {/* Updated logo with border and glow effect to match login page */}
+                  <div className="relative">
+                    <img
+                      src="/favicon1.png"
+                      alt="StayKila"
+                      className="w-6 h-6 rounded-lg border border-[#c9a84c]/30 shadow-xl object-cover"
+                    />
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#c9a84c]/20 rounded-full blur-sm"></div>
+                  </div>
                   <span
                     style={{ fontFamily: "'Cormorant Garamond', serif" }}
                     className="text-white text-base sm:text-lg">
@@ -1511,13 +1519,16 @@ function Footer() {
   return (
     <footer className="relative bg-[#0c1522] border-t border-white/10 py-10 md:py-12 snap-none">
       <div className="max-w-7xl mx-auto px-5 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-        {/* Navbar component - Updated logo section */}
+        {/* Footer logo - Updated with border and glow effect to match login page */}
         <div className="flex items-center gap-2.5">
-          <img
-            src="/favicon1.png"
-            alt="StayKila"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-contain"
-          />
+          <div className="relative">
+            <img
+              src="/favicon1.png"
+              alt="StayKila"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[#c9a84c]/30 shadow-xl object-cover"
+            />
+            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#c9a84c]/20 rounded-full blur-sm"></div>
+          </div>
           <span
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
             className="text-lg sm:text-xl text-white font-medium">

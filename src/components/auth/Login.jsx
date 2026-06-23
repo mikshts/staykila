@@ -4,6 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
+// Remove this import - it's causing the error
+// import logo from "../../public/favicon1.png";
 
 function useBrandFonts() {
   useEffect(() => {
@@ -108,9 +110,12 @@ export default function Login() {
           {/* Branding */}
           <div className="text-center mb-8">
             <div className="relative inline-block">
-              <div className="w-16 h-16 bg-[#0f1b2d] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/30 shadow-xl">
-                <i className="fas fa-hotel text-[#c9a84c] text-2xl"></i>
-              </div>
+              {/* Use the image directly from public folder */}
+              <img
+                src="/favicon1.png"
+                alt="Logo"
+                className="w-16 h-16 rounded-2xl mx-auto mb-4 border border-[#c9a84c]/30 shadow-xl object-cover"
+              />
               <div className="absolute -top-2 -right-2 w-8 h-8 bg-[#c9a84c]/20 rounded-full blur-xl"></div>
             </div>
             <h1
@@ -121,6 +126,7 @@ export default function Login() {
             <p className="text-gray-400 text-sm">Lodge Management Platform</p>
           </div>
 
+          {/* Rest of your component remains the same */}
           {/* Google Login Button */}
           <button
             onClick={handleGoogleLogin}

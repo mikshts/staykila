@@ -21,7 +21,7 @@ export default function Sidebar({
   onQRDownloadClick,
   user,
   onLogout,
-  onResetTotals, // This is the correct prop name
+  onResetTotals,
 }) {
   return (
     <>
@@ -37,14 +37,17 @@ export default function Sidebar({
         className={`fixed lg:sticky top-0 left-0 h-screen w-[240px] bg-[#0f1b2d] z-50 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } overflow-y-auto overflow-x-hidden`}>
-        {/* Logo */}
+        {/* Logo - Updated to match login design */}
         <div className="p-6 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <img
-              src="/favicon1.png"
-              alt="StayKila"
-              className="w-8 h-8 rounded-lg object-contain"
-            />
+            <div className="relative">
+              <img
+                src="/favicon1.png"
+                alt="StayKila"
+                className="w-10 h-10 rounded-xl border border-[#c9a84c]/30 shadow-xl object-cover"
+              />
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#c9a84c]/20 rounded-full blur-sm"></div>
+            </div>
             <div>
               <div className="text-white text-lg font-bold">
                 Stay<span className="text-[#c9a84c]">Kila</span>
@@ -176,7 +179,7 @@ export default function Sidebar({
             Danger Zone
           </div>
           <button
-            onClick={onResetTotals} // Use the correct prop name
+            onClick={onResetTotals}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
             <i className="fas fa-trash w-5 text-center"></i>
             Reset Totals
