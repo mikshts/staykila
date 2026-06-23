@@ -263,10 +263,10 @@ export default function Dashboard() {
       const processedRooms = (data || []).map((room) => {
         const bookings = room.bookings || [];
 
-        // Find active booking (currently checked in)
+        // Hanapin ang active booking (currently checked in)
         const activeBooking = bookings.find((b) => b.status === "active");
 
-        // Find future booked dates
+        // Hanapin ang future bookings
         const now = new Date();
         const futureBookings = bookings.filter(
           (b) => b.status === "booked" && new Date(b.start_time) > now,
@@ -279,20 +279,30 @@ export default function Dashboard() {
           futureBookings.length > 0 ? futureBookings[0] : null;
 
         if (activeBooking) {
-          // Room is currently occupied - show occupied status
+          // Occupied - may active guest
           room.booking = activeBooking;
           room.bookingStatus = "occupied";
           room.status = getRoomStatus(activeBooking.end_time);
           room.displayMode = "occupied";
         } else if (nextBooking) {
-          // Room has a future booking - but keep room status as "available"
+          // May future booking - pero HINDI nagbabago ang room status
           room.booking = nextBooking;
           room.bookingStatus = "booked";
-          // DO NOT change room.status - keep it as whatever it is (available)
-          room.displayMode = "available"; // Show as available with booking indicator
+          // IMPORTANTE: HUWAG baguhin ang room.status
+          // Keep it as "available" or whatever it was
+          room.displayMode = "available";
           room.bookingDate = new Date(nextBooking.start_time);
+          // Siguraduhin na ang room.status ay "available" o ang original status
+          if (
+            !room.status ||
+            room.status === "occupied" ||
+            room.status === "expired" ||
+            room.status === "expiring"
+          ) {
+            room.status = "available";
+          }
         } else {
-          // Room is available
+          // Walang booking
           room.booking = null;
           room.bookingStatus = "available";
           room.displayMode = "available";
@@ -336,7 +346,7 @@ export default function Dashboard() {
       }
 
       processedRooms.forEach((room) => {
-        // Use the actual room status for stats
+        // Gamitin ang room.status para sa stats
         const status = room.status || "available";
         if (newStats[status] !== undefined) {
           newStats[status]++;
