@@ -92,9 +92,21 @@ export default function RoomList({
           </thead>
           <tbody>
             {rooms.map((room) => {
-              const hasFutureBooking =
-                room.booking && room.bookingStatus === "booked";
-              const bookingDate = hasFutureBooking ? room.bookingDate : null;
+              // Get all future bookings
+              const bookings = room.bookings || [];
+              const now = new Date();
+              const futureBookings = bookings.filter(
+                (b) => b.status === "booked" && new Date(b.start_time) > now,
+              );
+
+              futureBookings.sort(
+                (a, b) => new Date(a.start_time) - new Date(b.start_time),
+              );
+
+              const hasFutureBooking = futureBookings.length > 0;
+              const bookingDates = futureBookings.map(
+                (b) => new Date(b.start_time),
+              );
 
               // ALWAYS use the room's actual status
               const displayStatus = room.status || "available";
@@ -109,9 +121,12 @@ export default function RoomList({
                   : "—";
               const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
-              const bookingText = bookingDate
-                ? `booked ${bookingDate.getMonth() + 1}/${bookingDate.getDate()}`
-                : "";
+              // Format all booking dates with asterisk
+              const bookingTexts = bookingDates.map(
+                (date) => `booked ${date.getMonth() + 1}/${date.getDate()}`,
+              );
+              const allBookingsText =
+                bookingTexts.length > 0 ? bookingTexts.join(" * ") : "";
 
               return (
                 <tr
@@ -121,15 +136,14 @@ export default function RoomList({
                     {room.name || `Room ${room.room_number}`}
                   </td>
                   <td className="p-2">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       <StatusPill
                         status={displayStatus}
                         getStatusMeta={getStatusMeta}
                       />
-                      {/* JUST ADD THE TEXT - NOTHING ELSE CHANGES */}
-                      {hasFutureBooking && bookingText && (
-                        <span className="text-[10px] text-purple-600 font-medium">
-                          . {bookingText}
+                      {hasFutureBooking && allBookingsText && (
+                        <span className="text-[10px] font-medium text-purple-600">
+                          {allBookingsText}
                         </span>
                       )}
                     </div>

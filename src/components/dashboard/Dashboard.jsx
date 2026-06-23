@@ -266,15 +266,18 @@ export default function Dashboard() {
         // Hanapin ang active booking (currently checked in)
         const activeBooking = bookings.find((b) => b.status === "active");
 
-        // Hanapin ang future bookings
+        // Hanapin ang lahat ng future bookings
         const now = new Date();
         const futureBookings = bookings.filter(
           (b) => b.status === "booked" && new Date(b.start_time) > now,
         );
 
+        // Sort by date
         futureBookings.sort(
           (a, b) => new Date(a.start_time) - new Date(b.start_time),
         );
+
+        // Kunin ang unang future booking (pinakamalapit)
         const nextBooking =
           futureBookings.length > 0 ? futureBookings[0] : null;
 
@@ -284,15 +287,15 @@ export default function Dashboard() {
           room.bookingStatus = "occupied";
           room.status = getRoomStatus(activeBooking.end_time);
           room.displayMode = "occupied";
-        } else if (nextBooking) {
-          // May future booking - pero HINDI nagbabago ang room status
+          room.futureBookings = futureBookings; // Store all future bookings
+        } else if (futureBookings.length > 0) {
+          // May mga future bookings - HINDI nagbabago ang room status
           room.booking = nextBooking;
           room.bookingStatus = "booked";
-          // IMPORTANTE: HUWAG baguhin ang room.status
-          // Keep it as "available" or whatever it was
           room.displayMode = "available";
           room.bookingDate = new Date(nextBooking.start_time);
-          // Siguraduhin na ang room.status ay "available" o ang original status
+          room.futureBookings = futureBookings; // Store all future bookings
+          // Siguraduhin na ang room.status ay "available"
           if (
             !room.status ||
             room.status === "occupied" ||
@@ -306,6 +309,7 @@ export default function Dashboard() {
           room.booking = null;
           room.bookingStatus = "available";
           room.displayMode = "available";
+          room.futureBookings = [];
           const completedBooking = bookings.find(
             (b) => b.status === "completed",
           );
@@ -346,7 +350,6 @@ export default function Dashboard() {
       }
 
       processedRooms.forEach((room) => {
-        // Gamitin ang room.status para sa stats
         const status = room.status || "available";
         if (newStats[status] !== undefined) {
           newStats[status]++;

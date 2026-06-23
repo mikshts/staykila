@@ -55,12 +55,22 @@ export default function RoomGrid({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {rooms.map((room) => {
-        // SIMPLE: Just check if there's a future booking
-        const hasFutureBooking =
-          room.booking && room.bookingStatus === "booked";
-        const bookingDate = hasFutureBooking ? room.bookingDate : null;
+        // Check if room has future bookings
+        const bookings = room.bookings || [];
+        const now = new Date();
+        const futureBookings = bookings.filter(
+          (b) => b.status === "booked" && new Date(b.start_time) > now,
+        );
 
-        // ALWAYS use the room's actual status - NEVER change it
+        // Sort by date
+        futureBookings.sort(
+          (a, b) => new Date(a.start_time) - new Date(b.start_time),
+        );
+
+        const hasFutureBooking = futureBookings.length > 0;
+        const bookingDates = futureBookings.map((b) => new Date(b.start_time));
+
+        // ALWAYS use the room's actual status
         const displayStatus = room.status || "available";
         const status =
           room.booking && room.bookingStatus !== "booked"
@@ -74,10 +84,14 @@ export default function RoomGrid({
             : null;
         const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
-        // Just format the date text
-        const bookingText = bookingDate
-          ? `booked ${bookingDate.getMonth() + 1}/${bookingDate.getDate()}`
-          : "";
+        // Format all booking dates with asterisk
+        const bookingTexts = bookingDates.map(
+          (date) => `booked ${date.getMonth() + 1}/${date.getDate()}`,
+        );
+
+        // Combine with asterisk
+        const allBookingsText =
+          bookingTexts.length > 0 ? bookingTexts.join(" * ") : "";
 
         return (
           <div
@@ -116,10 +130,10 @@ export default function RoomGrid({
                     status={displayStatus}
                     getStatusMeta={getStatusMeta}
                   />
-                  {/* JUST ADD THE TEXT - NOTHING ELSE CHANGES */}
-                  {hasFutureBooking && bookingText && (
-                    <span className="text-[10px] text-purple-600 font-medium">
-                      . {bookingText}
+                  {/* Display all bookings with asterisk */}
+                  {hasFutureBooking && allBookingsText && (
+                    <span className="text-[10px] font-medium text-purple-600">
+                      {allBookingsText}
                     </span>
                   )}
                 </div>
