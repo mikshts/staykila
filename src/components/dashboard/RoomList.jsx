@@ -109,23 +109,29 @@ export default function RoomList({
                   : "—";
               const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
+              const bookingDateText = bookingDate
+                ? `booked ${bookingDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                : "";
+
               return (
                 <tr
                   key={room.id}
                   className="border-b border-[#e5e2db] hover:bg-[#f7f3ee] transition">
                   <td className="p-2 font-medium">
                     {room.name || `Room ${room.room_number}`}
-                    {hasFutureBooking && bookingDate && (
-                      <div className="text-[9px] text-purple-600">
-                        📅 Booked {bookingDate.toLocaleDateString()}
-                      </div>
-                    )}
                   </td>
                   <td className="p-2">
-                    <StatusPill
-                      status={displayStatus}
-                      getStatusMeta={getStatusMeta}
-                    />
+                    <div className="flex items-center gap-1">
+                      <StatusPill
+                        status={displayStatus}
+                        getStatusMeta={getStatusMeta}
+                      />
+                      {hasFutureBooking && bookingDateText && (
+                        <span className="text-[10px] text-purple-600 font-medium">
+                          . {bookingDateText}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-2">
                     {room.booking && room.bookingStatus !== "booked" ? (
@@ -192,14 +198,13 @@ export default function RoomList({
                   <td className="p-2">
                     <div className="flex gap-1 flex-wrap">
                       {(displayStatus === "available" ||
-                        displayStatus === "cleaning") &&
-                        !hasFutureBooking && (
-                          <button
-                            onClick={() => onRoomAction("checkin", room)}
-                            className="btn btn-navy text-[10px] font-semibold py-1 px-2 rounded bg-[#0f1b2d] text-white hover:opacity-90 transition">
-                            <i className="fas fa-sign-in-alt"></i>
-                          </button>
-                        )}
+                        displayStatus === "cleaning") && (
+                        <button
+                          onClick={() => onRoomAction("checkin", room)}
+                          className="btn btn-navy text-[10px] font-semibold py-1 px-2 rounded bg-[#0f1b2d] text-white hover:opacity-90 transition">
+                          <i className="fas fa-sign-in-alt"></i>
+                        </button>
+                      )}
                       {(displayStatus === "occupied" ||
                         displayStatus === "expiring") && (
                         <button

@@ -1,4 +1,3 @@
-//src/components/settings/CalendarManager.jsx
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
@@ -13,10 +12,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
   const [roomBookings, setRoomBookings] = useState({});
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState("");
-  const [selectedDateRange, setSelectedDateRange] = useState(null);
-  const [isRangeMode, setIsRangeMode] = useState(false);
-  const [rangeStart, setRangeStart] = useState(null);
-  const [rangeEnd, setRangeEnd] = useState(null);
 
   useEffect(() => {
     fetchAllBookings();
@@ -36,7 +31,8 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
           end_time,
           status,
           guest_name,
-          notes
+          notes,
+          booking_source
         `,
         )
         .eq("hotel_id", hotel.id)
@@ -49,13 +45,11 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
         if (!bookingsByRoom[booking.room_id]) {
           bookingsByRoom[booking.room_id] = [];
         }
-        // Check if this booking spans multiple days
         const start = new Date(booking.start_time);
         const end = new Date(booking.end_time);
         const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
         if (diffDays > 1) {
-          // For multi-day bookings, create entries for each day
           for (let i = 0; i < diffDays; i++) {
             const date = new Date(start);
             date.setDate(date.getDate() + i);
@@ -63,11 +57,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
               date: date.toDateString(),
               start: start,
               end: end,
-              source: booking.guest_name?.includes("Agoda")
-                ? "agoda"
-                : booking.guest_name?.includes("Booking")
-                  ? "booking"
-                  : "walk-in",
+              source: booking.booking_source || "walk-in",
               guest: booking.guest_name,
               id: booking.id,
               notes: booking.notes,
@@ -79,11 +69,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
             date: start.toDateString(),
             start: start,
             end: end,
-            source: booking.guest_name?.includes("Agoda")
-              ? "agoda"
-              : booking.guest_name?.includes("Booking")
-                ? "booking"
-                : "walk-in",
+            source: booking.booking_source || "walk-in",
             guest: booking.guest_name,
             id: booking.id,
             notes: booking.notes,
@@ -108,7 +94,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       return;
     }
 
-    // Check if date is already booked
     const isBooked = isDateBooked(date, selectedRoomId);
     if (isBooked) {
       const booking = getBookingForDate(date, selectedRoomId);
@@ -122,7 +107,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
     setShowBookingModal(true);
   };
-  // In CalendarManager.jsx - handleBlockDate function
+
   const handleBlockDate = async () => {
     if (!selectedRoomId) {
       toast.error("Please select a room");
@@ -142,7 +127,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       const endTime = new Date(selectedDate);
       endTime.setHours(23, 59, 59, 999);
 
-      // Check if date is already booked
       const isBooked = isDateBooked(selectedDate, selectedRoomId);
       if (isBooked) {
         toast.error("This date is already booked!");
@@ -200,7 +184,9 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       console.error("Error blocking date:", error);
       toast.error("Failed to block date");
     }
-  }; // Add this function inside CalendarManager component
+  };
+
+  // FIXED: Clear ALL bookings for the selected room
   const handleClearAllBookings = async () => {
     if (!selectedRoomId) {
       toast.error("Please select a room first");
@@ -222,7 +208,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
     }
 
     try {
-      // Delete all bookings for this room with status 'booked'
+      // Delete ALL bookings for this room with status 'booked'
       const { error } = await supabase
         .from("bookings")
         .delete()
@@ -232,19 +218,26 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       if (error) throw error;
 
       toast.success(`✅ All bookings cleared for ${room.name}`);
+
+      // IMPORTANT: Refresh the calendar data
       await fetchAllBookings();
+
+      // Also refresh the room list in Dashboard
+      // This will trigger a refresh when the modal closes
+      window.dispatchEvent(new Event("refreshRooms"));
     } catch (error) {
       console.error("Error clearing bookings:", error);
       toast.error("Failed to clear bookings");
     }
   };
+
   const handleRemoveBooking = async (bookingId) => {
     if (!confirm("Remove this booking from the calendar?")) return;
 
     try {
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "cancelled" })
+        .delete()
         .eq("id", bookingId);
 
       if (error) throw error;
@@ -291,17 +284,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
     return icons[source] || icons["other"];
   };
 
-  const getSourceLabel = (source) => {
-    const labels = {
-      agoda: "Agoda",
-      booking: "Booking.com",
-      "walk-in": "Walk-in",
-      maintenance: "Maintenance",
-      other: "Other",
-    };
-    return labels[source] || source;
-  };
-
   const formatDate = (date) => {
     return date.toLocaleDateString("en-US", {
       weekday: "short",
@@ -311,12 +293,10 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
     });
   };
 
-  // Get booked dates count for a room
   const getBookedDatesCount = (roomId) => {
     return (roomBookings[roomId] || []).length;
   };
 
-  // Get room status color
   const getRoomStatusColor = (roomId) => {
     const count = getBookedDatesCount(roomId);
     if (count === 0) return "border-green-300 bg-green-50";
@@ -478,8 +458,8 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
               {selectedRoomId && (
                 <button
                   onClick={handleClearAllBookings}
-                  className="text-xs text-red-600 hover:text-red-800">
-                  <i className="fas fa-trash mr-1"></i> Clear All
+                  className="text-xs text-red-600 hover:text-red-800 font-medium">
+                  <i className="fas fa-trash mr-1"></i> Clear All Bookings
                 </button>
               )}
             </div>
@@ -552,6 +532,15 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                     Block This Date
                   </button>
                 </div>
+
+                {/* Show count of bookings for this room */}
+                {selectedRoomId && (
+                  <div className="mt-3 text-xs text-[#8a8278]">
+                    {getBookedDatesCount(selectedRoomId)} booking
+                    {getBookedDatesCount(selectedRoomId) !== 1 ? "s" : ""} for
+                    this room
+                  </div>
+                )}
               </>
             ) : (
               <div className="bg-gray-50 border-2 border-dashed border-[#e5e2db] rounded-lg p-12 text-center">

@@ -59,11 +59,8 @@ export default function RoomGrid({
         const hasFutureBooking =
           room.booking && room.bookingStatus === "booked";
         const bookingDate = hasFutureBooking ? room.bookingDate : null;
-        const bookingSource = hasFutureBooking
-          ? room.booking?.booking_source
-          : null;
 
-        // Use the actual room status from database, not the booking status
+        // Use the actual room status from database
         const actualStatus = room.status || "available";
         const status =
           room.booking && room.bookingStatus !== "booked"
@@ -77,8 +74,13 @@ export default function RoomGrid({
             : null;
         const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
-        // Determine display status - always show the room's actual status
+        // Display status is always the actual room status
         const displayStatus = actualStatus;
+
+        // Format booking date text
+        const bookingDateText = bookingDate
+          ? `booked ${bookingDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+          : "";
 
         return (
           <div
@@ -112,44 +114,23 @@ export default function RoomGrid({
                     {unread}
                   </span>
                 )}
-                <StatusPill
-                  status={displayStatus}
-                  getStatusMeta={getStatusMeta}
-                />
+                <div className="flex items-center gap-1">
+                  <StatusPill
+                    status={displayStatus}
+                    getStatusMeta={getStatusMeta}
+                  />
+                  {hasFutureBooking && bookingDateText && (
+                    <span className="text-[10px] text-purple-600 font-medium">
+                      . {bookingDateText}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Body */}
             <div className="p-3">
-              {/* Show future booking indicator if exists */}
-              {hasFutureBooking && bookingDate && (
-                <div className="mb-2 p-2 bg-purple-50 border border-purple-200 rounded-lg text-center">
-                  <div className="text-xs font-semibold text-purple-700">
-                    <i className="fas fa-calendar-check mr-1"></i>
-                    Booked for{" "}
-                    {bookingDate.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </div>
-                  <div className="text-[10px] text-purple-600 mt-0.5">
-                    {bookingSource === "agoda" && "🏨 Agoda"}
-                    {bookingSource === "booking" && "🛏️ Booking.com"}
-                    {bookingSource === "walk-in" && "🚶 Walk-in"}
-                    {bookingSource === "maintenance" && "🔧 Maintenance"}
-                    {bookingSource === "other" && "📋 Other"}
-                  </div>
-                  {room.booking?.notes && (
-                    <div className="text-[9px] text-purple-500 mt-0.5">
-                      📝 {room.booking.notes}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Show current occupancy details if occupied */}
-              {room.booking && room.bookingStatus !== "booked" && (
+              {room.booking && room.bookingStatus !== "booked" ? (
                 <>
                   <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
                     <span className="text-[#8a8278]">
@@ -203,10 +184,7 @@ export default function RoomGrid({
                     {countdown}
                   </div>
                 </>
-              )}
-
-              {/* Show available message */}
-              {!room.booking && (
+              ) : (
                 <div className="text-center py-4 text-[#8a8278]">
                   <i
                     className={`fas ${status === "cleaning" ? "fa-broom" : "fa-door-open"} text-2xl mb-1 block opacity-40`}></i>
@@ -221,18 +199,14 @@ export default function RoomGrid({
 
             {/* Actions */}
             <div className="p-2 bg-[#fafafa] border-t border-[#e5e2db] flex flex-wrap gap-1">
-              {/* Check In - Only for available rooms (not booked) */}
               {(displayStatus === "available" ||
-                displayStatus === "cleaning") &&
-                !hasFutureBooking && (
-                  <button
-                    onClick={() => onRoomAction("checkin", room)}
-                    className="flex-1 btn btn-navy text-xs font-semibold py-1.5 px-2 rounded-lg bg-[#0f1b2d] text-white hover:opacity-90 transition flex items-center justify-center gap-1">
-                    <i className="fas fa-sign-in-alt"></i> Check In
-                  </button>
-                )}
-
-              {/* Extend - Only for occupied rooms */}
+                displayStatus === "cleaning") && (
+                <button
+                  onClick={() => onRoomAction("checkin", room)}
+                  className="flex-1 btn btn-navy text-xs font-semibold py-1.5 px-2 rounded-lg bg-[#0f1b2d] text-white hover:opacity-90 transition flex items-center justify-center gap-1">
+                  <i className="fas fa-sign-in-alt"></i> Check In
+                </button>
+              )}
               {(displayStatus === "occupied" ||
                 displayStatus === "expiring") && (
                 <button
@@ -241,8 +215,6 @@ export default function RoomGrid({
                   <i className="fas fa-plus"></i> Extend
                 </button>
               )}
-
-              {/* Checkout - Only for occupied rooms */}
               {room.booking && room.bookingStatus !== "booked" && (
                 <button
                   onClick={() => onRoomAction("checkout", room)}
@@ -250,8 +222,6 @@ export default function RoomGrid({
                   <i className="fas fa-sign-out-alt"></i>
                 </button>
               )}
-
-              {/* Mark Ready - Only for cleaning */}
               {displayStatus === "cleaning" && (
                 <button
                   onClick={() => onMarkAvailable(room.id)}
@@ -259,8 +229,6 @@ export default function RoomGrid({
                   <i className="fas fa-sparkles"></i> Mark Ready
                 </button>
               )}
-
-              {/* Detail button - Always show */}
               <button
                 onClick={() => onRoomAction("detail", room)}
                 className="btn btn-ghost text-xs font-semibold py-1.5 px-2 rounded-lg border border-[#e5e2db] hover:bg-[#f7f3ee] transition flex items-center justify-center gap-1">
