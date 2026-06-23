@@ -43,7 +43,6 @@ export default function Dashboard() {
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [showWifiModal, setShowWifiModal] = useState(false);
   const [showMenuModal, setShowMenuModal] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
 
   const [showActivityPanel, setShowActivityPanel] = useState(false);
@@ -843,7 +842,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#f7f3ee] flex">
-      // In Dashboard.jsx return section, update the Sidebar props
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
