@@ -441,7 +441,7 @@ function Hero() {
                   { label: "Occupied Rooms", value: "42", accent: "#c9a84c" },
                   {
                     label: "Revenue Today",
-                    value: "$6,240",
+                    value: "₱6,240",
                     accent: "#60a5fa",
                   },
                   { label: "Occupancy Rate", value: "70%", accent: "#e8d189" },
@@ -507,7 +507,7 @@ function Hero() {
               },
               {
                 label: "Revenue Today",
-                value: "$6,240",
+                value: "₱6,240",
                 accent: "#60a5fa",
                 icon: "fa-sack-dollar",
               },
