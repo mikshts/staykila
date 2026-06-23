@@ -48,16 +48,10 @@ export default function RoomDetailPanel({
     ? room.futureBookings.map((b) => new Date(b.start_time))
     : [];
 
-  // REMOVED: auto-scroll to bottom on new messages
-  // useEffect(() => {
-  //   chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  // }, [messages]);
-
   const sendReply = async () => {
     if (!reply.trim()) return;
     await onSendMessage(room.id, reply, "admin");
     setReply("");
-    // Scroll to bottom after sending message
     setTimeout(() => {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
@@ -208,11 +202,19 @@ export default function RoomDetailPanel({
                       ₱{room.booking.price}
                     </span>
                   </div>
+                  {room.booking.notes && (
+                    <div className="flex justify-between text-xs py-1 border-t border-[#e5e2db] mt-1 pt-1">
+                      <span className="text-[#8a8278]">Notes</span>
+                      <span className="font-medium text-gray-700 max-w-[60%] text-right">
+                        {room.booking.notes}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </>
             )}
 
-            {/* Future Bookings List */}
+            {/* Future Bookings List - WITH NOTES */}
             {hasFutureBookings && bookingDates.length > 0 && (
               <>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-purple-600 mb-2">
@@ -222,23 +224,36 @@ export default function RoomDetailPanel({
                   {bookingDates.map((date, index) => (
                     <div
                       key={index}
-                      className="text-xs py-1 border-b border-purple-100 last:border-0 flex justify-between">
-                      <span className="text-purple-700">
-                        {date.toLocaleDateString("en-US", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                      <span className="text-purple-600">
-                        {room.futureBookings[index]?.booking_source ===
-                          "agoda" && "🏨 Agoda"}
-                        {room.futureBookings[index]?.booking_source ===
-                          "booking" && "🛏️ Booking.com"}
-                        {room.futureBookings[index]?.booking_source ===
-                          "walk-in" && "🚶 Walk-in"}
-                      </span>
+                      className="text-xs py-2 border-b border-purple-100 last:border-0">
+                      <div className="flex justify-between">
+                        <span className="text-purple-700 font-medium">
+                          {date.toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <span className="text-purple-600">
+                          {room.futureBookings[index]?.booking_source ===
+                            "agoda" && "🏨 Agoda"}
+                          {room.futureBookings[index]?.booking_source ===
+                            "booking" && "🛏️ Booking.com"}
+                          {room.futureBookings[index]?.booking_source ===
+                            "walk-in" && "🚶 Walk-in"}
+                          {room.futureBookings[index]?.booking_source ===
+                            "maintenance" && "🔧 Maintenance"}
+                        </span>
+                      </div>
+                      {/* SHOW NOTES FOR EACH BOOKING */}
+                      {room.futureBookings[index]?.notes && (
+                        <div className="text-[10px] text-purple-500 mt-0.5 flex items-start gap-1">
+                          <span>📝</span>
+                          <span className="text-purple-600/80">
+                            {room.futureBookings[index].notes}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -302,7 +317,6 @@ export default function RoomDetailPanel({
               Actions
             </div>
             <div className="space-y-2 mb-4">
-              {/* Check In - Only for available rooms (not future bookings) */}
               {(displayStatus === "available" ||
                 displayStatus === "cleaning") &&
                 !isFutureBooking && (
@@ -312,7 +326,6 @@ export default function RoomDetailPanel({
                     <i className="fas fa-sign-in-alt"></i> Check In Guest
                   </button>
                 )}
-              {/* Extend - Only for occupied rooms */}
               {(displayStatus === "occupied" ||
                 displayStatus === "expiring") && (
                 <button
@@ -321,7 +334,6 @@ export default function RoomDetailPanel({
                   <i className="fas fa-plus"></i> Extend Stay
                 </button>
               )}
-              {/* Checkout - Only for occupied rooms */}
               {isActiveBooking && room.booking && (
                 <button
                   onClick={onCheckout}
@@ -329,7 +341,6 @@ export default function RoomDetailPanel({
                   <i className="fas fa-sign-out-alt"></i> Check Out Now
                 </button>
               )}
-              {/* Mark Available - Only for cleaning */}
               {displayStatus === "cleaning" && (
                 <button
                   onClick={onMarkAvailable}

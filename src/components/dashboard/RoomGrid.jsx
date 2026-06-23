@@ -62,13 +62,7 @@ export default function RoomGrid({
           (b) => b.status === "booked" && new Date(b.start_time) > now,
         );
 
-        // Sort by date
-        futureBookings.sort(
-          (a, b) => new Date(a.start_time) - new Date(b.start_time),
-        );
-
         const hasFutureBooking = futureBookings.length > 0;
-        const bookingDates = futureBookings.map((b) => new Date(b.start_time));
 
         // ALWAYS use the room's actual status
         const displayStatus = room.status || "available";
@@ -83,15 +77,6 @@ export default function RoomGrid({
             ? formatCountdown(room.booking.end_time)
             : null;
         const roomTypeInfo = getRoomTypeInfo(room.room_type);
-
-        // Format all booking dates with asterisk
-        const bookingTexts = bookingDates.map(
-          (date) => `booked ${date.getMonth() + 1}/${date.getDate()}`,
-        );
-
-        // Combine with asterisk
-        const allBookingsText =
-          bookingTexts.length > 0 ? bookingTexts.join(" * ") : "";
 
         return (
           <div
@@ -112,6 +97,11 @@ export default function RoomGrid({
                     </span>
                   </div>
                 )}
+                <button
+                  onClick={() => onRoomAction("detail", room)}
+                  className="text-[10px] text-[#8a8278] hover:text-[#c9a84c] mt-0.5">
+                  <i className="fas fa-pen text-[9px] mr-1"></i>Rename
+                </button>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {unread > 0 && (
@@ -125,10 +115,10 @@ export default function RoomGrid({
                     status={displayStatus}
                     getStatusMeta={getStatusMeta}
                   />
-                  {/* Display all bookings with asterisk */}
-                  {hasFutureBooking && allBookingsText && (
+                  {/* SIMPLE: Just "booked" text */}
+                  {hasFutureBooking && (
                     <span className="text-[10px] font-medium text-purple-600">
-                      {allBookingsText}
+                      . booked
                     </span>
                   )}
                 </div>

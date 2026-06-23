@@ -99,14 +99,7 @@ export default function RoomList({
                 (b) => b.status === "booked" && new Date(b.start_time) > now,
               );
 
-              futureBookings.sort(
-                (a, b) => new Date(a.start_time) - new Date(b.start_time),
-              );
-
               const hasFutureBooking = futureBookings.length > 0;
-              const bookingDates = futureBookings.map(
-                (b) => new Date(b.start_time),
-              );
 
               // ALWAYS use the room's actual status
               const displayStatus = room.status || "available";
@@ -121,13 +114,6 @@ export default function RoomList({
                   : "—";
               const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
-              // Format all booking dates with asterisk
-              const bookingTexts = bookingDates.map(
-                (date) => `booked ${date.getMonth() + 1}/${date.getDate()}`,
-              );
-              const allBookingsText =
-                bookingTexts.length > 0 ? bookingTexts.join(" * ") : "";
-
               return (
                 <tr
                   key={room.id}
@@ -141,9 +127,10 @@ export default function RoomList({
                         status={displayStatus}
                         getStatusMeta={getStatusMeta}
                       />
-                      {hasFutureBooking && allBookingsText && (
+                      {/* SIMPLE: Just "booked" text */}
+                      {hasFutureBooking && (
                         <span className="text-[10px] font-medium text-purple-600">
-                          {allBookingsText}
+                          . booked
                         </span>
                       )}
                     </div>
