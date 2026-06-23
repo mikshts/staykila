@@ -112,11 +112,6 @@ export default function RoomGrid({
                     </span>
                   </div>
                 )}
-                <button
-                  onClick={() => onRoomAction("detail", room)}
-                  className="text-[10px] text-[#8a8278] hover:text-[#c9a84c] mt-0.5">
-                  <i className="fas fa-pen text-[9px] mr-1"></i>Rename
-                </button>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {unread > 0 && (
