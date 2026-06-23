@@ -1,4 +1,3 @@
-// src/components/settings/RoomDetailPanel.jsx
 import React, { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import QRModal from "../modals/QRModal";
@@ -50,6 +49,7 @@ export default function RoomDetailPanel({
     navigator.clipboard.writeText(url);
     toast.success("QR URL copied to clipboard");
   };
+
   // Handle click outside to close
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -75,7 +75,8 @@ export default function RoomDetailPanel({
               <div>
                 <div className="font-bold text-lg">{room.name}</div>
                 <div className="text-xs text-white/60">
-                  {meta.label} • Token: {room.token}
+                  {meta.label} • Room #
+                  {room.room_number || room.id.substring(0, 8)}
                 </div>
               </div>
               <button
