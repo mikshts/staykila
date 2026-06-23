@@ -168,7 +168,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
       if (error) {
         console.error("Supabase error:", error);
-        toast.error(`Failed to block date: ${error.message}`);
+        toast.error(`Failed to book date: ${error.message}`);
         return;
       }
 
@@ -181,8 +181,8 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       setNotes("");
       setBookingSource("agoda");
     } catch (error) {
-      console.error("Error blocking date:", error);
-      toast.error("Failed to block date");
+      console.error("Error booking date:", error);
+      toast.error("Failed to book date");
     }
   };
 
@@ -336,7 +336,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
               Calendar Manager
             </h2>
             <p className="text-sm text-[#8a8278] mt-1">
-              Select a room, then click any date to block it for OTA bookings or
+              Select a room, then click any date to book it for OTA bookings or
               maintenance
             </p>
           </div>
@@ -529,7 +529,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                         : "bg-[#0f1b2d] text-white hover:bg-[#1a2d44]"
                     }`}>
                     <i className="fas fa-plus mr-2"></i>
-                    Block This Date
+                    Book This Date
                   </button>
                 </div>
 
@@ -549,7 +549,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                   Select a room from the left to view its calendar
                 </p>
                 <p className="text-xs text-[#8a8278] mt-1">
-                  You can then click any date to block it
+                  You can then click any date to book it
                 </p>
               </div>
             )}
@@ -563,7 +563,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-[#0f1b2d]">
-                    Block Date
+                    book Date
                   </h3>
                   <p className="text-sm text-[#8a8278]">
                     {formatDate(selectedDate)} •{" "}
@@ -625,7 +625,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                   <button
                     onClick={handleBlockDate}
                     className="flex-1 px-4 py-2 bg-[#0f1b2d] text-white rounded-lg text-sm font-medium hover:bg-[#1a2d44] transition">
-                    Block Date
+                    book Date
                   </button>
                 </div>
               </div>
