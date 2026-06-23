@@ -27,10 +27,26 @@ export default function RoomDetailPanel({
   const chatEndRef = useRef(null);
   const panelRef = useRef(null);
 
-  const status = room.booking
-    ? getRoomStatus(room.booking.end_time)
+  // Check if the booking is active (current) or future
+  const isActiveBooking = room.booking && room.bookingStatus === "occupied";
+  const isFutureBooking = room.booking && room.bookingStatus === "booked";
+
+  // Use the correct status for display
+  const displayStatus = isFutureBooking
+    ? "available"
     : room.status || "available";
-  const meta = getStatusMeta(status);
+  const status =
+    room.booking && !isFutureBooking
+      ? getRoomStatus(room.booking.end_time)
+      : displayStatus;
+  const meta = getStatusMeta(displayStatus);
+
+  // Check if room has future bookings for display
+  const hasFutureBookings =
+    room.futureBookings && room.futureBookings.length > 0;
+  const bookingDates = hasFutureBookings
+    ? room.futureBookings.map((b) => new Date(b.start_time))
+    : [];
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,6 +93,15 @@ export default function RoomDetailPanel({
                 <div className="text-xs text-white/60">
                   {meta.label} • Room #
                   {room.room_number || room.id.substring(0, 8)}
+                  {/* Show future booking indicator */}
+                  {hasFutureBookings && bookingDates.length > 0 && (
+                    <span className="text-purple-300 ml-1">
+                      • booked{" "}
+                      {bookingDates
+                        .map((d) => `${d.getMonth() + 1}/${d.getDate()}`)
+                        .join(" * ")}
+                    </span>
+                  )}
                 </div>
               </div>
               <button
@@ -85,7 +110,8 @@ export default function RoomDetailPanel({
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
-            {room.booking && (
+            {/* Only show countdown for ACTIVE bookings, not future bookings */}
+            {isActiveBooking && room.booking && (
               <div className="mt-3 bg-white/10 rounded-xl p-3">
                 <div className="text-center">
                   <div
@@ -106,11 +132,44 @@ export default function RoomDetailPanel({
                 </div>
               </div>
             )}
+            {/* Show future booking info */}
+            {isFutureBooking && room.booking && (
+              <div className="mt-3 bg-purple-900/30 rounded-xl p-3">
+                <div className="text-center">
+                  <div className="text-sm font-semibold text-purple-300">
+                    <i className="fas fa-calendar-check mr-2"></i>
+                    Booked for{" "}
+                    {new Date(room.booking.start_time).toLocaleDateString(
+                      "en-US",
+                      {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    )}
+                  </div>
+                  <div className="text-xs text-purple-400/70 mt-1">
+                    {room.booking.booking_source === "agoda" && "🏨 Agoda"}
+                    {room.booking.booking_source === "booking" &&
+                      "🛏️ Booking.com"}
+                    {room.booking.booking_source === "walk-in" && "🚶 Walk-in"}
+                    {room.booking.booking_source === "maintenance" &&
+                      "🔧 Maintenance"}
+                  </div>
+                  {room.booking.notes && (
+                    <div className="text-[10px] text-purple-400/50 mt-1">
+                      📝 {room.booking.notes}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-4">
-            {/* Booking Info */}
-            {room.booking && (
+            {/* Booking Info - Only show for active bookings */}
+            {isActiveBooking && room.booking && (
               <>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a8278] mb-2">
                   Current booking
@@ -140,6 +199,39 @@ export default function RoomDetailPanel({
                       ₱{room.booking.price}
                     </span>
                   </div>
+                </div>
+              </>
+            )}
+
+            {/* Future Bookings List */}
+            {hasFutureBookings && bookingDates.length > 0 && (
+              <>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-purple-600 mb-2">
+                  <i className="fas fa-calendar-check mr-1"></i> Future Bookings
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-4">
+                  {bookingDates.map((date, index) => (
+                    <div
+                      key={index}
+                      className="text-xs py-1 border-b border-purple-100 last:border-0 flex justify-between">
+                      <span className="text-purple-700">
+                        {date.toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                      <span className="text-purple-600">
+                        {room.futureBookings[index]?.booking_source ===
+                          "agoda" && "🏨 Agoda"}
+                        {room.futureBookings[index]?.booking_source ===
+                          "booking" && "🛏️ Booking.com"}
+                        {room.futureBookings[index]?.booking_source ===
+                          "walk-in" && "🚶 Walk-in"}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
@@ -201,28 +293,35 @@ export default function RoomDetailPanel({
               Actions
             </div>
             <div className="space-y-2 mb-4">
-              {(status === "available" || status === "cleaning") && (
-                <button
-                  onClick={onCheckin}
-                  className="w-full py-2 bg-[#0f1b2d] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
-                  <i className="fas fa-sign-in-alt"></i> Check In Guest
-                </button>
-              )}
-              {(status === "occupied" || status === "expiring") && (
+              {/* Check In - Only for available rooms (not future bookings) */}
+              {(displayStatus === "available" ||
+                displayStatus === "cleaning") &&
+                !isFutureBooking && (
+                  <button
+                    onClick={onCheckin}
+                    className="w-full py-2 bg-[#0f1b2d] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+                    <i className="fas fa-sign-in-alt"></i> Check In Guest
+                  </button>
+                )}
+              {/* Extend - Only for occupied rooms */}
+              {(displayStatus === "occupied" ||
+                displayStatus === "expiring") && (
                 <button
                   onClick={onExtend}
                   className="w-full py-2 bg-[#c9a84c] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
                   <i className="fas fa-plus"></i> Extend Stay
                 </button>
               )}
-              {room.booking && (
+              {/* Checkout - Only for occupied rooms */}
+              {isActiveBooking && room.booking && (
                 <button
                   onClick={onCheckout}
                   className="w-full py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
                   <i className="fas fa-sign-out-alt"></i> Check Out Now
                 </button>
               )}
-              {status === "cleaning" && (
+              {/* Mark Available - Only for cleaning */}
+              {displayStatus === "cleaning" && (
                 <button
                   onClick={onMarkAvailable}
                   className="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
