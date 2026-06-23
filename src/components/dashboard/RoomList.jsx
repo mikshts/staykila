@@ -92,18 +92,21 @@ export default function RoomList({
           </thead>
           <tbody>
             {rooms.map((room) => {
-              const displayStatus =
-                room.displayMode || room.status || "available";
-              const status = room.booking
-                ? getRoomStatus(room.booking.end_time)
-                : room.status || "available";
+              const hasFutureBooking =
+                room.booking && room.bookingStatus === "booked";
+              const bookingDate = hasFutureBooking ? room.bookingDate : null;
+
+              // Use the actual room status
+              const displayStatus = room.status || "available";
+              const status =
+                room.booking && room.bookingStatus !== "booked"
+                  ? getRoomStatus(room.booking.end_time)
+                  : displayStatus;
               const unread = getUnreadForRoom(room.id);
               const countdown =
-                room.booking && displayStatus !== "booked"
+                room.booking && room.bookingStatus !== "booked"
                   ? formatCountdown(room.booking.end_time)
-                  : displayStatus === "booked"
-                    ? "—"
-                    : "—";
+                  : "—";
               const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
               return (
@@ -112,9 +115,9 @@ export default function RoomList({
                   className="border-b border-[#e5e2db] hover:bg-[#f7f3ee] transition">
                   <td className="p-2 font-medium">
                     {room.name || `Room ${room.room_number}`}
-                    {displayStatus === "booked" && room.bookingDate && (
+                    {hasFutureBooking && bookingDate && (
                       <div className="text-[9px] text-purple-600">
-                        📅 {room.bookingDate.toLocaleDateString()}
+                        📅 Booked {bookingDate.toLocaleDateString()}
                       </div>
                     )}
                   </td>
@@ -125,7 +128,7 @@ export default function RoomList({
                     />
                   </td>
                   <td className="p-2">
-                    {room.booking && displayStatus !== "booked" ? (
+                    {room.booking && room.bookingStatus !== "booked" ? (
                       <span
                         className={`text-xs font-medium ${roomTypeInfo.color}`}>
                         {roomTypeInfo.icon} {roomTypeInfo.label}
@@ -144,17 +147,17 @@ export default function RoomList({
                     )}
                   </td>
                   <td className="p-2">
-                    {room.booking && displayStatus !== "booked"
+                    {room.booking && room.bookingStatus !== "booked"
                       ? formatTime(room.booking.start_time)
                       : "—"}
                   </td>
                   <td className="p-2">
-                    {room.booking && displayStatus !== "booked"
+                    {room.booking && room.bookingStatus !== "booked"
                       ? formatTime(room.booking.end_time)
                       : "—"}
                   </td>
                   <td className="p-2 font-medium text-[#c9a84c]">
-                    {room.booking && displayStatus !== "booked"
+                    {room.booking && room.bookingStatus !== "booked"
                       ? `₱${room.booking.price}`
                       : "—"}
                   </td>
@@ -181,9 +184,7 @@ export default function RoomList({
                         ? "text-orange-500"
                         : status === "expired"
                           ? "text-red-500"
-                          : displayStatus === "booked"
-                            ? "text-purple-500"
-                            : "text-green-600"
+                          : "text-green-600"
                     }`}
                     data-timer={room.id}>
                     {countdown}
@@ -191,13 +192,14 @@ export default function RoomList({
                   <td className="p-2">
                     <div className="flex gap-1 flex-wrap">
                       {(displayStatus === "available" ||
-                        status === "cleaning") && (
-                        <button
-                          onClick={() => onRoomAction("checkin", room)}
-                          className="btn btn-navy text-[10px] font-semibold py-1 px-2 rounded bg-[#0f1b2d] text-white hover:opacity-90 transition">
-                          <i className="fas fa-sign-in-alt"></i>
-                        </button>
-                      )}
+                        displayStatus === "cleaning") &&
+                        !hasFutureBooking && (
+                          <button
+                            onClick={() => onRoomAction("checkin", room)}
+                            className="btn btn-navy text-[10px] font-semibold py-1 px-2 rounded bg-[#0f1b2d] text-white hover:opacity-90 transition">
+                            <i className="fas fa-sign-in-alt"></i>
+                          </button>
+                        )}
                       {(displayStatus === "occupied" ||
                         displayStatus === "expiring") && (
                         <button
@@ -206,14 +208,14 @@ export default function RoomList({
                           <i className="fas fa-plus"></i>
                         </button>
                       )}
-                      {displayStatus !== "booked" && room.booking && (
+                      {room.booking && room.bookingStatus !== "booked" && (
                         <button
                           onClick={() => onRoomAction("checkout", room)}
                           className="btn btn-red text-[10px] font-semibold py-1 px-2 rounded bg-red-600 text-white hover:opacity-90 transition">
                           <i className="fas fa-sign-out-alt"></i>
                         </button>
                       )}
-                      {status === "cleaning" && (
+                      {displayStatus === "cleaning" && (
                         <button
                           onClick={() => onMarkAvailable(room.id)}
                           className="btn btn-green text-[10px] font-semibold py-1 px-2 rounded bg-green-600 text-white hover:opacity-90 transition">

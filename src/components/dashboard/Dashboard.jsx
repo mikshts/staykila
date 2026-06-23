@@ -261,46 +261,40 @@ export default function Dashboard() {
       if (error) throw error;
 
       const processedRooms = (data || []).map((room) => {
-        // Get all bookings for this room (active and booked)
         const bookings = room.bookings || [];
 
         // Find active booking (currently checked in)
         const activeBooking = bookings.find((b) => b.status === "active");
 
-        // Find future booked dates (status = 'booked' and start time is in the future)
+        // Find future booked dates
         const now = new Date();
         const futureBookings = bookings.filter(
           (b) => b.status === "booked" && new Date(b.start_time) > now,
         );
 
-        // Sort future bookings by date (earliest first)
         futureBookings.sort(
           (a, b) => new Date(a.start_time) - new Date(b.start_time),
         );
-
-        // Find the next upcoming booking
         const nextBooking =
           futureBookings.length > 0 ? futureBookings[0] : null;
 
         if (activeBooking) {
-          // Room is currently occupied
+          // Room is currently occupied - show occupied status
           room.booking = activeBooking;
           room.bookingStatus = "occupied";
           room.status = getRoomStatus(activeBooking.end_time);
           room.displayMode = "occupied";
         } else if (nextBooking) {
-          // Room has a future booking
+          // Room has a future booking - but keep room status as "available"
           room.booking = nextBooking;
           room.bookingStatus = "booked";
-          room.status = "booked";
-          room.displayMode = "booked";
-          // Add the booking date for display
+          // DO NOT change room.status - keep it as whatever it is (available)
+          room.displayMode = "available"; // Show as available with booking indicator
           room.bookingDate = new Date(nextBooking.start_time);
         } else {
           // Room is available
           room.booking = null;
           room.bookingStatus = "available";
-          room.status = room.status || "available";
           room.displayMode = "available";
           const completedBooking = bookings.find(
             (b) => b.status === "completed",
@@ -342,7 +336,8 @@ export default function Dashboard() {
       }
 
       processedRooms.forEach((room) => {
-        const status = room.displayMode || room.status || "available";
+        // Use the actual room status for stats
+        const status = room.status || "available";
         if (newStats[status] !== undefined) {
           newStats[status]++;
         }

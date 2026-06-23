@@ -200,6 +200,43 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       console.error("Error blocking date:", error);
       toast.error("Failed to block date");
     }
+  }; // Add this function inside CalendarManager component
+  const handleClearAllBookings = async () => {
+    if (!selectedRoomId) {
+      toast.error("Please select a room first");
+      return;
+    }
+
+    const room = rooms.find((r) => r.id === selectedRoomId);
+    if (!room) {
+      toast.error("Room not found");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Are you sure you want to clear ALL bookings for ${room.name}? This cannot be undone!`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      // Delete all bookings for this room with status 'booked'
+      const { error } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("room_id", selectedRoomId)
+        .eq("status", "booked");
+
+      if (error) throw error;
+
+      toast.success(`✅ All bookings cleared for ${room.name}`);
+      await fetchAllBookings();
+    } catch (error) {
+      console.error("Error clearing bookings:", error);
+      toast.error("Failed to clear bookings");
+    }
   };
   const handleRemoveBooking = async (bookingId) => {
     if (!confirm("Remove this booking from the calendar?")) return;
@@ -440,16 +477,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
               </h3>
               {selectedRoomId && (
                 <button
-                  onClick={() => {
-                    const room = rooms.find((r) => r.id === selectedRoomId);
-                    if (
-                      room &&
-                      confirm(`Clear all bookings for ${room.name}?`)
-                    ) {
-                      // Implementation to clear all bookings for this room
-                      toast.info("Clear all feature coming soon");
-                    }
-                  }}
+                  onClick={handleClearAllBookings}
                   className="text-xs text-red-600 hover:text-red-800">
                   <i className="fas fa-trash mr-1"></i> Clear All
                 </button>
