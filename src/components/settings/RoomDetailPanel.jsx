@@ -26,7 +26,6 @@ export default function RoomDetailPanel({
   const [showQR, setShowQR] = useState(false);
   const chatEndRef = useRef(null);
   const panelRef = useRef(null);
-  const messagesContainerRef = useRef(null);
 
   // Check if the booking is active (current) or future
   const isActiveBooking = room.booking && room.bookingStatus === "occupied";
@@ -52,13 +51,6 @@ export default function RoomDetailPanel({
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // Scroll to top when panel opens
-  useEffect(() => {
-    if (panelRef.current) {
-      panelRef.current.scrollTop = 0;
-    }
-  }, []);
 
   const sendReply = async () => {
     if (!reply.trim()) return;
@@ -93,8 +85,8 @@ export default function RoomDetailPanel({
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
         <div
           ref={panelRef}
-          className="bg-white w-full max-w-md h-full overflow-y-auto"
-          style={{ scrollBehavior: "smooth" }}>
+          className="bg-white w-full max-w-md h-full overflow-y-auto">
+          {/* Header - Sticky */}
           <div className="sticky top-0 bg-[#0f1b2d] text-white p-4 z-10">
             <div className="flex items-start justify-between">
               <div>
@@ -119,6 +111,7 @@ export default function RoomDetailPanel({
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
+
             {/* Only show countdown for ACTIVE bookings, not future bookings */}
             {isActiveBooking && room.booking && (
               <div className="mt-3 bg-white/10 rounded-xl p-3">
@@ -141,6 +134,7 @@ export default function RoomDetailPanel({
                 </div>
               </div>
             )}
+
             {/* Show future booking info */}
             {isFutureBooking && room.booking && (
               <div className="mt-3 bg-purple-900/30 rounded-xl p-3">
@@ -176,6 +170,7 @@ export default function RoomDetailPanel({
             )}
           </div>
 
+          {/* Content - Normal scroll, no auto-scroll to top */}
           <div className="p-4 pb-6">
             {/* Booking Info - Only show for active bookings */}
             {isActiveBooking && room.booking && (
@@ -255,9 +250,7 @@ export default function RoomDetailPanel({
               )}
             </div>
 
-            <div
-              ref={messagesContainerRef}
-              className="bg-[#f8fafc] rounded-xl p-3 max-h-48 overflow-y-auto mb-3">
+            <div className="bg-[#f8fafc] rounded-xl p-3 max-h-48 overflow-y-auto mb-3">
               {messages.length === 0 ? (
                 <p className="text-[#8a8278] text-center text-sm py-4">
                   No messages yet
