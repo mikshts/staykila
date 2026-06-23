@@ -177,6 +177,10 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       );
 
       await fetchAllBookings();
+
+      // 🔥 FIX: Trigger refresh for dashboard para mag-update agad ang RoomGrid
+      window.dispatchEvent(new Event("refreshRooms"));
+
       setShowBookingModal(false);
       setNotes("");
       setBookingSource("agoda");
@@ -186,11 +190,10 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
     }
   };
 
-  // FIXED: Clear ALL bookings for the selected room
   const handleClearAllBookings = async () => {
     if (!selectedRoomId) {
       toast.error("Please select a room first");
-      return; // STOP HERE - don't continue
+      return;
     }
 
     const room = rooms.find((r) => r.id === selectedRoomId);
@@ -208,7 +211,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
     }
 
     try {
-      // Delete ALL bookings for this room with status 'booked'
       const { error } = await supabase
         .from("bookings")
         .delete()
@@ -219,13 +221,11 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
       toast.success(`✅ All bookings cleared for ${room.name}`);
 
-      // Refresh calendar data
       await fetchAllBookings();
 
       // Trigger refresh for dashboard
       window.dispatchEvent(new Event("refreshRooms"));
 
-      // Close the calendar manager after a short delay
       setTimeout(() => {
         onClose();
       }, 500);
