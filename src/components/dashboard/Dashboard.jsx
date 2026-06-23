@@ -43,6 +43,9 @@ export default function Dashboard() {
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [showWifiModal, setShowWifiModal] = useState(false);
   const [showMenuModal, setShowMenuModal] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+
   const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
@@ -562,7 +565,59 @@ export default function Dashboard() {
     setCheckoutRoom(room);
     setShowCheckoutModal(true);
   };
+  // src/components/dashboard/Dashboard.jsx
+  // Add this function with your other handler functions
 
+  const handleResetTotals = async () => {
+    try {
+      // Show loading state
+      setLoading(true);
+
+      // Get all completed bookings for this hotel
+      const { data: completedBookings, error: fetchError } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("hotel_id", hotel.id)
+        .eq("status", "completed");
+
+      if (fetchError) throw fetchError;
+
+      if (completedBookings && completedBookings.length > 0) {
+        // Delete all completed bookings
+        const { error: deleteError } = await supabase
+          .from("bookings")
+          .delete()
+          .eq("hotel_id", hotel.id)
+          .eq("status", "completed");
+
+        if (deleteError) throw deleteError;
+
+        // Log the reset activity
+        await logActivity(
+          "reset",
+          `Reset all totals - Deleted ${completedBookings.length} completed bookings`,
+        );
+
+        toast.success(
+          `Successfully reset totals (${completedBookings.length} bookings removed)`,
+        );
+      } else {
+        toast.info("No completed bookings to reset");
+      }
+
+      // Refresh the data
+      await fetchRooms();
+      await fetchActivityLogs();
+
+      // Close the confirmation modal
+      setShowResetConfirm(false);
+    } catch (error) {
+      console.error("Error resetting totals:", error);
+      toast.error("Failed to reset totals: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleMarkAvailable = async (roomId) => {
     try {
       const { error } = await supabase
@@ -788,6 +843,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#f7f3ee] flex">
+      // In Dashboard.jsx return section, update the Sidebar props
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -835,8 +891,8 @@ export default function Dashboard() {
         }}
         user={user}
         onLogout={logout}
+        onResetTotals={() => setShowResetModal(true)} // This opens the modal
       />
-
       <main className="flex-1 min-w-0">
         <TopBar
           onMenuClick={() => setSidebarOpen(true)}
@@ -928,7 +984,6 @@ export default function Dashboard() {
           )}
         </div>
       </main>
-
       {/* Modals and Panels */}
       {/* Updated CheckinModal call */}
       {showCheckinModal && selectedRoom && (
@@ -939,6 +994,38 @@ export default function Dashboard() {
           onClose={() => setShowCheckinModal(false)}
           formatTime={formatTime}
         />
+      )}
+      {/* Reset Confirmation Modal */}
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i className="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+              </div>
+              <h3 className="text-lg font-bold text-[#0f1b2d] mb-2">
+                Reset All Totals?
+              </h3>
+              <p className="text-sm text-[#8a8278]">
+                This will permanently delete ALL completed bookings and reset
+                your revenue totals. This action cannot be undone!
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="flex-1 px-4 py-2 border border-[#e5e2db] rounded-lg text-sm font-medium hover:bg-[#f7f3ee] transition">
+                Cancel
+              </button>
+              <button
+                onClick={handleResetTotals} // This calls the actual reset function
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
+                Yes, Reset All
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {showExtendModal && selectedRoom && (
         <ExtendModal
@@ -1003,7 +1090,6 @@ export default function Dashboard() {
           onClose={() => setShowActivityPanel(false)}
         />
       )}
-
       {/* Messages Panel */}
       {showMessagesPanel && (
         <MessagesPanel
@@ -1017,7 +1103,6 @@ export default function Dashboard() {
           }}
         />
       )}
-
       {showSettingsPanel && (
         <SettingsPanel
           hotel={hotel}

@@ -21,6 +21,7 @@ export default function Sidebar({
   onQRDownloadClick,
   user,
   onLogout,
+  onResetTotals, // This is the correct prop name
 }) {
   return (
     <>
@@ -82,7 +83,6 @@ export default function Sidebar({
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pb-2">
             Operations
           </div>
-
           <button
             onClick={() => onFilterChange("all")}
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition ${
@@ -94,7 +94,6 @@ export default function Sidebar({
             Rooms
             <span className="ml-auto text-white/30 text-xs">{roomCount}</span>
           </button>
-
           {stats.expiring + stats.expired > 0 && (
             <button
               onClick={() => onFilterChange("expiring")}
@@ -106,7 +105,6 @@ export default function Sidebar({
               </span>
             </button>
           )}
-
           <button
             onClick={onMessagesClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -118,18 +116,15 @@ export default function Sidebar({
               </span>
             )}
           </button>
-
           <button
             onClick={onActivityClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-list-ul w-5 text-center"></i>
             Activity
           </button>
-
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Utilities
           </div>
-
           <button
             onClick={onQRDownloadClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -139,11 +134,9 @@ export default function Sidebar({
               <i className="fas fa-download"></i>
             </span>
           </button>
-
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Reports
           </div>
-
           <button
             onClick={onReportsClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -153,33 +146,43 @@ export default function Sidebar({
               <i className="fas fa-print"></i>
             </span>
           </button>
-
           <button
             onClick={onSettingsClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-gear w-5 text-center"></i>
             Settings
           </button>
-
           <button
             onClick={onPriceClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-tag w-5 text-center"></i>
             Edit Prices
           </button>
-
           <button
             onClick={onWifiClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-wifi w-5 text-center"></i>
             WiFi Settings
           </button>
-
           <button
             onClick={onMenuClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-utensils w-5 text-center"></i>
             Room Service Menu
+          </button>
+
+          {/* Danger Zone Section */}
+          <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
+            Danger Zone
+          </div>
+          <button
+            onClick={onResetTotals} // Use the correct prop name
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
+            <i className="fas fa-trash w-5 text-center"></i>
+            Reset Totals
+            <span className="ml-auto text-red-400/30 text-[9px]">
+              <i className="fas fa-exclamation-triangle"></i>
+            </span>
           </button>
 
           {/* Bottom spacer to ensure footer doesn't overlap */}
