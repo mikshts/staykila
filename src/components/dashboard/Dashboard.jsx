@@ -336,23 +336,19 @@ export default function Dashboard() {
         booked: 0,
       };
 
-      // ✅ DECLARE ONCE
+      // ✅ StatsCards: Kunin ang revenue mula sa ACTIVE + COMPLETED
       let totalRevenue = 0;
       let totalCheckins = 0;
 
-      // 🔥 ACTIVE bookings LANG para sa StatsCards
-      const { data: activeBookings, error: revenueError } = await supabase
+      const { data: allBookings, error: revenueError } = await supabase
         .from("bookings")
         .select("price, status")
         .eq("hotel_id", hotel.id)
-        .eq("status", "active");
+        .in("status", ["active", "completed"]); // <-- ACTIVE + COMPLETED
 
-      if (!revenueError && activeBookings) {
-        totalRevenue = activeBookings.reduce(
-          (sum, b) => sum + (b.price || 0),
-          0,
-        );
-        totalCheckins = activeBookings.length;
+      if (!revenueError && allBookings) {
+        totalRevenue = allBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+        totalCheckins = allBookings.filter((b) => b.status === "active").length;
       }
 
       processedRooms.forEach((room) => {
@@ -382,6 +378,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
   // Helper functions
   const getRoomStatus = (endTime) => {
     const now = new Date();
@@ -623,35 +620,35 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      // 🔥 ACTIVE bookings LANG ang kunin (hindi kasama ang completed)
-      const { data: activeBookings, error: fetchError } = await supabase
+      // 🔥 Kunin ang LAHAT ng bookings (active at completed)
+      const { data: allBookings, error: fetchError } = await supabase
         .from("bookings")
         .select("id")
         .eq("hotel_id", hotel.id)
-        .eq("status", "active"); // <-- ACTIVE LANG
+        .in("status", ["active", "completed"]); // <-- KUHAIN LAHAT
 
       if (fetchError) throw fetchError;
 
-      if (activeBookings && activeBookings.length > 0) {
-        // 🔥 ACTIVE bookings LANG ang i-delete
+      if (allBookings && allBookings.length > 0) {
+        // 🔥 DELETE LAHAT (active at completed)
         const { error: deleteError } = await supabase
           .from("bookings")
           .delete()
           .eq("hotel_id", hotel.id)
-          .eq("status", "active"); // <-- ACTIVE LANG
+          .in("status", ["active", "completed"]); // <-- DELETE LAHAT
 
         if (deleteError) throw deleteError;
 
         await logActivity(
           "reset",
-          `Reset active bookings - Deleted ${activeBookings.length} active bookings`,
+          `Reset all totals - Deleted ${allBookings.length} bookings (active + completed)`,
         );
 
         toast.success(
-          `Successfully reset ${activeBookings.length} active booking(s)`,
+          `Successfully reset totals (${allBookings.length} bookings removed)`,
         );
       } else {
-        toast("No active bookings to reset", {
+        toast("No bookings to reset", {
           icon: "ℹ️",
         });
       }
