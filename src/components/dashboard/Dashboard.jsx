@@ -336,19 +336,23 @@ export default function Dashboard() {
         booked: 0,
       };
 
+      // ✅ DECLARE ONCE
       let totalRevenue = 0;
       let totalCheckins = 0;
 
-      // 🔥 FIX: Kunin ang revenue mula sa ACTIVE at COMPLETED bookings
-      const { data: allBookings, error: revenueError } = await supabase
+      // 🔥 ACTIVE bookings LANG para sa StatsCards
+      const { data: activeBookings, error: revenueError } = await supabase
         .from("bookings")
         .select("price, status")
         .eq("hotel_id", hotel.id)
-        .in("status", ["active", "completed"]);
+        .eq("status", "active");
 
-      if (!revenueError && allBookings) {
-        totalRevenue = allBookings.reduce((sum, b) => sum + (b.price || 0), 0);
-        totalCheckins = allBookings.filter((b) => b.status === "active").length;
+      if (!revenueError && activeBookings) {
+        totalRevenue = activeBookings.reduce(
+          (sum, b) => sum + (b.price || 0),
+          0,
+        );
+        totalCheckins = activeBookings.length;
       }
 
       processedRooms.forEach((room) => {
