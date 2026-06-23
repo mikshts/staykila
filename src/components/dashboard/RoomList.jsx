@@ -1,4 +1,3 @@
-// src/components/dashboard/RoomList.jsx
 import React from "react";
 
 function StatusPill({ status, getStatusMeta }) {
@@ -81,6 +80,9 @@ export default function RoomList({
                 Price
               </th>
               <th className="text-left p-2 font-semibold text-[#8a8278] text-[10px] uppercase tracking-wider">
+                Source
+              </th>
+              <th className="text-left p-2 font-semibold text-[#8a8278] text-[10px] uppercase tracking-wider">
                 Remaining
               </th>
               <th className="text-left p-2 font-semibold text-[#8a8278] text-[10px] uppercase tracking-wider">
@@ -137,6 +139,25 @@ export default function RoomList({
                   <td className="p-2 font-medium text-[#c9a84c]">
                     {room.booking ? `₱${room.booking.price}` : "—"}
                   </td>
+                  {/* Source Column */}
+                  <td className="p-2">
+                    {room.booking ? (
+                      <span className="text-xs font-medium">
+                        {room.booking.booking_source === "agoda" && "🏨 Agoda"}
+                        {room.booking.booking_source === "booking" &&
+                          "🛏️ Booking.com"}
+                        {room.booking.booking_source === "walk-in" &&
+                          "🚶 Walk-in"}
+                        {room.booking.booking_source === "maintenance" &&
+                          "🔧 Maintenance"}
+                        {room.booking.booking_source === "other" && "📋 Other"}
+                        {!room.booking.booking_source && "🚶 Walk-in"}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
+                  {/* Remaining Column */}
                   <td
                     className={`p-2 font-mono font-bold ${
                       status === "expiring"
@@ -148,6 +169,7 @@ export default function RoomList({
                     data-timer={room.id}>
                     {countdown}
                   </td>
+                  {/* Actions Column */}
                   <td className="p-2">
                     <div className="flex gap-1 flex-wrap">
                       {(status === "available" || status === "cleaning") && (

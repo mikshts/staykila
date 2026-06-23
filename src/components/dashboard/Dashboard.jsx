@@ -12,6 +12,7 @@ import ReportsPanel from "../reports/ReportsPanel";
 import { DashboardSkeleton } from "../ui";
 import QRDownload from "./QRDownload";
 import { buildGuestUrl } from "../../lib/guestUrl";
+import CalendarManager from "../settings/CalendarManager";
 
 import {
   CheckinModal,
@@ -44,6 +45,7 @@ export default function Dashboard() {
   const [showWifiModal, setShowWifiModal] = useState(false);
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showCalendarManager, setShowCalendarManager] = useState(false);
 
   const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
@@ -228,7 +230,6 @@ export default function Dashboard() {
       console.error("Error fetching activity logs:", error);
     }
   };
-
   const fetchRooms = async () => {
     try {
       setLoading(true);
@@ -247,7 +248,9 @@ export default function Dashboard() {
           status,
           guest_name,
           guest_email,
-          guest_phone
+          guest_phone,
+          booking_source,
+          notes    
         )
       `,
         )
@@ -878,6 +881,10 @@ export default function Dashboard() {
           setShowMenuModal(true);
           setSidebarOpen(false);
         }}
+        onCalendarClick={() => {
+          setShowCalendarManager(true);
+          setSidebarOpen(false);
+        }}
         user={user}
         onLogout={logout}
         onResetTotals={() => setShowResetModal(true)}
@@ -1076,7 +1083,13 @@ export default function Dashboard() {
           onClose={() => setShowMenuModal(false)}
         />
       )}
-
+      {showCalendarManager && (
+        <CalendarManager
+          hotel={hotel}
+          rooms={rooms}
+          onClose={() => setShowCalendarManager(false)}
+        />
+      )}
       {showActivityPanel && (
         <ActivityPanel
           logs={activityLog}

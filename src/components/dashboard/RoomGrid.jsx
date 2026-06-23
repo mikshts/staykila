@@ -1,4 +1,3 @@
-// src/components/dashboard/RoomGrid.jsx
 import React from "react";
 
 function StatusPill({ status, getStatusMeta }) {
@@ -128,6 +127,23 @@ export default function RoomGrid({
                     </span>
                     <span className="font-medium text-[#c9a84c]">
                       ₱{room.booking.price}
+                    </span>
+                  </div>
+                  {/* Booking Source - NEW */}
+                  <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
+                    <span className="text-[#8a8278]">
+                      <i className="fas fa-globe mr-1"></i>Source
+                    </span>
+                    <span className="font-medium">
+                      {room.booking.booking_source === "agoda" && "🏨 Agoda"}
+                      {room.booking.booking_source === "booking" &&
+                        "🛏️ Booking.com"}
+                      {room.booking.booking_source === "walk-in" &&
+                        "🚶 Walk-in"}
+                      {room.booking.booking_source === "maintenance" &&
+                        "🔧 Maintenance"}
+                      {room.booking.booking_source === "other" && "📋 Other"}
+                      {!room.booking.booking_source && "🚶 Walk-in"}
                     </span>
                   </div>
                   <div

@@ -19,6 +19,7 @@ export default function Sidebar({
   onMenuClick,
   onReportsClick,
   onQRDownloadClick,
+  onCalendarClick, // <-- ADD THIS LINE
   user,
   onLogout,
   onResetTotals,
@@ -148,6 +149,12 @@ export default function Sidebar({
             <span className="ml-auto text-white/30 text-[9px]">
               <i className="fas fa-print"></i>
             </span>
+          </button>
+          <button
+            onClick={onCalendarClick}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+            <i className="fas fa-calendar-alt w-5 text-center"></i>
+            <span className="text-sm font-medium">Calendar Manager</span>
           </button>
           <button
             onClick={onSettingsClick}
