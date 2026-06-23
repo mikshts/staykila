@@ -20,7 +20,7 @@ export default function Sidebar({
   onReportsClick,
   onQRDownloadClick,
   onCalendarClick,
-  onAnalyticsClick, // <-- ADD THIS
+  onAnalyticsClick,
   user,
   onLogout,
   onResetTotals,
@@ -85,9 +85,12 @@ export default function Sidebar({
 
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-2 py-4 pb-4">
+          {/* ===== SECTION 1: OPERATIONS ===== */}
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pb-2">
             Operations
           </div>
+
+          {/* 1. Rooms (Primary) */}
           <button
             onClick={() => onFilterChange("all")}
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition ${
@@ -99,6 +102,8 @@ export default function Sidebar({
             Rooms
             <span className="ml-auto text-white/30 text-xs">{roomCount}</span>
           </button>
+
+          {/* 2. Alerts (Conditional) */}
           {stats.expiring + stats.expired > 0 && (
             <button
               onClick={() => onFilterChange("expiring")}
@@ -110,6 +115,8 @@ export default function Sidebar({
               </span>
             </button>
           )}
+
+          {/* 3. Messages */}
           <button
             onClick={onMessagesClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -121,6 +128,8 @@ export default function Sidebar({
               </span>
             )}
           </button>
+
+          {/* 4. Activity */}
           <button
             onClick={onActivityClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -128,9 +137,12 @@ export default function Sidebar({
             Activity
           </button>
 
+          {/* ===== SECTION 2: ANALYTICS ===== */}
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Analytics
           </div>
+
+          {/* 5. Analytics Dashboard */}
           <button
             onClick={onAnalyticsClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -141,9 +153,31 @@ export default function Sidebar({
             </span>
           </button>
 
+          {/* 6. Night Audit / Reports */}
+          <button
+            onClick={onReportsClick}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+            <i className="fas fa-file-invoice w-5 text-center"></i>
+            Night Audit
+            <span className="ml-auto text-white/30 text-[9px]">
+              <i className="fas fa-print"></i>
+            </span>
+          </button>
+
+          {/* 7. Calendar Manager */}
+          <button
+            onClick={onCalendarClick}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+            <i className="fas fa-calendar-alt w-5 text-center"></i>
+            <span className="text-sm font-medium">Calendar Manager</span>
+          </button>
+
+          {/* ===== SECTION 3: MANAGEMENT ===== */}
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
-            Utilities
+            Management
           </div>
+
+          {/* 8. QR Codes */}
           <button
             onClick={onQRDownloadClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -154,42 +188,23 @@ export default function Sidebar({
             </span>
           </button>
 
-          <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
-            Reports
-          </div>
-          <button
-            onClick={onReportsClick}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
-            <i className="fas fa-file-invoice w-5 text-center"></i>
-            Night Audit
-            <span className="ml-auto text-white/30 text-[9px]">
-              <i className="fas fa-print"></i>
-            </span>
-          </button>
-          <button
-            onClick={onCalendarClick}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
-            <i className="fas fa-calendar-alt w-5 text-center"></i>
-            <span className="text-sm font-medium">Calendar Manager</span>
-          </button>
-          <button
-            onClick={onSettingsClick}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
-            <i className="fas fa-gear w-5 text-center"></i>
-            Settings
-          </button>
+          {/* 9. Prices */}
           <button
             onClick={onPriceClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-tag w-5 text-center"></i>
             Edit Prices
           </button>
+
+          {/* 10. WiFi Settings */}
           <button
             onClick={onWifiClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
             <i className="fas fa-wifi w-5 text-center"></i>
             WiFi Settings
           </button>
+
+          {/* 11. Room Service Menu */}
           <button
             onClick={onMenuClick}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
@@ -197,10 +212,20 @@ export default function Sidebar({
             Room Service Menu
           </button>
 
-          {/* Danger Zone */}
+          {/* 12. Settings (General) */}
+          <button
+            onClick={onSettingsClick}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+            <i className="fas fa-gear w-5 text-center"></i>
+            Settings
+          </button>
+
+          {/* ===== SECTION 4: DANGER ZONE ===== */}
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Danger Zone
           </div>
+
+          {/* 13. Reset Totals */}
           <button
             onClick={onResetTotals}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
