@@ -142,6 +142,13 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       const endTime = new Date(selectedDate);
       endTime.setHours(23, 59, 59, 999);
 
+      // Check if date is already booked
+      const isBooked = isDateBooked(selectedDate, selectedRoomId);
+      if (isBooked) {
+        toast.error("This date is already booked!");
+        return;
+      }
+
       const sourceLabels = {
         agoda: "Agoda Booking",
         booking: "Booking.com Booking",
@@ -160,13 +167,15 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
         end_time: endTime.toISOString(),
         hours: 24,
         price: 0,
-        status: "booked", // This is now valid after adding to constraint
+        status: "booked",
         booking_source: bookingSource,
+        booking_type:
+          bookingSource === "agoda" || bookingSource === "booking"
+            ? "ota"
+            : "walk-in",
         notes:
           notes || `Blocked via calendar on ${new Date().toLocaleDateString()}`,
       };
-
-      console.log("Inserting booking:", bookingData);
 
       const { data, error } = await supabase
         .from("bookings")
@@ -174,18 +183,13 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
         .select();
 
       if (error) {
-        console.error("Supabase error:", {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-        });
+        console.error("Supabase error:", error);
         toast.error(`Failed to block date: ${error.message}`);
         return;
       }
 
       toast.success(
-        `✅ ${room.name} blocked for ${selectedDate.toLocaleDateString()}`,
+        `✅ ${room.name} booked for ${selectedDate.toLocaleDateString()}`,
       );
 
       await fetchAllBookings();

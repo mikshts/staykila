@@ -261,31 +261,48 @@ export default function Dashboard() {
       if (error) throw error;
 
       const processedRooms = (data || []).map((room) => {
-        // Check for active booking (current check-in)
-        const activeBooking = room.bookings?.find((b) => b.status === "active");
+        // Get all bookings for this room (active and booked)
+        const bookings = room.bookings || [];
 
-        // Check for future booked dates
-        const futureBookings = room.bookings?.filter(
-          (b) => b.status === "booked" && new Date(b.start_time) > new Date(),
+        // Find active booking (currently checked in)
+        const activeBooking = bookings.find((b) => b.status === "active");
+
+        // Find future booked dates (status = 'booked' and start time is in the future)
+        const now = new Date();
+        const futureBookings = bookings.filter(
+          (b) => b.status === "booked" && new Date(b.start_time) > now,
         );
 
+        // Sort future bookings by date (earliest first)
+        futureBookings.sort(
+          (a, b) => new Date(a.start_time) - new Date(b.start_time),
+        );
+
+        // Find the next upcoming booking
+        const nextBooking =
+          futureBookings.length > 0 ? futureBookings[0] : null;
+
         if (activeBooking) {
-          // Currently occupied
+          // Room is currently occupied
           room.booking = activeBooking;
           room.bookingStatus = "occupied";
           room.status = getRoomStatus(activeBooking.end_time);
-        } else if (futureBookings && futureBookings.length > 0) {
-          // Has future bookings - show the next one
-          const nextBooking = futureBookings.sort(
-            (a, b) => new Date(a.start_time) - new Date(b.start_time),
-          )[0];
+          room.displayMode = "occupied";
+        } else if (nextBooking) {
+          // Room has a future booking
           room.booking = nextBooking;
           room.bookingStatus = "booked";
           room.status = "booked";
+          room.displayMode = "booked";
+          // Add the booking date for display
+          room.bookingDate = new Date(nextBooking.start_time);
         } else {
+          // Room is available
           room.booking = null;
           room.bookingStatus = "available";
-          const completedBooking = room.bookings?.find(
+          room.status = room.status || "available";
+          room.displayMode = "available";
+          const completedBooking = bookings.find(
             (b) => b.status === "completed",
           );
           if (completedBooking) {
@@ -297,7 +314,7 @@ export default function Dashboard() {
 
       setRooms(processedRooms);
 
-      // Update stats to include booked
+      // Update stats
       const newStats = {
         available: 0,
         occupied: 0,
@@ -325,7 +342,7 @@ export default function Dashboard() {
       }
 
       processedRooms.forEach((room) => {
-        const status = room.bookingStatus || room.status || "available";
+        const status = room.displayMode || room.status || "available";
         if (newStats[status] !== undefined) {
           newStats[status]++;
         }
@@ -351,7 +368,6 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
-
   // Helper functions
   const getRoomStatus = (endTime) => {
     const now = new Date();
@@ -383,7 +399,6 @@ export default function Dashboard() {
       .map((v) => String(v).padStart(2, "0"))
       .join(":");
   };
-
   const getStatusMeta = (status) => {
     const meta = {
       available: {

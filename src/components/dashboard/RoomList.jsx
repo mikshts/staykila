@@ -92,13 +92,18 @@ export default function RoomList({
           </thead>
           <tbody>
             {rooms.map((room) => {
+              const displayStatus =
+                room.displayMode || room.status || "available";
               const status = room.booking
                 ? getRoomStatus(room.booking.end_time)
                 : room.status || "available";
               const unread = getUnreadForRoom(room.id);
-              const countdown = room.booking
-                ? formatCountdown(room.booking.end_time)
-                : "—";
+              const countdown =
+                room.booking && displayStatus !== "booked"
+                  ? formatCountdown(room.booking.end_time)
+                  : displayStatus === "booked"
+                    ? "—"
+                    : "—";
               const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
               return (
@@ -107,12 +112,20 @@ export default function RoomList({
                   className="border-b border-[#e5e2db] hover:bg-[#f7f3ee] transition">
                   <td className="p-2 font-medium">
                     {room.name || `Room ${room.room_number}`}
+                    {displayStatus === "booked" && room.bookingDate && (
+                      <div className="text-[9px] text-purple-600">
+                        📅 {room.bookingDate.toLocaleDateString()}
+                      </div>
+                    )}
                   </td>
                   <td className="p-2">
-                    <StatusPill status={status} getStatusMeta={getStatusMeta} />
+                    <StatusPill
+                      status={displayStatus}
+                      getStatusMeta={getStatusMeta}
+                    />
                   </td>
                   <td className="p-2">
-                    {room.booking ? (
+                    {room.booking && displayStatus !== "booked" ? (
                       <span
                         className={`text-xs font-medium ${roomTypeInfo.color}`}>
                         {roomTypeInfo.icon} {roomTypeInfo.label}
@@ -131,15 +144,20 @@ export default function RoomList({
                     )}
                   </td>
                   <td className="p-2">
-                    {room.booking ? formatTime(room.booking.start_time) : "—"}
+                    {room.booking && displayStatus !== "booked"
+                      ? formatTime(room.booking.start_time)
+                      : "—"}
                   </td>
                   <td className="p-2">
-                    {room.booking ? formatTime(room.booking.end_time) : "—"}
+                    {room.booking && displayStatus !== "booked"
+                      ? formatTime(room.booking.end_time)
+                      : "—"}
                   </td>
                   <td className="p-2 font-medium text-[#c9a84c]">
-                    {room.booking ? `₱${room.booking.price}` : "—"}
+                    {room.booking && displayStatus !== "booked"
+                      ? `₱${room.booking.price}`
+                      : "—"}
                   </td>
-                  {/* Source Column */}
                   <td className="p-2">
                     {room.booking ? (
                       <span className="text-xs font-medium">
@@ -157,36 +175,38 @@ export default function RoomList({
                       <span className="text-xs text-gray-400">—</span>
                     )}
                   </td>
-                  {/* Remaining Column */}
                   <td
                     className={`p-2 font-mono font-bold ${
                       status === "expiring"
                         ? "text-orange-500"
                         : status === "expired"
                           ? "text-red-500"
-                          : "text-green-600"
+                          : displayStatus === "booked"
+                            ? "text-purple-500"
+                            : "text-green-600"
                     }`}
                     data-timer={room.id}>
                     {countdown}
                   </td>
-                  {/* Actions Column */}
                   <td className="p-2">
                     <div className="flex gap-1 flex-wrap">
-                      {(status === "available" || status === "cleaning") && (
+                      {(displayStatus === "available" ||
+                        status === "cleaning") && (
                         <button
                           onClick={() => onRoomAction("checkin", room)}
                           className="btn btn-navy text-[10px] font-semibold py-1 px-2 rounded bg-[#0f1b2d] text-white hover:opacity-90 transition">
                           <i className="fas fa-sign-in-alt"></i>
                         </button>
                       )}
-                      {(status === "occupied" || status === "expiring") && (
+                      {(displayStatus === "occupied" ||
+                        displayStatus === "expiring") && (
                         <button
                           onClick={() => onRoomAction("extend", room)}
                           className="btn btn-gold text-[10px] font-semibold py-1 px-2 rounded bg-[#c9a84c] text-white hover:opacity-90 transition">
                           <i className="fas fa-plus"></i>
                         </button>
                       )}
-                      {room.booking && (
+                      {displayStatus !== "booked" && room.booking && (
                         <button
                           onClick={() => onRoomAction("checkout", room)}
                           className="btn btn-red text-[10px] font-semibold py-1 px-2 rounded bg-red-600 text-white hover:opacity-90 transition">
