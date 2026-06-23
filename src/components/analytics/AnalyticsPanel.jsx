@@ -1,56 +1,223 @@
-import React, { useState } from "react";
+// src/components/analytics/AnalyticsPanel.jsx
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
+import toast from "react-hot-toast";
 
-export default function AnalyticsPanel({ hotel, rooms, bookings, onClose }) {
-  const [period, setPeriod] = useState("weekly"); // weekly, monthly, 15days
+export default function AnalyticsPanel({ hotel, rooms, onClose }) {
+  const [period, setPeriod] = useState("weekly");
+  const [loading, setLoading] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState({
+    revenue: 0,
+    checkins: 0,
+    occupancy: 0,
+    bookings: 0,
+    averageRate: 0,
+    topDay: "N/A",
+    slowDay: "N/A",
+    roomTypePopular: "N/A",
+    dailyData: [],
+    roomTypeStats: [],
+    revenueByHour: [],
+  });
 
-  // Mock data for demonstration
-  const stats = {
-    weekly: {
-      revenue: 45600,
-      checkins: 28,
-      occupancy: 76,
-      bookings: 35,
-      averageRate: 1628,
-      topDay: "Saturday",
-      slowDay: "Tuesday",
-      roomTypePopular: "Double Bed",
-    },
-    monthly: {
-      revenue: 185200,
-      checkins: 112,
-      occupancy: 72,
-      bookings: 145,
-      averageRate: 1653,
-      topDay: "Saturday",
-      slowDay: "Monday",
-      roomTypePopular: "Family Room",
-    },
-    "15days": {
-      revenue: 92300,
-      checkins: 56,
-      occupancy: 74,
-      bookings: 72,
-      averageRate: 1648,
-      topDay: "Saturday",
-      slowDay: "Wednesday",
-      roomTypePopular: "Single Bed",
-    },
+  useEffect(() => {
+    fetchAnalytics();
+  }, [period]);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+
+      // 1. Get date range based on period
+      const now = new Date();
+      let startDate = new Date();
+
+      if (period === "weekly") {
+        startDate.setDate(now.getDate() - 7);
+      } else if (period === "15days") {
+        startDate.setDate(now.getDate() - 15);
+      } else if (period === "monthly") {
+        startDate.setMonth(now.getMonth() - 1);
+      }
+
+      const startISO = startDate.toISOString();
+      const endISO = now.toISOString();
+
+      // 2. Get all bookings for the period
+      const { data: bookings, error: bookingsError } = await supabase
+        .from("bookings")
+        .select(
+          `
+          id,
+          price,
+          hours,
+          status,
+          start_time,
+          end_time,
+          created_at,
+          room_id,
+          booking_source,
+          rooms (
+            room_type,
+            name
+          )
+        `,
+        )
+        .eq("hotel_id", hotel.id)
+        .gte("created_at", startISO)
+        .lte("created_at", endISO)
+        .in("status", ["active", "completed", "booked"]);
+
+      if (bookingsError) throw bookingsError;
+
+      // 3. Calculate revenue (from active + completed)
+      const revenueBookings = bookings.filter(
+        (b) => b.status === "active" || b.status === "completed",
+      );
+      const totalRevenue = revenueBookings.reduce(
+        (sum, b) => sum + (b.price || 0),
+        0,
+      );
+
+      // 4. Calculate check-ins (active bookings)
+      const activeBookings = bookings.filter((b) => b.status === "active");
+      const checkins = activeBookings.length;
+
+      // 5. Calculate total bookings
+      const totalBookings = bookings.length;
+
+      // 6. Calculate average rate
+      const avgRate =
+        revenueBookings.length > 0
+          ? Math.round(totalRevenue / revenueBookings.length)
+          : 0;
+
+      // 7. Calculate occupancy rate
+      const totalRooms = rooms?.length || 0;
+      const occupancyRate =
+        totalRooms > 0
+          ? Math.round((activeBookings.length / totalRooms) * 100)
+          : 0;
+
+      // 8. Daily data for chart
+      const dailyMap = {};
+      bookings.forEach((b) => {
+        const date = new Date(b.created_at).toLocaleDateString("en-US", {
+          weekday: "short",
+        });
+        if (!dailyMap[date]) {
+          dailyMap[date] = { revenue: 0, bookings: 0 };
+        }
+        if (b.status === "active" || b.status === "completed") {
+          dailyMap[date].revenue += b.price || 0;
+        }
+        dailyMap[date].bookings += 1;
+      });
+
+      const dailyData = Object.entries(dailyMap).map(([day, data]) => ({
+        day,
+        revenue: data.revenue,
+        bookings: data.bookings,
+      }));
+
+      // Sort days
+      const dayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      dailyData.sort(
+        (a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day),
+      );
+
+      // 9. Room type popularity
+      const roomTypeMap = {};
+      bookings.forEach((b) => {
+        if (b.rooms?.room_type) {
+          const type = b.rooms.room_type;
+          if (!roomTypeMap[type]) roomTypeMap[type] = 0;
+          roomTypeMap[type]++;
+        }
+      });
+
+      const roomTypeStats = Object.entries(roomTypeMap)
+        .map(([type, count]) => ({
+          type: type.charAt(0).toUpperCase() + type.slice(1),
+          count,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      // 10. Best and worst days
+      const dayRevenueMap = {};
+      bookings.forEach((b) => {
+        if (b.status === "active" || b.status === "completed") {
+          const day = new Date(b.created_at).toLocaleDateString("en-US", {
+            weekday: "long",
+          });
+          if (!dayRevenueMap[day]) dayRevenueMap[day] = 0;
+          dayRevenueMap[day] += b.price || 0;
+        }
+      });
+
+      const dayEntries = Object.entries(dayRevenueMap);
+      let topDay = "N/A",
+        slowDay = "N/A";
+      if (dayEntries.length > 0) {
+        dayEntries.sort((a, b) => b[1] - a[1]);
+        topDay = dayEntries[0]?.[0] || "N/A";
+        slowDay = dayEntries[dayEntries.length - 1]?.[0] || "N/A";
+      }
+
+      // 11. Revenue by hour (for additional insight)
+      const hourMap = {};
+      bookings.forEach((b) => {
+        if (b.status === "active" || b.status === "completed") {
+          const hour = new Date(b.created_at).getHours();
+          if (!hourMap[hour]) hourMap[hour] = 0;
+          hourMap[hour] += b.price || 0;
+        }
+      });
+
+      const revenueByHour = Object.entries(hourMap)
+        .map(([hour, revenue]) => ({
+          hour: parseInt(hour),
+          revenue,
+        }))
+        .sort((a, b) => a.hour - b.hour);
+
+      setAnalyticsData({
+        revenue: totalRevenue,
+        checkins,
+        occupancy: occupancyRate,
+        bookings: totalBookings,
+        averageRate: avgRate,
+        topDay,
+        slowDay,
+        roomTypePopular:
+          roomTypeStats.length > 0 ? roomTypeStats[0].type : "N/A",
+        dailyData,
+        roomTypeStats,
+        revenueByHour,
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      toast.error("Failed to load analytics data");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const currentStats = stats[period] || stats.weekly;
+  const currentStats = analyticsData;
+  const maxRevenue = Math.max(
+    ...currentStats.dailyData.map((d) => d.revenue),
+    1,
+  );
 
-  // Mock data for daily revenue chart
-  const dailyData = [
-    { day: "Mon", revenue: 6800, bookings: 5 },
-    { day: "Tue", revenue: 4200, bookings: 3 },
-    { day: "Wed", revenue: 5600, bookings: 4 },
-    { day: "Thu", revenue: 7200, bookings: 6 },
-    { day: "Fri", revenue: 8900, bookings: 7 },
-    { day: "Sat", revenue: 10400, bookings: 8 },
-    { day: "Sun", revenue: 8500, bookings: 6 },
-  ];
-
-  const maxRevenue = Math.max(...dailyData.map((d) => d.revenue));
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
+        <div className="bg-white w-full max-w-4xl h-full p-6 animate-slide-in flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0f1b2d]"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
@@ -63,7 +230,7 @@ export default function AnalyticsPanel({ hotel, rooms, bookings, onClose }) {
               Analytics Dashboard
             </h2>
             <p className="text-sm text-[#8a8278] mt-1">
-              Business performance insights for your hotel
+              Real-time business performance insights
             </p>
           </div>
           <button
@@ -103,18 +270,20 @@ export default function AnalyticsPanel({ hotel, rooms, bookings, onClose }) {
               ₱{currentStats.revenue.toLocaleString()}
             </div>
             <div className="text-[10px] text-blue-500 mt-1">
-              <i className="fas fa-arrow-up mr-1"></i> +12% from last period
+              <i className="fas fa-coins mr-1"></i> {currentStats.bookings}{" "}
+              bookings
             </div>
           </div>
 
           <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
-            <div className="text-xs text-green-600 font-medium">Check-ins</div>
+            <div className="text-xs text-green-600 font-medium">
+              Active Check-ins
+            </div>
             <div className="text-2xl font-bold text-[#0f1b2d]">
               {currentStats.checkins}
             </div>
             <div className="text-[10px] text-green-500 mt-1">
-              <i className="fas fa-users mr-1"></i> {currentStats.bookings}{" "}
-              total bookings
+              <i className="fas fa-users mr-1"></i> Currently staying
             </div>
           </div>
 
@@ -151,36 +320,48 @@ export default function AnalyticsPanel({ hotel, rooms, bookings, onClose }) {
               <i className="fas fa-chart-bar mr-2 text-[#c9a84c]"></i>
               Daily Revenue
             </h3>
-            <span className="text-xs text-[#8a8278]">Last 7 days</span>
+            <span className="text-xs text-[#8a8278]">
+              {currentStats.dailyData.length} days
+            </span>
           </div>
 
-          <div className="flex items-end gap-2 h-48">
-            {dailyData.map((day, index) => {
-              const height = (day.revenue / maxRevenue) * 100;
-              return (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div className="w-full flex flex-col items-center">
-                    <div className="text-[10px] font-bold text-[#0f1b2d]">
-                      ₱{day.revenue}
-                    </div>
-                    <div
-                      className="w-full bg-[#c9a84c] rounded-t transition-all duration-500 hover:bg-[#b8963a] cursor-pointer"
-                      style={{
-                        height: `${Math.max(height, 10)}%`,
-                        minHeight: "10px",
-                      }}>
-                      <div className="text-[8px] text-white text-center opacity-0 hover:opacity-100 transition">
-                        {day.bookings}
+          {currentStats.dailyData.length === 0 ? (
+            <div className="text-center py-8 text-[#8a8278]">
+              <i className="fas fa-inbox text-3xl mb-2 block opacity-40"></i>
+              <p className="text-sm">No data available for this period</p>
+            </div>
+          ) : (
+            <div className="flex items-end gap-2 h-48">
+              {currentStats.dailyData.map((day, index) => {
+                const height =
+                  maxRevenue > 0 ? (day.revenue / maxRevenue) * 100 : 0;
+                return (
+                  <div
+                    key={index}
+                    className="flex-1 flex flex-col items-center">
+                    <div className="w-full flex flex-col items-center">
+                      <div className="text-[10px] font-bold text-[#0f1b2d]">
+                        ₱{day.revenue}
+                      </div>
+                      <div
+                        className="w-full bg-[#c9a84c] rounded-t transition-all duration-500 hover:bg-[#b8963a] cursor-pointer"
+                        style={{
+                          height: `${Math.max(height, 5)}%`,
+                          minHeight: "5px",
+                        }}>
+                        <div className="text-[8px] text-white text-center opacity-0 hover:opacity-100 transition">
+                          {day.bookings}
+                        </div>
                       </div>
                     </div>
+                    <div className="text-[10px] text-[#8a8278] mt-1 font-medium">
+                      {day.day}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-[#8a8278] mt-1 font-medium">
-                    {day.day}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Insights Grid */}
@@ -191,41 +372,46 @@ export default function AnalyticsPanel({ hotel, rooms, bookings, onClose }) {
               <i className="fas fa-bed mr-2 text-[#c9a84c]"></i>
               Room Type Popularity
             </h3>
-            <div className="space-y-2">
-              <div>
-                <div className="flex justify-between text-xs">
-                  <span>Single Bed</span>
-                  <span className="font-medium">45%</span>
-                </div>
-                <div className="h-1.5 bg-[#f7f3ee] rounded-full mt-1">
-                  <div
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{ width: "45%" }}></div>
-                </div>
+            {currentStats.roomTypeStats.length === 0 ? (
+              <p className="text-xs text-[#8a8278] text-center py-4">
+                No data yet
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {currentStats.roomTypeStats.map((type, index) => {
+                  const total = currentStats.roomTypeStats.reduce(
+                    (sum, t) => sum + t.count,
+                    0,
+                  );
+                  const percentage =
+                    total > 0 ? Math.round((type.count / total) * 100) : 0;
+                  const colors = [
+                    "#3b82f6",
+                    "#8b5cf6",
+                    "#f59e0b",
+                    "#10b981",
+                    "#ef4444",
+                  ];
+                  const color = colors[index % colors.length];
+                  return (
+                    <div key={type.type}>
+                      <div className="flex justify-between text-xs">
+                        <span>{type.type}</span>
+                        <span className="font-medium">{percentage}%</span>
+                      </div>
+                      <div className="h-1.5 bg-[#f7f3ee] rounded-full mt-1">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${percentage}%`,
+                            backgroundColor: color,
+                          }}></div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div>
-                <div className="flex justify-between text-xs">
-                  <span>Double Bed</span>
-                  <span className="font-medium">35%</span>
-                </div>
-                <div className="h-1.5 bg-[#f7f3ee] rounded-full mt-1">
-                  <div
-                    className="h-full bg-purple-500 rounded-full"
-                    style={{ width: "35%" }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs">
-                  <span>Family Room</span>
-                  <span className="font-medium">20%</span>
-                </div>
-                <div className="h-1.5 bg-[#f7f3ee] rounded-full mt-1">
-                  <div
-                    className="h-full bg-amber-500 rounded-full"
-                    style={{ width: "20%" }}></div>
-                </div>
-              </div>
-            </div>
+            )}
             <div className="text-[10px] text-[#8a8278] mt-3">
               Most popular:{" "}
               <span className="font-medium text-[#0f1b2d]">
@@ -289,13 +475,13 @@ export default function AnalyticsPanel({ hotel, rooms, bookings, onClose }) {
         <div className="mt-6 p-4 bg-[#f7f3ee] rounded-xl border border-[#e5e2db]">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <div className="text-[10px] text-[#8a8278]">Bookings</div>
+              <div className="text-[10px] text-[#8a8278]">Total Bookings</div>
               <div className="text-lg font-bold text-[#0f1b2d]">
                 {currentStats.bookings}
               </div>
             </div>
             <div>
-              <div className="text-[10px] text-[#8a8278]">Check-ins</div>
+              <div className="text-[10px] text-[#8a8278]">Active Check-ins</div>
               <div className="text-lg font-bold text-[#0f1b2d]">
                 {currentStats.checkins}
               </div>
