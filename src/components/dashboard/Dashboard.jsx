@@ -250,21 +250,41 @@ export default function Dashboard() {
           guest_email,
           guest_phone,
           booking_source,
+          booking_type,
           notes    
         )
       `,
         )
         .eq("hotel_id", hotel.id)
         .order("room_number");
+
       if (error) throw error;
 
       const processedRooms = (data || []).map((room) => {
+        // Check for active booking (current check-in)
         const activeBooking = room.bookings?.find((b) => b.status === "active");
+
+        // Check for future booked dates
+        const futureBookings = room.bookings?.filter(
+          (b) => b.status === "booked" && new Date(b.start_time) > new Date(),
+        );
+
         if (activeBooking) {
+          // Currently occupied
           room.booking = activeBooking;
+          room.bookingStatus = "occupied";
           room.status = getRoomStatus(activeBooking.end_time);
+        } else if (futureBookings && futureBookings.length > 0) {
+          // Has future bookings - show the next one
+          const nextBooking = futureBookings.sort(
+            (a, b) => new Date(a.start_time) - new Date(b.start_time),
+          )[0];
+          room.booking = nextBooking;
+          room.bookingStatus = "booked";
+          room.status = "booked";
         } else {
           room.booking = null;
+          room.bookingStatus = "available";
           const completedBooking = room.bookings?.find(
             (b) => b.status === "completed",
           );
@@ -277,12 +297,14 @@ export default function Dashboard() {
 
       setRooms(processedRooms);
 
+      // Update stats to include booked
       const newStats = {
         available: 0,
         occupied: 0,
         expiring: 0,
         expired: 0,
         cleaning: 0,
+        booked: 0,
       };
 
       let totalRevenue = 0;
@@ -303,9 +325,7 @@ export default function Dashboard() {
       }
 
       processedRooms.forEach((room) => {
-        const status = room.booking
-          ? getRoomStatus(room.booking.end_time)
-          : room.status || "available";
+        const status = room.bookingStatus || room.status || "available";
         if (newStats[status] !== undefined) {
           newStats[status]++;
         }
@@ -390,6 +410,11 @@ export default function Dashboard() {
         label: "Cleaning",
         color: "bg-blue-100 text-blue-700",
         dot: "bg-blue-500",
+      },
+      booked: {
+        label: "Booked",
+        color: "bg-purple-100 text-purple-700",
+        dot: "bg-purple-500",
       },
     };
     return meta[status] || meta.available;

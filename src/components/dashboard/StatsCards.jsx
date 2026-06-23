@@ -37,6 +37,12 @@ export default function StatsCards({ stats, revenue }) {
       value: stats.available,
     },
     {
+      key: "booked",
+      label: "Booked",
+      icon: "fa-calendar-check",
+      value: stats.booked || 0,
+    },
+    {
       key: "occupied",
       label: "Occupied",
       icon: "fa-bed",
@@ -59,12 +65,6 @@ export default function StatsCards({ stats, revenue }) {
       label: "Cleaning",
       icon: "fa-broom",
       value: stats.cleaning,
-    },
-    {
-      key: "occupancy",
-      label: "Occupancy",
-      icon: "fa-building",
-      value: `${revenue.occupancyRate}%`,
     },
   ];
 

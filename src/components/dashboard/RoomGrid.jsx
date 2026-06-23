@@ -102,61 +102,70 @@ export default function RoomGrid({
             </div>
 
             {/* Body */}
+            {/* Body */}
             <div className="p-3">
               {room.booking ? (
                 <>
-                  <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
-                    <span className="text-[#8a8278]">
-                      <i className="fas fa-right-to-bracket mr-1"></i>Check-in
-                    </span>
-                    <span className="font-medium">
-                      {formatTime(room.booking.start_time)}
-                    </span>
-                  </div>
-                  <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
-                    <span className="text-[#8a8278]">
-                      <i className="fas fa-right-from-bracket mr-1"></i>Checkout
-                    </span>
-                    <span className="font-medium">
-                      {formatTime(room.booking.end_time)}
-                    </span>
-                  </div>
-                  <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
-                    <span className="text-[#8a8278]">
-                      <i className="fas fa-tag mr-1"></i>Price
-                    </span>
-                    <span className="font-medium text-[#c9a84c]">
-                      ₱{room.booking.price}
-                    </span>
-                  </div>
-                  {/* Booking Source - NEW */}
-                  <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
-                    <span className="text-[#8a8278]">
-                      <i className="fas fa-globe mr-1"></i>Source
-                    </span>
-                    <span className="font-medium">
-                      {room.booking.booking_source === "agoda" && "🏨 Agoda"}
-                      {room.booking.booking_source === "booking" &&
-                        "🛏️ Booking.com"}
-                      {room.booking.booking_source === "walk-in" &&
-                        "🚶 Walk-in"}
-                      {room.booking.booking_source === "maintenance" &&
-                        "🔧 Maintenance"}
-                      {room.booking.booking_source === "other" && "📋 Other"}
-                      {!room.booking.booking_source && "🚶 Walk-in"}
-                    </span>
-                  </div>
-                  <div
-                    className={`text-center font-bold font-mono text-xl mt-2 ${
-                      status === "expiring"
-                        ? "text-orange-500 animate-pulse"
-                        : status === "expired"
-                          ? "text-red-500"
-                          : "text-green-600"
-                    }`}
-                    data-timer={room.id}>
-                    {countdown}
-                  </div>
+                  {/* Show if it's a future booking (booked status) */}
+                  {room.bookingStatus === "booked" && (
+                    <div className="mb-2 p-2 bg-purple-50 border border-purple-200 rounded-lg text-center">
+                      <div className="text-xs font-semibold text-purple-700">
+                        <i className="fas fa-calendar-check mr-1"></i>
+                        Booked for{" "}
+                        {new Date(room.booking.start_time).toLocaleDateString()}
+                      </div>
+                      <div className="text-[10px] text-purple-600 mt-0.5">
+                        {room.booking.booking_source === "agoda" && "🏨 Agoda"}
+                        {room.booking.booking_source === "booking" &&
+                          "🛏️ Booking.com"}
+                        {room.booking.booking_source === "walk-in" &&
+                          "🚶 Walk-in"}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show if currently occupied */}
+                  {room.bookingStatus !== "booked" && (
+                    <>
+                      <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
+                        <span className="text-[#8a8278]">
+                          <i className="fas fa-right-to-bracket mr-1"></i>
+                          Check-in
+                        </span>
+                        <span className="font-medium">
+                          {formatTime(room.booking.start_time)}
+                        </span>
+                      </div>
+                      <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
+                        <span className="text-[#8a8278]">
+                          <i className="fas fa-right-from-bracket mr-1"></i>
+                          Checkout
+                        </span>
+                        <span className="font-medium">
+                          {formatTime(room.booking.end_time)}
+                        </span>
+                      </div>
+                      <div className="text-xs flex justify-between py-1 border-b border-[#e5e2db]">
+                        <span className="text-[#8a8278]">
+                          <i className="fas fa-tag mr-1"></i>Price
+                        </span>
+                        <span className="font-medium text-[#c9a84c]">
+                          ₱{room.booking.price}
+                        </span>
+                      </div>
+                      <div
+                        className={`text-center font-bold font-mono text-xl mt-2 ${
+                          status === "expiring"
+                            ? "text-orange-500 animate-pulse"
+                            : status === "expired"
+                              ? "text-red-500"
+                              : "text-green-600"
+                        }`}
+                        data-timer={room.id}>
+                        {countdown}
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-4 text-[#8a8278]">
@@ -172,7 +181,9 @@ export default function RoomGrid({
             </div>
 
             {/* Actions */}
+            {/* Actions */}
             <div className="p-2 bg-[#fafafa] border-t border-[#e5e2db] flex flex-wrap gap-1">
+              {/* Only show Check In for available rooms (not booked or occupied) */}
               {(status === "available" || status === "cleaning") && (
                 <button
                   onClick={() => onRoomAction("checkin", room)}
@@ -180,6 +191,8 @@ export default function RoomGrid({
                   <i className="fas fa-sign-in-alt"></i> Check In
                 </button>
               )}
+
+              {/* Show Extend only for active bookings */}
               {(status === "occupied" || status === "expiring") && (
                 <button
                   onClick={() => onRoomAction("extend", room)}
@@ -187,13 +200,16 @@ export default function RoomGrid({
                   <i className="fas fa-plus"></i> Extend
                 </button>
               )}
-              {room.booking && (
+
+              {/* Show Checkout only for active bookings */}
+              {room.booking && room.bookingStatus !== "booked" && (
                 <button
                   onClick={() => onRoomAction("checkout", room)}
                   className="btn btn-red text-xs font-semibold py-1.5 px-2 rounded-lg bg-red-600 text-white hover:opacity-90 transition flex items-center justify-center gap-1">
                   <i className="fas fa-sign-out-alt"></i>
                 </button>
               )}
+
               {status === "cleaning" && (
                 <button
                   onClick={() => onMarkAvailable(room.id)}
