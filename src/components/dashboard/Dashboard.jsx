@@ -13,6 +13,7 @@ import { DashboardSkeleton } from "../ui";
 import QRDownload from "./QRDownload";
 import { buildGuestUrl } from "../../lib/guestUrl";
 import CalendarManager from "../settings/CalendarManager";
+import AnalyticsPanel from "../analytics/AnalyticsPanel";
 
 import {
   CheckinModal,
@@ -46,7 +47,7 @@ export default function Dashboard() {
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showCalendarManager, setShowCalendarManager] = useState(false);
-
+  const [showAnalyticsPanel, setShowAnalyticsPanel] = useState(false);
   const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
@@ -905,6 +906,10 @@ export default function Dashboard() {
           setShowActivityPanel(true);
           setSidebarOpen(false);
         }}
+        onAnalyticsClick={() => {
+          setShowAnalyticsPanel(true);
+          setSidebarOpen(false);
+        }}
         onSettingsClick={() => {
           setShowSettingsPanel(true);
           setSidebarOpen(false);
@@ -1037,7 +1042,14 @@ export default function Dashboard() {
           formatTime={formatTime}
         />
       )}
-
+      {showAnalyticsPanel && (
+        <AnalyticsPanel
+          hotel={hotel}
+          rooms={rooms}
+          bookings={[]}
+          onClose={() => setShowAnalyticsPanel(false)}
+        />
+      )}
       {showResetModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">

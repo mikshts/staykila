@@ -19,7 +19,8 @@ export default function Sidebar({
   onMenuClick,
   onReportsClick,
   onQRDownloadClick,
-  onCalendarClick, // <-- ADD THIS LINE
+  onCalendarClick,
+  onAnalyticsClick, // <-- ADD THIS
   user,
   onLogout,
   onResetTotals,
@@ -38,7 +39,7 @@ export default function Sidebar({
         className={`fixed lg:sticky top-0 left-0 h-screen w-[240px] bg-[#0f1b2d] z-50 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } overflow-y-auto overflow-x-hidden`}>
-        {/* Logo - Updated to match login design */}
+        {/* Logo */}
         <div className="p-6 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -82,7 +83,7 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Navigation - Scrollable area */}
+        {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-2 py-4 pb-4">
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pb-2">
             Operations
@@ -126,6 +127,20 @@ export default function Sidebar({
             <i className="fas fa-list-ul w-5 text-center"></i>
             Activity
           </button>
+
+          <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
+            Analytics
+          </div>
+          <button
+            onClick={onAnalyticsClick}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+            <i className="fas fa-chart-pie w-5 text-center"></i>
+            <span className="text-sm font-medium">Analytics</span>
+            <span className="ml-auto text-white/30 text-[9px]">
+              <i className="fas fa-chart-line"></i>
+            </span>
+          </button>
+
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Utilities
           </div>
@@ -138,6 +153,7 @@ export default function Sidebar({
               <i className="fas fa-download"></i>
             </span>
           </button>
+
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Reports
           </div>
@@ -181,7 +197,7 @@ export default function Sidebar({
             Room Service Menu
           </button>
 
-          {/* Danger Zone Section */}
+          {/* Danger Zone */}
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Danger Zone
           </div>
@@ -195,11 +211,10 @@ export default function Sidebar({
             </span>
           </button>
 
-          {/* Bottom spacer to ensure footer doesn't overlap */}
           <div className="h-20" />
         </div>
 
-        {/* Footer - Fixed at bottom */}
+        {/* Footer */}
         <div className="flex-shrink-0 p-4 border-t border-white/10 bg-[#0f1b2d]">
           <div className="text-white/40 text-xs mb-2 truncate overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
             <i className="fas fa-user mr-1"></i>
