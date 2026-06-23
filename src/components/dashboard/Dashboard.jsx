@@ -428,6 +428,9 @@ export default function Dashboard() {
   // Room actions
   // src/components/dashboard/Dashboard.jsx - Updated handleCheckin
   // src/components/dashboard/Dashboard.jsx - Updated handleCheckin (without metadata)
+  // src/components/dashboard/Dashboard.jsx
+  // Replace the handleCheckin function with this:
+
   const handleCheckin = async (roomId, hours, calculatedPrice, roomType) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
@@ -450,16 +453,19 @@ export default function Dashboard() {
           price: calculatedPrice,
           status: "active",
           checked_in_at: startTime.toISOString(),
-          // REMOVED: metadata: { room_type: roomType || "single" },
         })
         .select()
         .single();
 
       if (bookingError) throw bookingError;
 
+      // UPDATE: Also update the room's room_type
       const { error: roomError } = await supabase
         .from("rooms")
-        .update({ status: "occupied" })
+        .update({
+          status: "occupied",
+          room_type: roomType, // <-- THIS IS THE KEY FIX
+        })
         .eq("id", roomId);
 
       if (roomError) throw roomError;

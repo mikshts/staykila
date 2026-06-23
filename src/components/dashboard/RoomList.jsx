@@ -12,6 +12,28 @@ function StatusPill({ status, getStatusMeta }) {
   );
 }
 
+// Helper function to get room type info
+const getRoomTypeInfo = (roomType) => {
+  const types = {
+    single: {
+      label: "Single Bed",
+      icon: "🛏️",
+      color: "text-blue-600",
+    },
+    double: {
+      label: "Double Bed",
+      icon: "🛏️🛏️",
+      color: "text-purple-600",
+    },
+    family: {
+      label: "Family Room",
+      icon: "🏠",
+      color: "text-amber-600",
+    },
+  };
+  return types[roomType] || types.single;
+};
+
 export default function RoomList({
   rooms,
   onRoomAction,
@@ -44,6 +66,9 @@ export default function RoomList({
                 Status
               </th>
               <th className="text-left p-2 font-semibold text-[#8a8278] text-[10px] uppercase tracking-wider">
+                Type
+              </th>
+              <th className="text-left p-2 font-semibold text-[#8a8278] text-[10px] uppercase tracking-wider">
                 Messages
               </th>
               <th className="text-left p-2 font-semibold text-[#8a8278] text-[10px] uppercase tracking-wider">
@@ -72,6 +97,7 @@ export default function RoomList({
               const countdown = room.booking
                 ? formatCountdown(room.booking.end_time)
                 : "—";
+              const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
               return (
                 <tr
@@ -82,6 +108,16 @@ export default function RoomList({
                   </td>
                   <td className="p-2">
                     <StatusPill status={status} getStatusMeta={getStatusMeta} />
+                  </td>
+                  <td className="p-2">
+                    {room.booking ? (
+                      <span
+                        className={`text-xs font-medium ${roomTypeInfo.color}`}>
+                        {roomTypeInfo.icon} {roomTypeInfo.label}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="p-2">
                     {unread > 0 ? (

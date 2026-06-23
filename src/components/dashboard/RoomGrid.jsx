@@ -75,14 +75,16 @@ export default function RoomGrid({
                 <div className="font-bold text-[#0f1b2d] text-base">
                   {room.name || `Room ${room.room_number}`}
                 </div>
-                {/* Room Type Badge */}
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${roomTypeInfo.color}`}>
-                    <span>{roomTypeInfo.icon}</span>
-                    {roomTypeInfo.label}
-                  </span>
-                </div>
+                {/* Room Type Badge - Only show if occupied */}
+                {room.booking && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span
+                      className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${roomTypeInfo.color}`}>
+                      <span>{roomTypeInfo.icon}</span>
+                      {roomTypeInfo.label}
+                    </span>
+                  </div>
+                )}
                 <button
                   onClick={() => onRoomAction("detail", room)}
                   className="text-[10px] text-[#8a8278] hover:text-[#c9a84c] mt-0.5">
@@ -149,14 +151,6 @@ export default function RoomGrid({
                       ? "Being cleaned"
                       : "Ready for check-in"}
                   </p>
-                  {/* Show room type when empty */}
-                  <div className="mt-1">
-                    <span
-                      className={`inline-flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full ${roomTypeInfo.color}`}>
-                      <span>{roomTypeInfo.icon}</span>
-                      {roomTypeInfo.label}
-                    </span>
-                  </div>
                 </div>
               )}
             </div>
