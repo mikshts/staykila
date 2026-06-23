@@ -122,6 +122,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
     setShowBookingModal(true);
   };
+  // In CalendarManager.jsx - handleBlockDate function
   const handleBlockDate = async () => {
     if (!selectedRoomId) {
       toast.error("Please select a room");
@@ -151,7 +152,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
       const guestName = sourceLabels[bookingSource] || "Booked";
 
-      // Ensure all fields are properly formatted
       const bookingData = {
         room_id: selectedRoomId,
         hotel_id: hotel.id,
@@ -160,7 +160,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
         end_time: endTime.toISOString(),
         hours: 24,
         price: 0,
-        status: "booked",
+        status: "booked", // This is now valid after adding to constraint
         booking_source: bookingSource,
         notes:
           notes || `Blocked via calendar on ${new Date().toLocaleDateString()}`,
@@ -170,7 +170,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
       const { data, error } = await supabase
         .from("bookings")
-        .insert([bookingData]) // Note: using array syntax
+        .insert([bookingData])
         .select();
 
       if (error) {
@@ -188,10 +188,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
         `✅ ${room.name} blocked for ${selectedDate.toLocaleDateString()}`,
       );
 
-      // Refresh the calendar data
       await fetchAllBookings();
-
-      // Reset modal state
       setShowBookingModal(false);
       setNotes("");
       setBookingSource("agoda");
@@ -200,7 +197,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       toast.error("Failed to block date");
     }
   };
-
   const handleRemoveBooking = async (bookingId) => {
     if (!confirm("Remove this booking from the calendar?")) return;
 
