@@ -619,41 +619,36 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      // 🔥 Kunin ang LAHAT ng bookings (active at completed)
-      const { data: allBookings, error: fetchError } = await supabase
+      // 🔥 ACTIVE bookings LANG ang kunin (hindi kasama ang completed)
+      const { data: activeBookings, error: fetchError } = await supabase
         .from("bookings")
         .select("id")
         .eq("hotel_id", hotel.id)
-        .in("status", ["active", "completed"]); // <-- KUHAIN LAHAT
+        .eq("status", "active"); // <-- ACTIVE LANG
 
       if (fetchError) throw fetchError;
 
-      if (allBookings && allBookings.length > 0) {
-        // 🔥 DELETE LAHAT (active at completed)
+      if (activeBookings && activeBookings.length > 0) {
+        // 🔥 ACTIVE bookings LANG ang i-delete
         const { error: deleteError } = await supabase
           .from("bookings")
           .delete()
           .eq("hotel_id", hotel.id)
-          .in("status", ["active", "completed"]); // <-- DELETE LAHAT
+          .eq("status", "active"); // <-- ACTIVE LANG
 
         if (deleteError) throw deleteError;
 
         await logActivity(
           "reset",
-          `Reset all totals - Deleted ${allBookings.length} bookings (active + completed)`,
+          `Reset active bookings - Deleted ${activeBookings.length} active bookings`,
         );
 
         toast.success(
-          `Successfully reset totals (${allBookings.length} bookings removed)`,
+          `Successfully reset ${activeBookings.length} active booking(s)`,
         );
       } else {
-        toast("No bookings to reset", {
+        toast("No active bookings to reset", {
           icon: "ℹ️",
-          style: {
-            borderRadius: "10px",
-            background: "#333",
-            color: "#fff",
-          },
         });
       }
 
