@@ -55,17 +55,17 @@ export default function RoomGrid({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {rooms.map((room) => {
-        // Check if this room has a future booking
+        // SIMPLE: Just check if there's a future booking
         const hasFutureBooking =
           room.booking && room.bookingStatus === "booked";
         const bookingDate = hasFutureBooking ? room.bookingDate : null;
 
-        // Use the actual room status from database
-        const actualStatus = room.status || "available";
+        // ALWAYS use the room's actual status - NEVER change it
+        const displayStatus = room.status || "available";
         const status =
           room.booking && room.bookingStatus !== "booked"
             ? getRoomStatus(room.booking.end_time)
-            : actualStatus;
+            : displayStatus;
 
         const unread = getUnreadForRoom(room.id);
         const countdown =
@@ -74,12 +74,9 @@ export default function RoomGrid({
             : null;
         const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
-        // Display status is always the actual room status
-        const displayStatus = actualStatus;
-
-        // Format booking date text
-        const bookingDateText = bookingDate
-          ? `booked ${bookingDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+        // Just format the date text
+        const bookingText = bookingDate
+          ? `booked ${bookingDate.getMonth() + 1}/${bookingDate.getDate()}`
           : "";
 
         return (
@@ -119,16 +116,17 @@ export default function RoomGrid({
                     status={displayStatus}
                     getStatusMeta={getStatusMeta}
                   />
-                  {hasFutureBooking && bookingDateText && (
+                  {/* JUST ADD THE TEXT - NOTHING ELSE CHANGES */}
+                  {hasFutureBooking && bookingText && (
                     <span className="text-[10px] text-purple-600 font-medium">
-                      . {bookingDateText}
+                      . {bookingText}
                     </span>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Body */}
+            {/* Body - STAYS EXACTLY THE SAME */}
             <div className="p-3">
               {room.booking && room.bookingStatus !== "booked" ? (
                 <>
@@ -197,7 +195,7 @@ export default function RoomGrid({
               )}
             </div>
 
-            {/* Actions */}
+            {/* Actions - STAYS EXACTLY THE SAME */}
             <div className="p-2 bg-[#fafafa] border-t border-[#e5e2db] flex flex-wrap gap-1">
               {(displayStatus === "available" ||
                 displayStatus === "cleaning") && (

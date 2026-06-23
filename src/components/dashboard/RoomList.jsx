@@ -96,7 +96,7 @@ export default function RoomList({
                 room.booking && room.bookingStatus === "booked";
               const bookingDate = hasFutureBooking ? room.bookingDate : null;
 
-              // Use the actual room status
+              // ALWAYS use the room's actual status
               const displayStatus = room.status || "available";
               const status =
                 room.booking && room.bookingStatus !== "booked"
@@ -109,8 +109,8 @@ export default function RoomList({
                   : "—";
               const roomTypeInfo = getRoomTypeInfo(room.room_type);
 
-              const bookingDateText = bookingDate
-                ? `booked ${bookingDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+              const bookingText = bookingDate
+                ? `booked ${bookingDate.getMonth() + 1}/${bookingDate.getDate()}`
                 : "";
 
               return (
@@ -126,9 +126,10 @@ export default function RoomList({
                         status={displayStatus}
                         getStatusMeta={getStatusMeta}
                       />
-                      {hasFutureBooking && bookingDateText && (
+                      {/* JUST ADD THE TEXT - NOTHING ELSE CHANGES */}
+                      {hasFutureBooking && bookingText && (
                         <span className="text-[10px] text-purple-600 font-medium">
-                          . {bookingDateText}
+                          . {bookingText}
                         </span>
                       )}
                     </div>
