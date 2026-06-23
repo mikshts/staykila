@@ -566,7 +566,6 @@ export default function Dashboard() {
   };
   // src/components/dashboard/Dashboard.jsx
   // Add this function with your other handler functions
-
   const handleResetTotals = async () => {
     try {
       // Show loading state
@@ -601,15 +600,23 @@ export default function Dashboard() {
           `Successfully reset totals (${completedBookings.length} bookings removed)`,
         );
       } else {
-        toast.info("No completed bookings to reset");
+        // FIX: Use toast() with appropriate styling instead of toast.info()
+        toast("No completed bookings to reset", {
+          icon: "ℹ️",
+          style: {
+            borderRadius: "10px",
+            background: "#333",
+            color: "#fff",
+          },
+        });
       }
 
       // Refresh the data
       await fetchRooms();
       await fetchActivityLogs();
 
-      // Close the confirmation modal
-      setShowResetConfirm(false);
+      // FIX: Close the correct modal - use showResetModal instead
+      setShowResetModal(false);
     } catch (error) {
       console.error("Error resetting totals:", error);
       toast.error("Failed to reset totals: " + error.message);
