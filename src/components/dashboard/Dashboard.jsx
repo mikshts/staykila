@@ -137,10 +137,19 @@ export default function Dashboard() {
       fetchMessages();
       fetchActivityLogs();
     }
+
+    // Add event listener for refreshRooms
+    const handleRefreshRooms = () => {
+      fetchRooms();
+    };
+
+    window.addEventListener("refreshRooms", handleRefreshRooms);
+
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
+      window.removeEventListener("refreshRooms", handleRefreshRooms);
     };
   }, [hotel]);
 
@@ -281,35 +290,41 @@ export default function Dashboard() {
         const nextBooking =
           futureBookings.length > 0 ? futureBookings[0] : null;
 
+        // IMPORTANT: I-reset muna ang room.booking
+        room.booking = null;
+        room.bookingStatus = "available";
+        room.futureBookings = [];
+
         if (activeBooking) {
           // Occupied - may active guest
           room.booking = activeBooking;
           room.bookingStatus = "occupied";
           room.status = getRoomStatus(activeBooking.end_time);
           room.displayMode = "occupied";
-          room.futureBookings = futureBookings; // Store all future bookings
-        } else if (futureBookings.length > 0) {
-          // May mga future bookings - HINDI nagbabago ang room status
+          room.futureBookings = futureBookings;
+        } else if (nextBooking) {
+          // May future booking - HINDI nagbabago ang room status
           room.booking = nextBooking;
           room.bookingStatus = "booked";
           room.displayMode = "available";
           room.bookingDate = new Date(nextBooking.start_time);
-          room.futureBookings = futureBookings; // Store all future bookings
+          room.futureBookings = futureBookings;
           // Siguraduhin na ang room.status ay "available"
+          room.status = "available";
+        } else {
+          // Walang booking - ensure status is available
+          room.booking = null;
+          room.bookingStatus = "available";
+          room.displayMode = "available";
+          room.futureBookings = [];
+          // Only set to available if it was previously occupied/expired/etc
           if (
-            !room.status ||
             room.status === "occupied" ||
             room.status === "expired" ||
             room.status === "expiring"
           ) {
             room.status = "available";
           }
-        } else {
-          // Walang booking
-          room.booking = null;
-          room.bookingStatus = "available";
-          room.displayMode = "available";
-          room.futureBookings = [];
           const completedBooking = bookings.find(
             (b) => b.status === "completed",
           );
