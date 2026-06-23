@@ -48,14 +48,19 @@ export default function RoomDetailPanel({
     ? room.futureBookings.map((b) => new Date(b.start_time))
     : [];
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // REMOVED: auto-scroll to bottom on new messages
+  // useEffect(() => {
+  //   chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [messages]);
 
   const sendReply = async () => {
     if (!reply.trim()) return;
     await onSendMessage(room.id, reply, "admin");
     setReply("");
+    // Scroll to bottom after sending message
+    setTimeout(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
   const copyQRUrl = () => {
@@ -170,7 +175,7 @@ export default function RoomDetailPanel({
             )}
           </div>
 
-          {/* Content - Normal scroll, no auto-scroll to top */}
+          {/* Content - Normal scroll */}
           <div className="p-4 pb-6">
             {/* Booking Info - Only show for active bookings */}
             {isActiveBooking && room.booking && (
