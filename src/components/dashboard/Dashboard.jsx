@@ -619,33 +619,35 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      const { data: completedBookings, error: fetchError } = await supabase
+      // 🔥 Kunin ang LAHAT ng bookings (active at completed)
+      const { data: allBookings, error: fetchError } = await supabase
         .from("bookings")
         .select("id")
         .eq("hotel_id", hotel.id)
-        .eq("status", "active"); // <-- ITO NA
+        .in("status", ["active", "completed"]); // <-- KUHAIN LAHAT
 
       if (fetchError) throw fetchError;
 
-      if (completedBookings && completedBookings.length > 0) {
+      if (allBookings && allBookings.length > 0) {
+        // 🔥 DELETE LAHAT (active at completed)
         const { error: deleteError } = await supabase
           .from("bookings")
           .delete()
           .eq("hotel_id", hotel.id)
-          .eq("status", "active"); // <-- ITO NA
+          .in("status", ["active", "completed"]); // <-- DELETE LAHAT
 
         if (deleteError) throw deleteError;
 
         await logActivity(
           "reset",
-          `Reset all totals - Deleted ${completedBookings.length} completed bookings`,
+          `Reset all totals - Deleted ${allBookings.length} bookings (active + completed)`,
         );
 
         toast.success(
-          `Successfully reset totals (${completedBookings.length} bookings removed)`,
+          `Successfully reset totals (${allBookings.length} bookings removed)`,
         );
       } else {
-        toast("No completed bookings to reset", {
+        toast("No bookings to reset", {
           icon: "ℹ️",
           style: {
             borderRadius: "10px",
