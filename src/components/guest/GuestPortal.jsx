@@ -541,27 +541,6 @@ export default function GuestPortal() {
                     }`}>
                     {formatTime(timeRemaining)}
                   </div>
-                  <div className="mt-3">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-                        getStatusClass() === "warn"
-                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                          : getStatusClass() === "expired"
-                            ? "bg-red-500/10 text-red-400 border-red-500/20"
-                            : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      }`}>
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          getStatusClass() === "warn"
-                            ? "bg-amber-400 animate-pulse"
-                            : getStatusClass() === "expired"
-                              ? "bg-red-400"
-                              : "bg-emerald-400"
-                        }`}
-                      />
-                      {getStatusText()}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Progress Bar */}

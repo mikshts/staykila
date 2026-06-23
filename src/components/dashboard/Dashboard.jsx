@@ -1,4 +1,4 @@
-//src/components/dashboard/Dashboard.jsx
+// src/components/dashboard/Dashboard.jsx
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
@@ -19,7 +19,7 @@ import {
   PriceModal,
   WifiModal,
   MenuModal,
-  CheckoutModal, // Added here
+  CheckoutModal,
 } from "../modals";
 import {
   ActivityPanel,
@@ -49,9 +49,8 @@ export default function Dashboard() {
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showReportsPanel, setShowReportsPanel] = useState(false);
-  const [uploading, setUploading] = useState(false); // <-- ADD THIS LINE
+  const [uploading, setUploading] = useState(false);
   const [showQRDownload, setShowQRDownload] = useState(false);
-  // Add this state with your other useState declarations
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [checkoutRoom, setCheckoutRoom] = useState(null);
   const [activityLog, setActivityLog] = useState([]);
@@ -80,13 +79,54 @@ export default function Dashboard() {
   const [wifiPassword, setWifiPassword] = useState("");
   const [menuImages, setMenuImages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [timerTick, setTimerTick] = useState(0);
 
   const timerIntervalRef = useRef(null);
-  const roomsRef = useRef(rooms); // Add this line
+  const roomsRef = useRef(rooms);
+
   // Keep roomsRef in sync with rooms state
   useEffect(() => {
     roomsRef.current = rooms;
   }, [rooms]);
+
+  // Timer tick - increments every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimerTick((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update timers whenever timerTick changes
+  useEffect(() => {
+    const currentRooms = roomsRef.current;
+    const timerElements = document.querySelectorAll("[data-timer]");
+
+    if (timerElements.length === 0) return;
+
+    timerElements.forEach((el) => {
+      const roomId = el.dataset.timer;
+      if (!roomId) return;
+
+      const room = currentRooms.find((r) => r.id === parseInt(roomId));
+      if (room?.booking) {
+        const countdown = formatCountdown(room.booking.end_time);
+        if (el.textContent !== countdown) {
+          el.textContent = countdown;
+        }
+        const status = getRoomStatus(room.booking.end_time);
+        // Update class for status styling
+        el.className =
+          `timer-display text-2xl font-bold font-mono ` +
+          (status === "expiring"
+            ? "text-orange-500 animate-pulse"
+            : status === "expired"
+              ? "text-red-500"
+              : "text-green-600");
+      }
+    });
+  }, [timerTick]); // Re-run every second
+
   // Fetch data on mount
   useEffect(() => {
     if (hotel?.id) {
@@ -102,48 +142,7 @@ export default function Dashboard() {
     };
   }, [hotel]);
 
-  // Start timer for countdown updates
-  useEffect(() => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-    }
-
-    timerIntervalRef.current = setInterval(() => {
-      // Use roomsRef.current to get the latest rooms
-      const currentRooms = roomsRef.current;
-
-      document.querySelectorAll("[data-timer]").forEach((el) => {
-        const roomId = el.dataset.timer;
-        const room = currentRooms.find((r) => r.id === parseInt(roomId));
-        if (room?.booking) {
-          const countdown = formatCountdown(room.booking.end_time);
-          if (el.textContent !== countdown) {
-            el.textContent = countdown;
-          }
-          const status = getRoomStatus(room.booking.end_time);
-          el.className =
-            `timer-display text-2xl font-bold font-mono ` +
-            (status === "expiring"
-              ? "text-orange-500 animate-pulse"
-              : status === "expired"
-                ? "text-red-500"
-                : "text-green-600");
-        }
-      });
-    }, 1000);
-
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-    };
-  }, []); // Empty array - only set up once
-
   // Fetch functions
-  // src/components/dashboard/Dashboard.jsx
-  // Replace the fetchHotelSettings function with this:
-
   const fetchHotelSettings = async () => {
     try {
       const { data: hotelData, error: hotelError } = await supabase
@@ -166,7 +165,6 @@ export default function Dashboard() {
         setMenuImages(menuData);
       }
 
-      // UPDATED: Fetch pricing with room_type
       const { data: pricingData, error: pricingError } = await supabase
         .from("pricing")
         .select("*")
@@ -175,7 +173,6 @@ export default function Dashboard() {
       if (!pricingError && pricingData) {
         const priceMap = {};
         pricingData.forEach((p) => {
-          // FIX: Create key with room_type and duration
           const key = `${p.room_type || "single"}_${p.duration_hours}`;
           priceMap[key] = p.price;
         });
@@ -232,13 +229,10 @@ export default function Dashboard() {
     }
   };
 
-  // src/components/dashboard/Dashboard.jsx - Fixed fetchRooms
-
   const fetchRooms = async () => {
     try {
       setLoading(true);
 
-      // Fetch rooms with ALL bookings (not just active)
       const { data, error } = await supabase
         .from("rooms")
         .select(
@@ -263,14 +257,12 @@ export default function Dashboard() {
       if (error) throw error;
 
       const processedRooms = (data || []).map((room) => {
-        // Find active booking for status display
         const activeBooking = room.bookings?.find((b) => b.status === "active");
         if (activeBooking) {
           room.booking = activeBooking;
           room.status = getRoomStatus(activeBooking.end_time);
         } else {
           room.booking = null;
-          // If no active booking, check if there's a completed booking
           const completedBooking = room.bookings?.find(
             (b) => b.status === "completed",
           );
@@ -283,7 +275,6 @@ export default function Dashboard() {
 
       setRooms(processedRooms);
 
-      // Calculate stats - only for current status
       const newStats = {
         available: 0,
         occupied: 0,
@@ -292,11 +283,9 @@ export default function Dashboard() {
         cleaning: 0,
       };
 
-      // Calculate revenue from ALL completed bookings
       let totalRevenue = 0;
       let totalCheckins = 0;
 
-      // Get all completed bookings for this hotel
       const { data: completedBookings, error: revenueError } = await supabase
         .from("bookings")
         .select("price, status")
@@ -311,7 +300,6 @@ export default function Dashboard() {
         totalCheckins = completedBookings.length;
       }
 
-      // Count current room statuses
       processedRooms.forEach((room) => {
         const status = room.booking
           ? getRoomStatus(room.booking.end_time)
@@ -432,11 +420,6 @@ export default function Dashboard() {
   };
 
   // Room actions
-  // src/components/dashboard/Dashboard.jsx - Updated handleCheckin
-  // src/components/dashboard/Dashboard.jsx - Updated handleCheckin (without metadata)
-  // src/components/dashboard/Dashboard.jsx
-  // Replace the handleCheckin function with this:
-
   const handleCheckin = async (roomId, hours, calculatedPrice, roomType) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
@@ -465,12 +448,11 @@ export default function Dashboard() {
 
       if (bookingError) throw bookingError;
 
-      // UPDATE: Also update the room's room_type
       const { error: roomError } = await supabase
         .from("rooms")
         .update({
           status: "occupied",
-          room_type: roomType, // <-- THIS IS THE KEY FIX
+          room_type: roomType,
         })
         .eq("id", roomId);
 
@@ -531,7 +513,6 @@ export default function Dashboard() {
     }
   };
 
-  // Replace the handleCheckout function
   const handleCheckout = async (roomId) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
@@ -577,19 +558,15 @@ export default function Dashboard() {
     }
   };
 
-  // Add a function to open the checkout modal
   const openCheckoutModal = (room) => {
     setCheckoutRoom(room);
     setShowCheckoutModal(true);
   };
-  // src/components/dashboard/Dashboard.jsx
-  // Add this function with your other handler functions
+
   const handleResetTotals = async () => {
     try {
-      // Show loading state
       setLoading(true);
 
-      // Get all completed bookings for this hotel
       const { data: completedBookings, error: fetchError } = await supabase
         .from("bookings")
         .select("id")
@@ -599,7 +576,6 @@ export default function Dashboard() {
       if (fetchError) throw fetchError;
 
       if (completedBookings && completedBookings.length > 0) {
-        // Delete all completed bookings
         const { error: deleteError } = await supabase
           .from("bookings")
           .delete()
@@ -608,7 +584,6 @@ export default function Dashboard() {
 
         if (deleteError) throw deleteError;
 
-        // Log the reset activity
         await logActivity(
           "reset",
           `Reset all totals - Deleted ${completedBookings.length} completed bookings`,
@@ -618,7 +593,6 @@ export default function Dashboard() {
           `Successfully reset totals (${completedBookings.length} bookings removed)`,
         );
       } else {
-        // FIX: Use toast() with appropriate styling instead of toast.info()
         toast("No completed bookings to reset", {
           icon: "ℹ️",
           style: {
@@ -629,11 +603,8 @@ export default function Dashboard() {
         });
       }
 
-      // Refresh the data
       await fetchRooms();
       await fetchActivityLogs();
-
-      // FIX: Close the correct modal - use showResetModal instead
       setShowResetModal(false);
     } catch (error) {
       console.error("Error resetting totals:", error);
@@ -642,6 +613,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
   const handleMarkAvailable = async (roomId) => {
     try {
       const { error } = await supabase
@@ -723,18 +695,12 @@ export default function Dashboard() {
     }
   };
 
-  // src/components/dashboard/Dashboard.jsx
-  // Replace the savePrices function with this:
-
   const savePrices = async () => {
     try {
-      // Convert the editPrices object to array format for saving
       const pricingData = [];
       Object.entries(editPrices).forEach(([key, price]) => {
-        // Skip if price is empty or zero
         if (price === undefined || price === null || price === "") return;
 
-        // Extract room_type and duration from key (e.g., "single_1")
         const parts = key.split("_");
         if (parts.length === 2) {
           const roomType = parts[0];
@@ -755,7 +721,6 @@ export default function Dashboard() {
         return;
       }
 
-      // Upsert the pricing data
       const { error } = await supabase.from("pricing").upsert(pricingData, {
         onConflict: "hotel_id,duration_hours,room_type",
       });
@@ -772,8 +737,6 @@ export default function Dashboard() {
     }
   };
 
-  // src/components/dashboard/Dashboard.jsx - Fixed handleMenuUpload
-  // Your handleMenuUpload function can stay as-is since setUploading is now defined
   const handleMenuUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) {
@@ -781,13 +744,11 @@ export default function Dashboard() {
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File too large. Maximum size is 5MB");
       return;
     }
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
@@ -800,11 +761,7 @@ export default function Dashboard() {
       const fileName = `${hotel.id}_${Date.now()}.${fileExt}`;
       const filePath = fileName;
 
-      console.log("Uploading file:", filePath);
-      console.log("File size:", file.size);
-      console.log("File type:", file.type);
-
-      const { error: uploadError, data: uploadData } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("menu-images")
         .upload(filePath, file, {
           cacheControl: "3600",
@@ -812,36 +769,25 @@ export default function Dashboard() {
         });
 
       if (uploadError) {
-        console.error("Upload error details:", uploadError);
         toast.error(`Upload failed: ${uploadError.message}`);
         return;
       }
-
-      console.log("Upload successful:", uploadData);
 
       const { data: urlData } = supabase.storage
         .from("menu-images")
         .getPublicUrl(filePath);
 
-      console.log("Public URL:", urlData.publicUrl);
-
-      const { error: insertError, data: insertData } = await supabase
-        .from("menu_images")
-        .insert({
-          hotel_id: hotel.id,
-          image_url: urlData.publicUrl,
-          display_order: menuImages.length,
-        })
-        .select();
+      const { error: insertError } = await supabase.from("menu_images").insert({
+        hotel_id: hotel.id,
+        image_url: urlData.publicUrl,
+        display_order: menuImages.length,
+      });
 
       if (insertError) {
-        console.error("Insert error details:", insertError);
         await supabase.storage.from("menu-images").remove([filePath]);
         toast.error(`Failed to save menu: ${insertError.message}`);
         return;
       }
-
-      console.log("Insert successful:", insertData);
 
       toast.success("Menu image uploaded successfully!");
       await fetchHotelSettings();
@@ -878,21 +824,12 @@ export default function Dashboard() {
   };
 
   const generateQRUrl = (room) => {
-    // Shared helper — same URLSearchParams-based encoding used by
-    // GuestPortal.jsx, QRModal.jsx, and QRDownload.jsx. The previous
-    // version manually called encodeURIComponent on the combined
-    // "hotelId_roomId" string AND again on the name, which is a third,
-    // slightly different encoding path from the other three files.
-    // Three independent hand-rolled encoders is exactly how a "works on
-    // desktop, breaks on mobile" inconsistency creeps in — this removes
-    // that risk by routing every URL build through one function.
     return buildGuestUrl(hotel.id, room.id, room.name);
   };
+
   if (loading) {
     return <DashboardSkeleton />;
   }
-
-  // src/components/dashboard/Dashboard.jsx - Fixed render section
 
   return (
     <div className="min-h-screen bg-[#f7f3ee] flex">
@@ -943,7 +880,7 @@ export default function Dashboard() {
         }}
         user={user}
         onLogout={logout}
-        onResetTotals={() => setShowResetModal(true)} // This opens the modal
+        onResetTotals={() => setShowResetModal(true)}
       />
       <main className="flex-1 min-w-0">
         <TopBar
@@ -955,7 +892,6 @@ export default function Dashboard() {
         <div className="p-4">
           <StatsCards stats={stats} revenue={revenue} />
 
-          {/* Filters + Search */}
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
             {[
               "all",
@@ -994,7 +930,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Room Grid / List */}
           {view === "grid" ? (
             <RoomGrid
               rooms={filteredRooms()}
@@ -1004,7 +939,7 @@ export default function Dashboard() {
                 else if (action === "extend") setShowExtendModal(true);
                 else if (action === "detail") setShowRoomDetail(true);
                 else if (action === "checkout") {
-                  openCheckoutModal(room); // Replace window.confirm
+                  openCheckoutModal(room);
                 }
               }}
               onMarkAvailable={handleMarkAvailable}
@@ -1023,7 +958,7 @@ export default function Dashboard() {
                 else if (action === "extend") setShowExtendModal(true);
                 else if (action === "detail") setShowRoomDetail(true);
                 else if (action === "checkout") {
-                  openCheckoutModal(room); // Replace window.confirm
+                  openCheckoutModal(room);
                 }
               }}
               onMarkAvailable={handleMarkAvailable}
@@ -1036,8 +971,8 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
       {/* Modals and Panels */}
-      {/* Updated CheckinModal call */}
       {showCheckinModal && selectedRoom && (
         <CheckinModal
           room={selectedRoom}
@@ -1047,8 +982,7 @@ export default function Dashboard() {
           formatTime={formatTime}
         />
       )}
-      {/* Reset Confirmation Modal */}
-      {/* Reset Confirmation Modal */}
+
       {showResetModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
@@ -1071,7 +1005,7 @@ export default function Dashboard() {
                 Cancel
               </button>
               <button
-                onClick={handleResetTotals} // This calls the actual reset function
+                onClick={handleResetTotals}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
                 Yes, Reset All
               </button>
@@ -1079,6 +1013,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
       {showExtendModal && selectedRoom && (
         <ExtendModal
           room={selectedRoom}
@@ -1089,6 +1024,7 @@ export default function Dashboard() {
           formatCountdown={formatCountdown}
         />
       )}
+
       {showPriceModal && (
         <PriceModal
           prices={editPrices}
@@ -1097,6 +1033,7 @@ export default function Dashboard() {
           onClose={() => setShowPriceModal(false)}
         />
       )}
+
       {showQRDownload && (
         <QRDownload
           hotel={hotel}
@@ -1104,6 +1041,7 @@ export default function Dashboard() {
           onClose={() => setShowQRDownload(false)}
         />
       )}
+
       {showWifiModal && (
         <WifiModal
           currentPassword={wifiPassword}
@@ -1111,7 +1049,7 @@ export default function Dashboard() {
           onClose={() => setShowWifiModal(false)}
         />
       )}
-      {/* Checkout Modal */}
+
       {showCheckoutModal && checkoutRoom && (
         <CheckoutModal
           room={checkoutRoom}
@@ -1122,12 +1060,14 @@ export default function Dashboard() {
           }}
         />
       )}
+
       {showReportsPanel && (
         <ReportsPanel
           hotel={hotel}
           onClose={() => setShowReportsPanel(false)}
         />
       )}
+
       {showMenuModal && (
         <MenuModal
           menuImages={menuImages}
@@ -1136,25 +1076,26 @@ export default function Dashboard() {
           onClose={() => setShowMenuModal(false)}
         />
       )}
+
       {showActivityPanel && (
         <ActivityPanel
           logs={activityLog}
           onClose={() => setShowActivityPanel(false)}
         />
       )}
-      {/* Messages Panel */}
+
       {showMessagesPanel && (
         <MessagesPanel
           rooms={rooms}
           onClose={() => setShowMessagesPanel(false)}
           onOpenChat={(room) => {
-            console.log("Opening chat for room:", room);
             setShowMessagesPanel(false);
             setSelectedRoom(room);
             setShowRoomDetail(true);
           }}
         />
       )}
+
       {showSettingsPanel && (
         <SettingsPanel
           hotel={hotel}
@@ -1177,6 +1118,7 @@ export default function Dashboard() {
           }}
         />
       )}
+
       {showRoomDetail && selectedRoom && (
         <RoomDetailPanel
           room={selectedRoom}
@@ -1194,7 +1136,7 @@ export default function Dashboard() {
           }}
           onCheckout={() => {
             setShowRoomDetail(false);
-            openCheckoutModal(selectedRoom); // Replace window.confirm
+            openCheckoutModal(selectedRoom);
           }}
           onMarkAvailable={() => {
             handleMarkAvailable(selectedRoom.id);
