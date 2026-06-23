@@ -326,7 +326,6 @@ export default function Dashboard() {
       });
 
       setRooms(processedRooms);
-
       const newStats = {
         available: 0,
         occupied: 0,
@@ -336,19 +335,22 @@ export default function Dashboard() {
         booked: 0,
       };
 
-      // ✅ StatsCards: Kunin ang revenue mula sa ACTIVE + COMPLETED
+      // ✅ StatsCards: ACTIVE bookings LANG
       let totalRevenue = 0;
       let totalCheckins = 0;
 
-      const { data: allBookings, error: revenueError } = await supabase
+      const { data: activeBookings, error: revenueError } = await supabase
         .from("bookings")
         .select("price, status")
         .eq("hotel_id", hotel.id)
-        .in("status", ["active", "completed"]); // <-- ACTIVE + COMPLETED
+        .eq("status", "active"); // <-- ACTIVE LANG
 
-      if (!revenueError && allBookings) {
-        totalRevenue = allBookings.reduce((sum, b) => sum + (b.price || 0), 0);
-        totalCheckins = allBookings.filter((b) => b.status === "active").length;
+      if (!revenueError && activeBookings) {
+        totalRevenue = activeBookings.reduce(
+          (sum, b) => sum + (b.price || 0),
+          0,
+        );
+        totalCheckins = activeBookings.length;
       }
 
       processedRooms.forEach((room) => {
@@ -620,22 +622,21 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      // 🔥 ACTIVE bookings LANG ang kunin (hindi kasama ang completed)
+      // 🔥 ACTIVE bookings LANG ang i-delete
       const { data: activeBookings, error: fetchError } = await supabase
         .from("bookings")
         .select("id")
         .eq("hotel_id", hotel.id)
-        .eq("status", "active"); // <-- ACTIVE LANG
+        .eq("status", "active");
 
       if (fetchError) throw fetchError;
 
       if (activeBookings && activeBookings.length > 0) {
-        // 🔥 ACTIVE bookings LANG ang i-delete
         const { error: deleteError } = await supabase
           .from("bookings")
           .delete()
           .eq("hotel_id", hotel.id)
-          .eq("status", "active"); // <-- ACTIVE LANG
+          .eq("status", "active");
 
         if (deleteError) throw deleteError;
 

@@ -71,6 +71,7 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
       if (bookingsError) throw bookingsError;
 
       // 3. Calculate revenue (from active + completed)
+      // AnalyticsPanel.jsx - Tama na ito
       const revenueBookings = bookings.filter(
         (b) => b.status === "active" || b.status === "completed",
       );
