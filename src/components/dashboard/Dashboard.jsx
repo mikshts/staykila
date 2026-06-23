@@ -272,52 +272,41 @@ export default function Dashboard() {
       const processedRooms = (data || []).map((room) => {
         const bookings = room.bookings || [];
 
-        // Hanapin ang active booking (currently checked in)
         const activeBooking = bookings.find((b) => b.status === "active");
-
-        // Hanapin ang lahat ng future bookings
         const now = new Date();
         const futureBookings = bookings.filter(
           (b) => b.status === "booked" && new Date(b.start_time) > now,
         );
 
-        // Sort by date
         futureBookings.sort(
           (a, b) => new Date(a.start_time) - new Date(b.start_time),
         );
 
-        // Kunin ang unang future booking (pinakamalapit)
         const nextBooking =
           futureBookings.length > 0 ? futureBookings[0] : null;
 
-        // IMPORTANT: I-reset muna ang room.booking
         room.booking = null;
         room.bookingStatus = "available";
         room.futureBookings = [];
 
         if (activeBooking) {
-          // Occupied - may active guest
           room.booking = activeBooking;
           room.bookingStatus = "occupied";
           room.status = getRoomStatus(activeBooking.end_time);
           room.displayMode = "occupied";
           room.futureBookings = futureBookings;
         } else if (nextBooking) {
-          // May future booking - HINDI nagbabago ang room status
           room.booking = nextBooking;
           room.bookingStatus = "booked";
           room.displayMode = "available";
           room.bookingDate = new Date(nextBooking.start_time);
           room.futureBookings = futureBookings;
-          // Siguraduhin na ang room.status ay "available"
           room.status = "available";
         } else {
-          // Walang booking - ensure status is available
           room.booking = null;
           room.bookingStatus = "available";
           room.displayMode = "available";
           room.futureBookings = [];
-          // Only set to available if it was previously occupied/expired/etc
           if (
             room.status === "occupied" ||
             room.status === "expired" ||
@@ -337,7 +326,6 @@ export default function Dashboard() {
 
       setRooms(processedRooms);
 
-      // Update stats
       const newStats = {
         available: 0,
         occupied: 0,
@@ -350,18 +338,16 @@ export default function Dashboard() {
       let totalRevenue = 0;
       let totalCheckins = 0;
 
-      const { data: completedBookings, error: revenueError } = await supabase
+      // 🔥 FIX: Kunin ang revenue mula sa ACTIVE at COMPLETED bookings
+      const { data: allBookings, error: revenueError } = await supabase
         .from("bookings")
         .select("price, status")
         .eq("hotel_id", hotel.id)
-        .eq("status", "active"); // <-- ITO NA
+        .in("status", ["active", "completed"]);
 
-      if (!revenueError && completedBookings) {
-        totalRevenue = completedBookings.reduce(
-          (sum, b) => sum + (b.price || 0),
-          0,
-        );
-        totalCheckins = completedBookings.length;
+      if (!revenueError && allBookings) {
+        totalRevenue = allBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+        totalCheckins = allBookings.filter((b) => b.status === "active").length;
       }
 
       processedRooms.forEach((room) => {
