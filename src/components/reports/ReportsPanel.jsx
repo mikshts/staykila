@@ -129,7 +129,7 @@ export default function ReportsPanel({ hotel, onClose }) {
     }).format(amount);
   };
 
-  // Split data into pages for printing (max 18 rows per page for better fit)
+  // Split data into pages for printing (max 18 rows per page)
   const getPageData = (data, rowsPerPage = 18) => {
     const pages = [];
     for (let i = 0; i < data.length; i += rowsPerPage) {
@@ -218,222 +218,55 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
           </div>
 
-          {/* PRINT VIEW - Professional Layout */}
-          <div className="hidden print:block">
-            {pages.map((pageData, pageIndex) => {
-              const pageTotalRevenue = pageData.reduce(
-                (sum, b) => sum + (b.price || 0),
-                0,
-              );
-              const pageTotalBookings = pageData.length;
-              const pageTotalHours = pageData.reduce(
-                (sum, b) => sum + (b.hours || 0),
-                0,
-              );
-              const isFirstPage = pageIndex === 0;
-              const isLastPage = pageIndex === pages.length - 1;
+          {/* ===== SUMMARY CARDS - Visible on Screen AND Print ===== */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 print:grid-cols-4 print:gap-4 print:mb-6">
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center print:border print:border-gray-300 print:shadow-none">
+              <div className="text-2xl font-bold text-[#0f1b2d] print:text-xl">
+                {formatCurrency(summary.totalRevenue)}
+              </div>
+              <div className="text-xs text-[#8a8278] print:text-gray-600">
+                Total Revenue
+              </div>
+              <div className="text-[10px] text-[#8a8278]/50 print:text-gray-400 mt-0.5">
+                {summary.totalBookings} bookings
+              </div>
+            </div>
 
-              return (
-                <div
-                  key={pageIndex}
-                  className={`${!isLastPage ? "page-break" : ""}`}>
-                  {/* ===== FIRST PAGE: Full Header with Logo & Summary ===== */}
-                  {isFirstPage && (
-                    <>
-                      {/* Header with Logo - Blue & Gold */}
-                      <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-5 rounded-t-lg flex items-center justify-between border-b-4 border-[#c9a84c]">
-                        <div className="flex items-center gap-4">
-                          <img
-                            src="/favicon1.png"
-                            alt="StayKila"
-                            className="w-12 h-12 rounded-lg border-2 border-[#c9a84c]"
-                          />
-                          <div>
-                            <h1 className="text-2xl font-bold">
-                              Stay<span className="text-[#c9a84c]">Kila</span>
-                            </h1>
-                            <p className="text-sm text-white/70">
-                              Night Audit Report
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold">{hotel?.name}</p>
-                          <p className="text-xs text-white/60">
-                            {new Date(dateRange.start).toLocaleDateString()} -{" "}
-                            {new Date(dateRange.end).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-500 text-right px-2 py-1 bg-gray-50 border-x border-b border-gray-200 rounded-b-lg">
-                        Generated: {new Date().toLocaleString()}
-                      </div>
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center print:border print:border-gray-300 print:shadow-none">
+              <div className="text-2xl font-bold text-[#0f1b2d] print:text-xl">
+                {summary.totalBookings}
+              </div>
+              <div className="text-xs text-[#8a8278] print:text-gray-600">
+                Total Bookings
+              </div>
+              <div className="text-[10px] text-[#8a8278]/50 print:text-gray-400 mt-0.5">
+                Completed
+              </div>
+            </div>
 
-                      {/* Summary Cards */}
-                      <div className="grid grid-cols-4 gap-3 my-4">
-                        <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
-                          <div className="text-lg font-bold text-[#0f1b2d]">
-                            {formatCurrency(summary.totalRevenue)}
-                          </div>
-                          <div className="text-[10px] text-gray-600">
-                            Total Revenue
-                          </div>
-                          <div className="text-[9px] text-gray-400">
-                            {summary.totalBookings} bookings
-                          </div>
-                        </div>
-                        <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
-                          <div className="text-lg font-bold text-[#0f1b2d]">
-                            {summary.totalBookings}
-                          </div>
-                          <div className="text-[10px] text-gray-600">
-                            Total Bookings
-                          </div>
-                          <div className="text-[9px] text-gray-400">
-                            Completed
-                          </div>
-                        </div>
-                        <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
-                          <div className="text-lg font-bold text-[#0f1b2d]">
-                            {summary.totalHours}h
-                          </div>
-                          <div className="text-[10px] text-gray-600">
-                            Total Hours
-                          </div>
-                          <div className="text-[9px] text-gray-400">
-                            Room usage
-                          </div>
-                        </div>
-                        <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
-                          <div className="text-lg font-bold text-[#0f1b2d]">
-                            {summary.averageStay}h
-                          </div>
-                          <div className="text-[10px] text-gray-600">
-                            Avg Stay Duration
-                          </div>
-                          <div className="text-[9px] text-gray-400">
-                            Average
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center print:border print:border-gray-300 print:shadow-none">
+              <div className="text-2xl font-bold text-[#0f1b2d] print:text-xl">
+                {summary.totalHours}h
+              </div>
+              <div className="text-xs text-[#8a8278] print:text-gray-600">
+                Total Hours
+              </div>
+              <div className="text-[10px] text-[#8a8278]/50 print:text-gray-400 mt-0.5">
+                Room usage
+              </div>
+            </div>
 
-                  {/* ===== SUBSEQUENT PAGES: Clean header with page number only ===== */}
-                  {!isFirstPage && (
-                    <div className="text-center border-b border-gray-300 pb-2 mb-3">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Night Audit Report - Page {pageIndex + 1} of{" "}
-                        {pages.length}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* ===== TRANSACTION TABLE ===== */}
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
-                          Date
-                        </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
-                          Room
-                        </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
-                          Hours
-                        </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
-                          Price
-                        </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
-                          Guest
-                        </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
-                          Check-in
-                        </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
-                          Checkout
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pageData.map((booking) => (
-                        <tr key={booking.id} className="border border-gray-200">
-                          <td className="p-2 text-xs border border-gray-200">
-                            {new Date(booking.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="p-2 font-medium text-xs border border-gray-200">
-                            {booking.rooms?.name || "Unknown"}
-                          </td>
-                          <td className="p-2 text-xs border border-gray-200">
-                            {booking.hours}h
-                          </td>
-                          <td className="p-2 font-medium text-xs border border-gray-200">
-                            ₱{booking.price}
-                          </td>
-                          <td className="p-2 text-xs border border-gray-200">
-                            {booking.guest_name || "N/A"}
-                          </td>
-                          <td className="p-2 text-xs border border-gray-200">
-                            {new Date(booking.start_time).toLocaleTimeString()}
-                          </td>
-                          <td className="p-2 text-xs border border-gray-200">
-                            {new Date(booking.end_time).toLocaleTimeString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      {/* Page Total */}
-                      <tr className="bg-gray-50 font-semibold">
-                        <td
-                          colSpan="3"
-                          className="p-2 text-right text-xs border border-gray-300">
-                          Page Total:
-                        </td>
-                        <td className="p-2 text-xs border border-gray-300 text-[#c9a84c] font-bold">
-                          {formatCurrency(pageTotalRevenue)}
-                        </td>
-                        <td
-                          colSpan="3"
-                          className="p-2 text-xs border border-gray-300">
-                          {pageTotalBookings} bookings • {pageTotalHours}h
-                        </td>
-                      </tr>
-
-                      {/* Grand Total - Only on last page */}
-                      {isLastPage && reports.length > 0 && (
-                        <tr className="bg-blue-50 font-bold">
-                          <td
-                            colSpan="3"
-                            className="p-2 text-right text-xs border border-blue-300">
-                            GRAND TOTAL:
-                          </td>
-                          <td className="p-2 text-xs border border-blue-300 text-[#c9a84c] font-bold">
-                            {formatCurrency(summary.totalRevenue)}
-                          </td>
-                          <td
-                            colSpan="3"
-                            className="p-2 text-xs border border-blue-300">
-                            {summary.totalBookings} bookings •{" "}
-                            {summary.totalHours}h total
-                          </td>
-                        </tr>
-                      )}
-                    </tfoot>
-                  </table>
-
-                  {/* Footer */}
-                  <div className="text-center text-xs text-gray-400 mt-2 pt-1 border-t border-gray-200">
-                    {hotel?.name} •{" "}
-                    {new Date(dateRange.start).toLocaleDateString()} -{" "}
-                    {new Date(dateRange.end).toLocaleDateString()}
-                    {!isFirstPage &&
-                      ` • Page ${pageIndex + 1} of ${pages.length}`}
-                  </div>
-                </div>
-              );
-            })}
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center print:border print:border-gray-300 print:shadow-none">
+              <div className="text-2xl font-bold text-[#0f1b2d] print:text-xl">
+                {summary.averageStay}h
+              </div>
+              <div className="text-xs text-[#8a8278] print:text-gray-600">
+                Avg Stay Duration
+              </div>
+              <div className="text-[10px] text-[#8a8278]/50 print:text-gray-400 mt-0.5">
+                Average
+              </div>
+            </div>
           </div>
 
           {/* Report Table - Screen View */}
@@ -518,6 +351,215 @@ export default function ReportsPanel({ hotel, onClose }) {
                 )}
               </table>
             </div>
+          </div>
+
+          {/* ===== PRINT VIEW - Single copy with pagination ===== */}
+          <div className="hidden print:block">
+            {pages.map((pageData, pageIndex) => {
+              const pageTotalRevenue = pageData.reduce(
+                (sum, b) => sum + (b.price || 0),
+                0,
+              );
+              const pageTotalBookings = pageData.length;
+              const pageTotalHours = pageData.reduce(
+                (sum, b) => sum + (b.hours || 0),
+                0,
+              );
+              const isFirstPage = pageIndex === 0;
+              const isLastPage = pageIndex === pages.length - 1;
+
+              return (
+                <div
+                  key={pageIndex}
+                  className={!isLastPage ? "page-break" : ""}>
+                  {/* Header with Logo - Only on FIRST page */}
+                  {isFirstPage && (
+                    <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-5 rounded-t-lg flex items-center justify-between border-b-4 border-[#c9a84c]">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src="/favicon1.png"
+                          alt="StayKila"
+                          className="w-12 h-12 rounded-lg border-2 border-[#c9a84c]"
+                        />
+                        <div>
+                          <h1 className="text-2xl font-bold">
+                            Stay<span className="text-[#c9a84c]">Kila</span>
+                          </h1>
+                          <p className="text-sm text-white/70">
+                            Night Audit Report
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">{hotel?.name}</p>
+                        <p className="text-xs text-white/60">
+                          {new Date(dateRange.start).toLocaleDateString()} -{" "}
+                          {new Date(dateRange.end).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Simple header for subsequent pages */}
+                  {!isFirstPage && (
+                    <div className="text-center border-b border-gray-300 pb-2 mb-3">
+                      <span className="text-sm font-semibold text-gray-600">
+                        Night Audit Report - Page {pageIndex + 1} of{" "}
+                        {pages.length}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Summary Cards - Only on FIRST page */}
+                  {isFirstPage && (
+                    <div className="grid grid-cols-4 gap-3 my-4">
+                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
+                        <div className="text-lg font-bold text-[#0f1b2d]">
+                          {formatCurrency(summary.totalRevenue)}
+                        </div>
+                        <div className="text-[10px] text-gray-600">
+                          Total Revenue
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          {summary.totalBookings} bookings
+                        </div>
+                      </div>
+                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
+                        <div className="text-lg font-bold text-[#0f1b2d]">
+                          {summary.totalBookings}
+                        </div>
+                        <div className="text-[10px] text-gray-600">
+                          Total Bookings
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          Completed
+                        </div>
+                      </div>
+                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
+                        <div className="text-lg font-bold text-[#0f1b2d]">
+                          {summary.totalHours}h
+                        </div>
+                        <div className="text-[10px] text-gray-600">
+                          Total Hours
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          Room usage
+                        </div>
+                      </div>
+                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
+                        <div className="text-lg font-bold text-[#0f1b2d]">
+                          {summary.averageStay}h
+                        </div>
+                        <div className="text-[10px] text-gray-600">
+                          Avg Stay Duration
+                        </div>
+                        <div className="text-[9px] text-gray-400">Average</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Transaction Table */}
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Date
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Room
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Hours
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Price
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Guest
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Check-in
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Checkout
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageData.map((booking) => (
+                        <tr key={booking.id} className="border border-gray-200">
+                          <td className="p-2 text-xs border border-gray-200">
+                            {new Date(booking.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="p-2 font-medium text-xs border border-gray-200">
+                            {booking.rooms?.name || "Unknown"}
+                          </td>
+                          <td className="p-2 text-xs border border-gray-200">
+                            {booking.hours}h
+                          </td>
+                          <td className="p-2 font-medium text-xs border border-gray-200">
+                            ₱{booking.price}
+                          </td>
+                          <td className="p-2 text-xs border border-gray-200">
+                            {booking.guest_name || "N/A"}
+                          </td>
+                          <td className="p-2 text-xs border border-gray-200">
+                            {new Date(booking.start_time).toLocaleTimeString()}
+                          </td>
+                          <td className="p-2 text-xs border border-gray-200">
+                            {new Date(booking.end_time).toLocaleTimeString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50 font-semibold">
+                        <td
+                          colSpan="3"
+                          className="p-2 text-right text-xs border border-gray-300">
+                          Page Total:
+                        </td>
+                        <td className="p-2 text-xs border border-gray-300 text-[#c9a84c] font-bold">
+                          {formatCurrency(pageTotalRevenue)}
+                        </td>
+                        <td
+                          colSpan="3"
+                          className="p-2 text-xs border border-gray-300">
+                          {pageTotalBookings} bookings • {pageTotalHours}h
+                        </td>
+                      </tr>
+                      {isLastPage && reports.length > 0 && (
+                        <tr className="bg-blue-50 font-bold">
+                          <td
+                            colSpan="3"
+                            className="p-2 text-right text-xs border border-blue-300">
+                            GRAND TOTAL:
+                          </td>
+                          <td className="p-2 text-xs border border-blue-300 text-[#c9a84c] font-bold">
+                            {formatCurrency(summary.totalRevenue)}
+                          </td>
+                          <td
+                            colSpan="3"
+                            className="p-2 text-xs border border-blue-300">
+                            {summary.totalBookings} bookings •{" "}
+                            {summary.totalHours}h total
+                          </td>
+                        </tr>
+                      )}
+                    </tfoot>
+                  </table>
+
+                  {/* Footer */}
+                  <div className="text-center text-xs text-gray-400 mt-2 pt-1 border-t border-gray-200">
+                    {hotel?.name} •{" "}
+                    {new Date(dateRange.start).toLocaleDateString()} -{" "}
+                    {new Date(dateRange.end).toLocaleDateString()}
+                    {!isFirstPage &&
+                      ` • Page ${pageIndex + 1} of ${pages.length}`}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Footer - Screen only */}
