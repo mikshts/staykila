@@ -33,20 +33,6 @@ export default function CheckinModal({
   ];
 
   const durations = [
-    // --- ADD THIS FOR TESTING ---
-    {
-      hours: 0.003,
-      label: "🔊 TEST: 10 seconds",
-      note: "Sound test",
-      icon: "🔊",
-    },
-    {
-      hours: 0.017,
-      label: "🔊 TEST: 1 minute",
-      note: "Sound test",
-      icon: "🔊",
-    },
-    // --- END TEST ---
     { hours: 1, label: "1 Hour", note: "Quick rest", icon: "🌙" },
     { hours: 3, label: "3 Hours", note: "Short stay", icon: "☕" },
     { hours: 6, label: "6 Hours", note: "Half day", icon: "🏠" },
