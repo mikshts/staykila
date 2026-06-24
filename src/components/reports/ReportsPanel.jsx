@@ -129,20 +129,6 @@ export default function ReportsPanel({ hotel, onClose }) {
     }).format(amount);
   };
 
-  // Split data into pages for printing (max 18 rows per page)
-  const getPageData = (data, rowsPerPage = 18) => {
-    const pages = [];
-    // Always return at least one (possibly empty) page so the print
-    // view has somewhere to show "no bookings" / the summary cards.
-    if (data.length === 0) return [[]];
-    for (let i = 0; i < data.length; i += rowsPerPage) {
-      pages.push(data.slice(i, i + rowsPerPage));
-    }
-    return pages;
-  };
-
-  const pages = getPageData(reports);
-
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
@@ -154,16 +140,12 @@ export default function ReportsPanel({ hotel, onClose }) {
   }
 
   return (
-    <div className="report-modal-overlay fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
       <div
         ref={panelRef}
-        className="report-modal-panel bg-white w-full max-w-4xl h-full overflow-y-auto">
-        {/* ============================================================ */}
-        {/* SCREEN-ONLY CONTENT (everything below uses the .screen-only class) */}
-        {/* ============================================================ */}
-
-        {/* Header - Screen */}
-        <div className="screen-only sticky top-0 bg-[#0f1b2d] text-white p-4 flex items-center justify-between">
+        className="bg-white w-full max-w-4xl h-full overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-[#0f1b2d] text-white p-4 flex items-center justify-between">
           <div>
             <div className="font-bold text-lg">Night Audit Reports</div>
             <div className="text-xs text-white/50">
@@ -175,8 +157,8 @@ export default function ReportsPanel({ hotel, onClose }) {
           </button>
         </div>
 
-        <div className="screen-only p-4">
-          {/* Date Range Selector - Screen only */}
+        <div className="p-4">
+          {/* Date Range Selector */}
           <div className="bg-[#f7f3ee] rounded-xl p-4 mb-6">
             <div className="flex flex-wrap items-center gap-4">
               <div>
@@ -225,7 +207,7 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
           </div>
 
-          {/* Summary Cards - SCREEN ONLY (this whole block never prints) */}
+          {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
               <div className="text-2xl font-bold text-[#0f1b2d]">
@@ -268,7 +250,7 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
           </div>
 
-          {/* Report Table - Screen View only */}
+          {/* Report Table */}
           <div className="bg-white border border-[#e5e2db] rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -352,7 +334,7 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
           </div>
 
-          {/* Footer - Screen only */}
+          {/* Footer */}
           <div className="mt-4 text-xs text-[#8a8278] text-center">
             <p>Generated on {new Date().toLocaleString()}</p>
             <p className="mt-1">
@@ -362,444 +344,42 @@ export default function ReportsPanel({ hotel, onClose }) {
             </p>
           </div>
         </div>
-
-        {/* ============================================================ */}
-        {/* PRINT-ONLY CONTENT — the ONLY thing visible when printing.     */}
-        {/* This is the single source of truth for the printed report.    */}
-        {/* Nothing above this point renders on print (.screen-only is display:none in print). */}
-        {/* ============================================================ */}
-        <div className="print-report">
-          {pages.map((pageData, pageIndex) => {
-            const pageTotalRevenue = pageData.reduce(
-              (sum, b) => sum + (b.price || 0),
-              0,
-            );
-            const pageTotalBookings = pageData.length;
-            const pageTotalHours = pageData.reduce(
-              (sum, b) => sum + (b.hours || 0),
-              0,
-            );
-            const isFirstPage = pageIndex === 0;
-            const isLastPage = pageIndex === pages.length - 1;
-
-            return (
-              <div
-                key={pageIndex}
-                className={
-                  "print-page" + (!isLastPage ? " print-page-break" : "")
-                }>
-                {/* Header with Logo - ONLY on first page */}
-                {isFirstPage && (
-                  <div className="print-header-main">
-                    <div className="print-header-left">
-                      <img
-                        src="/favicon1.png"
-                        alt="StayKila"
-                        className="print-logo"
-                      />
-                      <div>
-                        <h1 className="print-brand">
-                          Stay<span className="print-brand-gold">Kila</span>
-                        </h1>
-                        <p className="print-subtitle">Night Audit Report</p>
-                      </div>
-                    </div>
-                    <div className="print-header-right">
-                      <p className="print-hotel-name">{hotel?.name}</p>
-                      <p className="print-date-range">
-                        {new Date(dateRange.start).toLocaleDateString()} -{" "}
-                        {new Date(dateRange.end).toLocaleDateString()}
-                      </p>
-                      <p className="print-generated">
-                        Generated: {new Date().toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Simple header - ONLY on pages after the first */}
-                {!isFirstPage && (
-                  <div className="print-header-simple">
-                    Night Audit Report - Page {pageIndex + 1} of {pages.length}
-                  </div>
-                )}
-
-                {/* Summary Cards - ONLY on first page */}
-                {isFirstPage && (
-                  <div className="print-summary-grid">
-                    <div className="print-summary-card">
-                      <div className="print-summary-value">
-                        {formatCurrency(summary.totalRevenue)}
-                      </div>
-                      <div className="print-summary-label">Total Revenue</div>
-                      <div className="print-summary-sub">
-                        {summary.totalBookings} bookings
-                      </div>
-                    </div>
-                    <div className="print-summary-card">
-                      <div className="print-summary-value">
-                        {summary.totalBookings}
-                      </div>
-                      <div className="print-summary-label">Total Bookings</div>
-                      <div className="print-summary-sub">Completed</div>
-                    </div>
-                    <div className="print-summary-card">
-                      <div className="print-summary-value">
-                        {summary.totalHours}h
-                      </div>
-                      <div className="print-summary-label">Total Hours</div>
-                      <div className="print-summary-sub">Room usage</div>
-                    </div>
-                    <div className="print-summary-card">
-                      <div className="print-summary-value">
-                        {summary.averageStay}h
-                      </div>
-                      <div className="print-summary-label">
-                        Avg Stay Duration
-                      </div>
-                      <div className="print-summary-sub">Average</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Transaction Table */}
-                <table className="print-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Room</th>
-                      <th>Hours</th>
-                      <th>Price</th>
-                      <th>Guest</th>
-                      <th>Check-in</th>
-                      <th>Checkout</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pageData.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="print-no-data">
-                          No completed bookings found for this period
-                        </td>
-                      </tr>
-                    ) : (
-                      pageData.map((booking) => (
-                        <tr key={booking.id}>
-                          <td>
-                            {new Date(booking.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="print-cell-strong">
-                            {booking.rooms?.name || "Unknown"}
-                          </td>
-                          <td>{booking.hours}h</td>
-                          <td className="print-cell-gold">₱{booking.price}</td>
-                          <td>{booking.guest_name || "N/A"}</td>
-                          <td>
-                            {new Date(booking.start_time).toLocaleTimeString()}
-                          </td>
-                          <td>
-                            {new Date(booking.end_time).toLocaleTimeString()}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                  {pageData.length > 0 && (
-                    <tfoot>
-                      <tr className="print-page-total-row">
-                        <td colSpan="3" className="print-total-label">
-                          Page Total:
-                        </td>
-                        <td className="print-cell-gold print-cell-strong">
-                          {formatCurrency(pageTotalRevenue)}
-                        </td>
-                        <td colSpan="3">
-                          {pageTotalBookings} bookings • {pageTotalHours}h
-                        </td>
-                      </tr>
-                      {isLastPage && reports.length > 0 && (
-                        <tr className="print-grand-total-row">
-                          <td colSpan="3" className="print-total-label">
-                            GRAND TOTAL:
-                          </td>
-                          <td className="print-cell-gold print-cell-strong">
-                            {formatCurrency(summary.totalRevenue)}
-                          </td>
-                          <td colSpan="3">
-                            {summary.totalBookings} bookings •{" "}
-                            {summary.totalHours}h total
-                          </td>
-                        </tr>
-                      )}
-                    </tfoot>
-                  )}
-                </table>
-
-                {/* Footer */}
-                <div className="print-footer">
-                  {hotel?.name} •{" "}
-                  {new Date(dateRange.start).toLocaleDateString()} -{" "}
-                  {new Date(dateRange.end).toLocaleDateString()}
-                  {!isFirstPage &&
-                    ` • Page ${pageIndex + 1} of ${pages.length}`}
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* Print Styles                                                  */}
-      {/* ============================================================ */}
+      {/* Simple Print Styles - Just hide the background overlay */}
       <style jsx global>{`
-        /* Screen-only content: hidden ONLY during print. Driven by a real
-           class (not Tailwind's print:hidden) so it can never be dropped
-           by purge/safelist config in the build. */
         @media print {
-          .screen-only {
-            display: none !important;
-          }
-        }
-
-        /* The print report is hidden on screen by default... */
-        .print-report {
-          display: none;
-        }
-
-        @media print {
-          @page {
-            size: auto;
-            margin: 12mm 10mm;
-          }
-
-          html,
           body {
             background: white !important;
             margin: 0 !important;
             padding: 0 !important;
-            height: auto !important;
-            overflow: visible !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
           }
 
-          /* Neutralize the modal overlay/backdrop so it can't clip,
-             constrain height, or otherwise hide its descendants during
-             print. This is the actual fix: these were fixed + flex
-             + overflow-y-auto containers, and if any Tailwind print
-             override failed to load, the print content was trapped
-             inside a zero/constrained-height scroll box and rendered
-             nothing. */
-          .report-modal-overlay {
-            position: static !important;
-            inset: auto !important;
-            display: block !important;
+          /* Remove the overlay background */
+          .fixed.inset-0.bg-black\/50 {
             background: white !important;
+            position: static !important;
             backdrop-filter: none !important;
-            height: auto !important;
-            width: auto !important;
-            z-index: auto !important;
           }
 
-          .report-modal-panel {
-            position: static !important;
-            display: block !important;
+          /* Make the panel full page */
+          .bg-white.w-full.max-w-4xl.h-full {
             max-width: 100% !important;
-            width: 100% !important;
             height: auto !important;
             overflow: visible !important;
-            background: white !important;
           }
 
-          /* ...and only switched on inside print, with !important so it
-             cannot be defeated by any Tailwind hidden utility still
-             present in the cascade. */
-          .print-report {
-            display: block !important;
-            width: 100%;
+          /* Hide the close button */
+          .sticky.top-0 button {
+            display: none !important;
           }
 
-          .print-page {
-            width: 100%;
+          /* Hide date picker and buttons */
+          .bg-\\[\\#f7f3ee\\] {
+            display: none !important;
           }
 
-          .print-page-break {
-            page-break-after: always;
-          }
-
-          /* ----- Header (page 1 only) ----- */
-          .print-header-main {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: linear-gradient(to right, #1e3a8a, #1e40af);
-            color: #ffffff;
-            padding: 18px 20px;
-            border-radius: 8px 8px 0 0;
-            border-bottom: 4px solid #c9a84c;
-          }
-
-          .print-header-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-          }
-
-          .print-logo {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
-            border: 2px solid #c9a84c;
-            object-fit: cover;
-          }
-
-          .print-brand {
-            font-size: 22px;
-            font-weight: 700;
-            margin: 0;
-            color: #ffffff;
-          }
-
-          .print-brand-gold {
-            color: #c9a84c;
-          }
-
-          .print-subtitle {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.75);
-            margin: 2px 0 0 0;
-          }
-
-          .print-header-right {
-            text-align: right;
-          }
-
-          .print-hotel-name {
-            font-size: 13px;
-            font-weight: 600;
-            margin: 0;
-            color: #ffffff;
-          }
-
-          .print-date-range,
-          .print-generated {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.65);
-            margin: 2px 0 0 0;
-          }
-
-          /* ----- Simple header (page 2+) ----- */
-          .print-header-simple {
-            text-align: center;
-            font-size: 12px;
-            font-weight: 600;
-            color: #4b5563;
-            border-bottom: 1px solid #d1d5db;
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-          }
-
-          /* ----- Summary cards (page 1 only) ----- */
-          .print-summary-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin: 16px 0;
-          }
-
-          .print-summary-card {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
-            background: #f9fafb;
-          }
-
-          .print-summary-value {
-            font-size: 18px;
-            font-weight: 700;
-            color: #0f1b2d;
-          }
-
-          .print-summary-label {
-            font-size: 10px;
-            color: #4b5563;
-            margin-top: 2px;
-          }
-
-          .print-summary-sub {
-            font-size: 9px;
-            color: #9ca3af;
-          }
-
-          /* ----- Table ----- */
-          .print-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-          }
-
-          .print-table th {
-            text-align: left;
-            background: #f3f4f6;
-            color: #374151;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            border: 1px solid #d1d5db;
-            padding: 6px 8px;
-          }
-
-          .print-table td {
-            border: 1px solid #e5e7eb;
-            padding: 6px 8px;
-          }
-
-          .print-table tbody tr {
-            page-break-inside: avoid;
-          }
-
-          .print-cell-strong {
-            font-weight: 600;
-          }
-
-          .print-cell-gold {
-            color: #c9a84c;
-            font-weight: 600;
-          }
-
-          .print-no-data {
-            text-align: center;
-            padding: 24px 0;
-            color: #8a8278;
-          }
-
-          .print-page-total-row {
-            background: #f9fafb;
-            font-weight: 600;
-          }
-
-          .print-grand-total-row {
-            background: #eff6ff;
-            font-weight: 700;
-          }
-
-          .print-total-label {
-            text-align: right;
-          }
-
-          /* ----- Footer ----- */
-          .print-footer {
-            text-align: center;
-            font-size: 10px;
-            color: #9ca3af;
-            margin-top: 10px;
-            padding-top: 6px;
-            border-top: 1px solid #e5e7eb;
-          }
+          /* Everything else prints as-is */
         }
       `}</style>
     </div>
