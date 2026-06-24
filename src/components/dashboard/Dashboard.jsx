@@ -14,7 +14,6 @@ import QRDownload from "./QRDownload";
 import { buildGuestUrl } from "../../lib/guestUrl";
 import CalendarManager from "../settings/CalendarManager";
 import AnalyticsPanel from "../analytics/AnalyticsPanel";
-import { useSoundAlert } from "../../hooks/useSoundAlert";
 
 import {
   CheckinModal,
