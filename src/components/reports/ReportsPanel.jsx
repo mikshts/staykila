@@ -354,6 +354,7 @@ export default function ReportsPanel({ hotel, onClose }) {
           </div>
 
           {/* ===== PRINT VIEW - Single copy with pagination ===== */}
+          {/* ===== PRINT VIEW - Single copy with pagination ===== */}
           <div className="hidden print:block">
             {pages.map((pageData, pageIndex) => {
               const pageTotalRevenue = pageData.reduce(
@@ -410,53 +411,9 @@ export default function ReportsPanel({ hotel, onClose }) {
                     </div>
                   )}
 
-                  {/* Summary Cards - Only on FIRST page */}
-                  {isFirstPage && (
-                    <div className="grid grid-cols-4 gap-3 my-4">
-                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
-                        <div className="text-lg font-bold text-[#0f1b2d]">
-                          {formatCurrency(summary.totalRevenue)}
-                        </div>
-                        <div className="text-[10px] text-gray-600">
-                          Total Revenue
-                        </div>
-                        <div className="text-[9px] text-gray-400">
-                          {summary.totalBookings} bookings
-                        </div>
-                      </div>
-                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
-                        <div className="text-lg font-bold text-[#0f1b2d]">
-                          {summary.totalBookings}
-                        </div>
-                        <div className="text-[10px] text-gray-600">
-                          Total Bookings
-                        </div>
-                        <div className="text-[9px] text-gray-400">
-                          Completed
-                        </div>
-                      </div>
-                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
-                        <div className="text-lg font-bold text-[#0f1b2d]">
-                          {summary.totalHours}h
-                        </div>
-                        <div className="text-[10px] text-gray-600">
-                          Total Hours
-                        </div>
-                        <div className="text-[9px] text-gray-400">
-                          Room usage
-                        </div>
-                      </div>
-                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
-                        <div className="text-lg font-bold text-[#0f1b2d]">
-                          {summary.averageStay}h
-                        </div>
-                        <div className="text-[10px] text-gray-600">
-                          Avg Stay Duration
-                        </div>
-                        <div className="text-[9px] text-gray-400">Average</div>
-                      </div>
-                    </div>
-                  )}
+                  {/* ======================================================== */}
+                  {/* ✅ SUMMARY CARDS REMOVED FROM PRINT - Only in screen view */}
+                  {/* ======================================================== */}
 
                   {/* Transaction Table */}
                   <table className="w-full text-sm border-collapse">
