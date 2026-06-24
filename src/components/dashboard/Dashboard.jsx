@@ -972,31 +972,115 @@ export default function Dashboard() {
           <StatsCards stats={stats} revenue={revenue} />
 
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
-            {[
-              "all",
-              "available",
-              "occupied",
-              "expiring",
-              "expired",
-              "cleaning",
-            ].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition whitespace-nowrap ${
-                  filter === f
-                    ? "bg-[#0f1b2d] text-white border-[#0f1b2d]"
-                    : "bg-white text-[#8a8278] border-[#e5e2db] hover:border-[#0f1b2d] hover:text-[#0f1b2d]"
-                }`}>
-                {f === "all" ? (
-                  <>
-                    <i className="fas fa-th-list mr-1"></i>All
-                  </>
-                ) : (
-                  f.charAt(0).toUpperCase() + f.slice(1)
-                )}
-              </button>
-            ))}
+            {/* All button - always shows total rooms */}
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition whitespace-nowrap flex items-center gap-1.5 ${
+                filter === "all"
+                  ? "bg-[#0f1b2d] text-white border-[#0f1b2d]"
+                  : "bg-white text-[#8a8278] border-[#e5e2db] hover:border-[#0f1b2d] hover:text-[#0f1b2d]"
+              }`}>
+              <i className="fas fa-th-list"></i>
+              All
+              <span
+                className={`text-[9px] ${filter === "all" ? "text-white/60" : "text-[#8a8278]/50"}`}>
+                ({rooms.length})
+              </span>
+            </button>
+
+            {/* Available button */}
+            <button
+              onClick={() => setFilter("available")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition whitespace-nowrap flex items-center gap-1.5 ${
+                filter === "available"
+                  ? "bg-green-600 text-white border-green-600"
+                  : "bg-white text-[#8a8278] border-[#e5e2db] hover:border-green-500 hover:text-green-600"
+              }`}>
+              <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+              Available
+              {stats.available > 0 && (
+                <span
+                  className={`text-[9px] ${filter === "available" ? "text-white/60" : "text-green-600"}`}>
+                  ({stats.available})
+                </span>
+              )}
+            </button>
+
+            {/* Occupied button - with red indicator */}
+            <button
+              onClick={() => setFilter("occupied")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition whitespace-nowrap flex items-center gap-1.5 ${
+                filter === "occupied"
+                  ? "bg-red-600 text-white border-red-600"
+                  : "bg-white text-[#8a8278] border-[#e5e2db] hover:border-red-500 hover:text-red-600"
+              }`}>
+              <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+              Occupied
+              {stats.occupied > 0 && (
+                <span
+                  className={`text-[9px] ${filter === "occupied" ? "text-white/60" : "text-red-600"}`}>
+                  ({stats.occupied})
+                </span>
+              )}
+            </button>
+
+            {/* Expiring button - with orange indicator and pulse if > 0 */}
+            <button
+              onClick={() => setFilter("expiring")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition whitespace-nowrap flex items-center gap-1.5 ${
+                filter === "expiring"
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "bg-white text-[#8a8278] border-[#e5e2db] hover:border-orange-500 hover:text-orange-500"
+              }`}>
+              <span
+                className={`w-2 h-2 rounded-full bg-orange-500 inline-block ${stats.expiring > 0 ? "animate-pulse" : ""}`}></span>
+              Expiring
+              {stats.expiring > 0 && (
+                <span
+                  className={`text-[9px] font-bold ${filter === "expiring" ? "text-white" : "text-orange-500"}`}>
+                  ({stats.expiring})
+                </span>
+              )}
+            </button>
+
+            {/* Expired button - with gray/dark indicator */}
+            <button
+              onClick={() => setFilter("expired")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition whitespace-nowrap flex items-center gap-1.5 ${
+                filter === "expired"
+                  ? "bg-gray-700 text-white border-gray-700"
+                  : "bg-white text-[#8a8278] border-[#e5e2db] hover:border-gray-500 hover:text-gray-700"
+              }`}>
+              <span className="w-2 h-2 rounded-full bg-gray-500 inline-block"></span>
+              Expired
+              {stats.expired > 0 && (
+                <span
+                  className={`text-[9px] ${filter === "expired" ? "text-white/60" : "text-gray-600"}`}>
+                  ({stats.expired})
+                </span>
+              )}
+            </button>
+
+            {/* Cleaning button - with blue indicator and glow if > 0 */}
+            <button
+              onClick={() => setFilter("cleaning")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition whitespace-nowrap flex items-center gap-1.5 ${
+                filter === "cleaning"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-[#8a8278] border-[#e5e2db] hover:border-blue-500 hover:text-blue-600"
+              }`}>
+              <span
+                className={`w-2 h-2 rounded-full bg-blue-500 inline-block ${stats.cleaning > 0 ? "shadow-[0_0_6px_#3b82f6]" : ""}`}></span>
+              Cleaning
+              {stats.cleaning > 0 && (
+                <span
+                  className={`text-[9px] font-bold ${filter === "cleaning" ? "text-white" : "text-blue-600"}`}>
+                  ({stats.cleaning})
+                </span>
+              )}
+            </button>
+
+            {/* Search bar */}
             <div className="ml-auto flex items-center gap-1 bg-white border border-[#e5e2db] rounded-full px-3 py-1">
               <i className="fas fa-search text-[#8a8278] text-xs"></i>
               <input
