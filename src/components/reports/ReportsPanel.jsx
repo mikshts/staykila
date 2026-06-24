@@ -132,9 +132,6 @@ export default function ReportsPanel({ hotel, onClose }) {
   // Split data into pages for printing (max 18 rows per page)
   const getPageData = (data, rowsPerPage = 18) => {
     const pages = [];
-    // Always return at least one (possibly empty) page so the print
-    // view has somewhere to show "no bookings" / the summary cards.
-    if (data.length === 0) return [[]];
     for (let i = 0; i < data.length; i += rowsPerPage) {
       pages.push(data.slice(i, i + rowsPerPage));
     }
@@ -154,14 +151,10 @@ export default function ReportsPanel({ hotel, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end print:static print:bg-white print:block">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
       <div
         ref={panelRef}
-        className="bg-white w-full max-w-4xl h-full overflow-y-auto print:max-w-full print:overflow-visible print:bg-white print:h-auto print:w-auto">
-        {/* ============================================================ */}
-        {/* SCREEN-ONLY CONTENT (everything below is print:hidden)        */}
-        {/* ============================================================ */}
-
+        className="bg-white w-full max-w-4xl h-full overflow-y-auto print:max-w-full print:overflow-visible print:bg-white">
         {/* Header - Screen */}
         <div className="sticky top-0 bg-[#0f1b2d] text-white p-4 flex items-center justify-between print:hidden">
           <div>
@@ -175,9 +168,9 @@ export default function ReportsPanel({ hotel, onClose }) {
           </button>
         </div>
 
-        <div className="p-4 print:hidden">
+        <div className="p-4 print:p-6">
           {/* Date Range Selector - Screen only */}
-          <div className="bg-[#f7f3ee] rounded-xl p-4 mb-6">
+          <div className="bg-[#f7f3ee] rounded-xl p-4 mb-6 no-print">
             <div className="flex flex-wrap items-center gap-4">
               <div>
                 <label className="block text-xs font-semibold text-[#8a8278] mb-1">
@@ -225,51 +218,59 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
           </div>
 
-          {/* Summary Cards - SCREEN ONLY (this whole block never prints) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-[#0f1b2d]">
+          {/* ===== SUMMARY CARDS - Visible on Screen AND Print ===== */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 print:grid-cols-4 print:gap-4 print:mb-6">
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center print:border print:border-gray-300 print:shadow-none">
+              <div className="text-2xl font-bold text-[#0f1b2d] print:text-xl">
                 {formatCurrency(summary.totalRevenue)}
               </div>
-              <div className="text-xs text-[#8a8278]">Total Revenue</div>
-              <div className="text-[10px] text-[#8a8278]/50 mt-0.5">
+              <div className="text-xs text-[#8a8278] print:text-gray-600">
+                Total Revenue
+              </div>
+              <div className="text-[10px] text-[#8a8278]/50 print:text-gray-400 mt-0.5">
                 {summary.totalBookings} bookings
               </div>
             </div>
 
-            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-[#0f1b2d]">
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center print:border print:border-gray-300 print:shadow-none">
+              <div className="text-2xl font-bold text-[#0f1b2d] print:text-xl">
                 {summary.totalBookings}
               </div>
-              <div className="text-xs text-[#8a8278]">Total Bookings</div>
-              <div className="text-[10px] text-[#8a8278]/50 mt-0.5">
+              <div className="text-xs text-[#8a8278] print:text-gray-600">
+                Total Bookings
+              </div>
+              <div className="text-[10px] text-[#8a8278]/50 print:text-gray-400 mt-0.5">
                 Completed
               </div>
             </div>
 
-            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-[#0f1b2d]">
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center print:border print:border-gray-300 print:shadow-none">
+              <div className="text-2xl font-bold text-[#0f1b2d] print:text-xl">
                 {summary.totalHours}h
               </div>
-              <div className="text-xs text-[#8a8278]">Total Hours</div>
-              <div className="text-[10px] text-[#8a8278]/50 mt-0.5">
+              <div className="text-xs text-[#8a8278] print:text-gray-600">
+                Total Hours
+              </div>
+              <div className="text-[10px] text-[#8a8278]/50 print:text-gray-400 mt-0.5">
                 Room usage
               </div>
             </div>
 
-            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-[#0f1b2d]">
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 text-center print:border print:border-gray-300 print:shadow-none">
+              <div className="text-2xl font-bold text-[#0f1b2d] print:text-xl">
                 {summary.averageStay}h
               </div>
-              <div className="text-xs text-[#8a8278]">Avg Stay Duration</div>
-              <div className="text-[10px] text-[#8a8278]/50 mt-0.5">
+              <div className="text-xs text-[#8a8278] print:text-gray-600">
+                Avg Stay Duration
+              </div>
+              <div className="text-[10px] text-[#8a8278]/50 print:text-gray-400 mt-0.5">
                 Average
               </div>
             </div>
           </div>
 
-          {/* Report Table - Screen View only */}
-          <div className="bg-white border border-[#e5e2db] rounded-xl overflow-hidden">
+          {/* Report Table - Screen View */}
+          <div className="bg-white border border-[#e5e2db] rounded-xl overflow-hidden print:hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -352,8 +353,217 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
           </div>
 
+          {/* ===== PRINT VIEW - Single copy with pagination ===== */}
+          <div className="hidden print:block">
+            {pages.map((pageData, pageIndex) => {
+              const pageTotalRevenue = pageData.reduce(
+                (sum, b) => sum + (b.price || 0),
+                0,
+              );
+              const pageTotalBookings = pageData.length;
+              const pageTotalHours = pageData.reduce(
+                (sum, b) => sum + (b.hours || 0),
+                0,
+              );
+              const isFirstPage = pageIndex === 0;
+              const isLastPage = pageIndex === pages.length - 1;
+
+              return (
+                <div
+                  key={pageIndex}
+                  className={!isLastPage ? "page-break" : ""}>
+                  {/* Header with Logo - Only on FIRST page */}
+                  {isFirstPage && (
+                    <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-5 rounded-t-lg flex items-center justify-between border-b-4 border-[#c9a84c]">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src="/favicon1.png"
+                          alt="StayKila"
+                          className="w-12 h-12 rounded-lg border-2 border-[#c9a84c]"
+                        />
+                        <div>
+                          <h1 className="text-2xl font-bold">
+                            Stay<span className="text-[#c9a84c]">Kila</span>
+                          </h1>
+                          <p className="text-sm text-white/70">
+                            Night Audit Report
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">{hotel?.name}</p>
+                        <p className="text-xs text-white/60">
+                          {new Date(dateRange.start).toLocaleDateString()} -{" "}
+                          {new Date(dateRange.end).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Simple header for subsequent pages */}
+                  {!isFirstPage && (
+                    <div className="text-center border-b border-gray-300 pb-2 mb-3">
+                      <span className="text-sm font-semibold text-gray-600">
+                        Night Audit Report - Page {pageIndex + 1} of{" "}
+                        {pages.length}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Summary Cards - Only on FIRST page */}
+                  {isFirstPage && (
+                    <div className="grid grid-cols-4 gap-3 my-4">
+                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
+                        <div className="text-lg font-bold text-[#0f1b2d]">
+                          {formatCurrency(summary.totalRevenue)}
+                        </div>
+                        <div className="text-[10px] text-gray-600">
+                          Total Revenue
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          {summary.totalBookings} bookings
+                        </div>
+                      </div>
+                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
+                        <div className="text-lg font-bold text-[#0f1b2d]">
+                          {summary.totalBookings}
+                        </div>
+                        <div className="text-[10px] text-gray-600">
+                          Total Bookings
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          Completed
+                        </div>
+                      </div>
+                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
+                        <div className="text-lg font-bold text-[#0f1b2d]">
+                          {summary.totalHours}h
+                        </div>
+                        <div className="text-[10px] text-gray-600">
+                          Total Hours
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          Room usage
+                        </div>
+                      </div>
+                      <div className="border border-gray-300 rounded-lg p-3 text-center bg-gray-50">
+                        <div className="text-lg font-bold text-[#0f1b2d]">
+                          {summary.averageStay}h
+                        </div>
+                        <div className="text-[10px] text-gray-600">
+                          Avg Stay Duration
+                        </div>
+                        <div className="text-[9px] text-gray-400">Average</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Transaction Table */}
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Date
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Room
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Hours
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Price
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Guest
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Check-in
+                        </th>
+                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                          Checkout
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageData.map((booking) => (
+                        <tr key={booking.id} className="border border-gray-200">
+                          <td className="p-2 text-xs border border-gray-200">
+                            {new Date(booking.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="p-2 font-medium text-xs border border-gray-200">
+                            {booking.rooms?.name || "Unknown"}
+                          </td>
+                          <td className="p-2 text-xs border border-gray-200">
+                            {booking.hours}h
+                          </td>
+                          <td className="p-2 font-medium text-xs border border-gray-200">
+                            ₱{booking.price}
+                          </td>
+                          <td className="p-2 text-xs border border-gray-200">
+                            {booking.guest_name || "N/A"}
+                          </td>
+                          <td className="p-2 text-xs border border-gray-200">
+                            {new Date(booking.start_time).toLocaleTimeString()}
+                          </td>
+                          <td className="p-2 text-xs border border-gray-200">
+                            {new Date(booking.end_time).toLocaleTimeString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50 font-semibold">
+                        <td
+                          colSpan="3"
+                          className="p-2 text-right text-xs border border-gray-300">
+                          Page Total:
+                        </td>
+                        <td className="p-2 text-xs border border-gray-300 text-[#c9a84c] font-bold">
+                          {formatCurrency(pageTotalRevenue)}
+                        </td>
+                        <td
+                          colSpan="3"
+                          className="p-2 text-xs border border-gray-300">
+                          {pageTotalBookings} bookings • {pageTotalHours}h
+                        </td>
+                      </tr>
+                      {isLastPage && reports.length > 0 && (
+                        <tr className="bg-blue-50 font-bold">
+                          <td
+                            colSpan="3"
+                            className="p-2 text-right text-xs border border-blue-300">
+                            GRAND TOTAL:
+                          </td>
+                          <td className="p-2 text-xs border border-blue-300 text-[#c9a84c] font-bold">
+                            {formatCurrency(summary.totalRevenue)}
+                          </td>
+                          <td
+                            colSpan="3"
+                            className="p-2 text-xs border border-blue-300">
+                            {summary.totalBookings} bookings •{" "}
+                            {summary.totalHours}h total
+                          </td>
+                        </tr>
+                      )}
+                    </tfoot>
+                  </table>
+
+                  {/* Footer */}
+                  <div className="text-center text-xs text-gray-400 mt-2 pt-1 border-t border-gray-200">
+                    {hotel?.name} •{" "}
+                    {new Date(dateRange.start).toLocaleDateString()} -{" "}
+                    {new Date(dateRange.end).toLocaleDateString()}
+                    {!isFirstPage &&
+                      ` • Page ${pageIndex + 1} of ${pages.length}`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {/* Footer - Screen only */}
-          <div className="mt-4 text-xs text-[#8a8278] text-center">
+          <div className="mt-4 text-xs text-[#8a8278] text-center no-print">
             <p>Generated on {new Date().toLocaleString()}</p>
             <p className="mt-1">
               <i className="fas fa-print mr-1"></i> Click Print for PDF •
@@ -362,411 +572,176 @@ export default function ReportsPanel({ hotel, onClose }) {
             </p>
           </div>
         </div>
-
-        {/* ============================================================ */}
-        {/* PRINT-ONLY CONTENT — the ONLY thing visible when printing.     */}
-        {/* This is the single source of truth for the printed report.    */}
-        {/* Nothing above this point renders on print (all print:hidden). */}
-        {/* ============================================================ */}
-        <div className="hidden print:block print-report">
-          {pages.map((pageData, pageIndex) => {
-            const pageTotalRevenue = pageData.reduce(
-              (sum, b) => sum + (b.price || 0),
-              0,
-            );
-            const pageTotalBookings = pageData.length;
-            const pageTotalHours = pageData.reduce(
-              (sum, b) => sum + (b.hours || 0),
-              0,
-            );
-            const isFirstPage = pageIndex === 0;
-            const isLastPage = pageIndex === pages.length - 1;
-
-            return (
-              <div
-                key={pageIndex}
-                className={
-                  "print-page" + (!isLastPage ? " print-page-break" : "")
-                }>
-                {/* Header with Logo - ONLY on first page */}
-                {isFirstPage && (
-                  <div className="print-header-main">
-                    <div className="print-header-left">
-                      <img
-                        src="/favicon1.png"
-                        alt="StayKila"
-                        className="print-logo"
-                      />
-                      <div>
-                        <h1 className="print-brand">
-                          Stay<span className="print-brand-gold">Kila</span>
-                        </h1>
-                        <p className="print-subtitle">Night Audit Report</p>
-                      </div>
-                    </div>
-                    <div className="print-header-right">
-                      <p className="print-hotel-name">{hotel?.name}</p>
-                      <p className="print-date-range">
-                        {new Date(dateRange.start).toLocaleDateString()} -{" "}
-                        {new Date(dateRange.end).toLocaleDateString()}
-                      </p>
-                      <p className="print-generated">
-                        Generated: {new Date().toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Simple header - ONLY on pages after the first */}
-                {!isFirstPage && (
-                  <div className="print-header-simple">
-                    Night Audit Report - Page {pageIndex + 1} of {pages.length}
-                  </div>
-                )}
-
-                {/* Summary Cards - ONLY on first page */}
-                {isFirstPage && (
-                  <div className="print-summary-grid">
-                    <div className="print-summary-card">
-                      <div className="print-summary-value">
-                        {formatCurrency(summary.totalRevenue)}
-                      </div>
-                      <div className="print-summary-label">Total Revenue</div>
-                      <div className="print-summary-sub">
-                        {summary.totalBookings} bookings
-                      </div>
-                    </div>
-                    <div className="print-summary-card">
-                      <div className="print-summary-value">
-                        {summary.totalBookings}
-                      </div>
-                      <div className="print-summary-label">Total Bookings</div>
-                      <div className="print-summary-sub">Completed</div>
-                    </div>
-                    <div className="print-summary-card">
-                      <div className="print-summary-value">
-                        {summary.totalHours}h
-                      </div>
-                      <div className="print-summary-label">Total Hours</div>
-                      <div className="print-summary-sub">Room usage</div>
-                    </div>
-                    <div className="print-summary-card">
-                      <div className="print-summary-value">
-                        {summary.averageStay}h
-                      </div>
-                      <div className="print-summary-label">
-                        Avg Stay Duration
-                      </div>
-                      <div className="print-summary-sub">Average</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Transaction Table */}
-                <table className="print-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Room</th>
-                      <th>Hours</th>
-                      <th>Price</th>
-                      <th>Guest</th>
-                      <th>Check-in</th>
-                      <th>Checkout</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pageData.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="print-no-data">
-                          No completed bookings found for this period
-                        </td>
-                      </tr>
-                    ) : (
-                      pageData.map((booking) => (
-                        <tr key={booking.id}>
-                          <td>
-                            {new Date(booking.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="print-cell-strong">
-                            {booking.rooms?.name || "Unknown"}
-                          </td>
-                          <td>{booking.hours}h</td>
-                          <td className="print-cell-gold">₱{booking.price}</td>
-                          <td>{booking.guest_name || "N/A"}</td>
-                          <td>
-                            {new Date(booking.start_time).toLocaleTimeString()}
-                          </td>
-                          <td>
-                            {new Date(booking.end_time).toLocaleTimeString()}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                  {pageData.length > 0 && (
-                    <tfoot>
-                      <tr className="print-page-total-row">
-                        <td colSpan="3" className="print-total-label">
-                          Page Total:
-                        </td>
-                        <td className="print-cell-gold print-cell-strong">
-                          {formatCurrency(pageTotalRevenue)}
-                        </td>
-                        <td colSpan="3">
-                          {pageTotalBookings} bookings • {pageTotalHours}h
-                        </td>
-                      </tr>
-                      {isLastPage && reports.length > 0 && (
-                        <tr className="print-grand-total-row">
-                          <td colSpan="3" className="print-total-label">
-                            GRAND TOTAL:
-                          </td>
-                          <td className="print-cell-gold print-cell-strong">
-                            {formatCurrency(summary.totalRevenue)}
-                          </td>
-                          <td colSpan="3">
-                            {summary.totalBookings} bookings •{" "}
-                            {summary.totalHours}h total
-                          </td>
-                        </tr>
-                      )}
-                    </tfoot>
-                  )}
-                </table>
-
-                {/* Footer */}
-                <div className="print-footer">
-                  {hotel?.name} •{" "}
-                  {new Date(dateRange.start).toLocaleDateString()} -{" "}
-                  {new Date(dateRange.end).toLocaleDateString()}
-                  {!isFirstPage &&
-                    ` • Page ${pageIndex + 1} of ${pages.length}`}
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* Print Styles                                                  */}
-      {/* ============================================================ */}
+      {/* Print Styles */}
       <style jsx global>{`
         @media print {
-          @page {
-            size: auto;
-            margin: 12mm 10mm;
-          }
-
-          html,
           body {
             background: white !important;
             margin: 0 !important;
             padding: 0 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
           }
 
-          /* Belt-and-suspenders: hide EVERYTHING by default when printing,
-             then explicitly re-show only the print report. This prevents
-             any other fixed/sticky/overlay elements in the app (modals,
-             toasts, nav bars, etc.) from sneaking onto the printed page
-             and causing a second "copy" of content or a blank 2nd sheet. */
-          body * {
-            visibility: hidden;
+          .no-print {
+            display: none !important;
           }
 
-          .print-report,
-          .print-report * {
-            visibility: visible;
+          .print\\:block {
+            display: block !important;
           }
 
-          .print-report {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-          }
-
-          .print-page {
-            width: 100%;
-          }
-
-          .print-page-break {
+          .page-break {
             page-break-after: always;
-          }
-
-          /* ----- Header (page 1 only) ----- */
-          .print-header-main {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: linear-gradient(to right, #1e3a8a, #1e40af);
-            color: #ffffff;
-            padding: 18px 20px;
-            border-radius: 8px 8px 0 0;
-            border-bottom: 4px solid #c9a84c;
-          }
-
-          .print-header-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-          }
-
-          .print-logo {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
-            border: 2px solid #c9a84c;
-            object-fit: cover;
-          }
-
-          .print-brand {
-            font-size: 22px;
-            font-weight: 700;
-            margin: 0;
-            color: #ffffff;
-          }
-
-          .print-brand-gold {
-            color: #c9a84c;
-          }
-
-          .print-subtitle {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.75);
-            margin: 2px 0 0 0;
-          }
-
-          .print-header-right {
-            text-align: right;
-          }
-
-          .print-hotel-name {
-            font-size: 13px;
-            font-weight: 600;
-            margin: 0;
-            color: #ffffff;
-          }
-
-          .print-date-range,
-          .print-generated {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.65);
-            margin: 2px 0 0 0;
-          }
-
-          /* ----- Simple header (page 2+) ----- */
-          .print-header-simple {
-            text-align: center;
-            font-size: 12px;
-            font-weight: 600;
-            color: #4b5563;
-            border-bottom: 1px solid #d1d5db;
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-          }
-
-          /* ----- Summary cards (page 1 only) ----- */
-          .print-summary-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            margin: 16px 0;
-          }
-
-          .print-summary-card {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
-            background: #f9fafb;
-          }
-
-          .print-summary-value {
-            font-size: 18px;
-            font-weight: 700;
-            color: #0f1b2d;
-          }
-
-          .print-summary-label {
-            font-size: 10px;
-            color: #4b5563;
-            margin-top: 2px;
-          }
-
-          .print-summary-sub {
-            font-size: 9px;
-            color: #9ca3af;
-          }
-
-          /* ----- Table ----- */
-          .print-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-          }
-
-          .print-table th {
-            text-align: left;
-            background: #f3f4f6;
-            color: #374151;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            border: 1px solid #d1d5db;
-            padding: 6px 8px;
-          }
-
-          .print-table td {
-            border: 1px solid #e5e7eb;
-            padding: 6px 8px;
-          }
-
-          .print-table tbody tr {
             page-break-inside: avoid;
           }
 
-          .print-cell-strong {
-            font-weight: 600;
+          .print\\:grid-cols-4 {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 1rem !important;
           }
 
-          .print-cell-gold {
-            color: #c9a84c;
-            font-weight: 600;
+          .print\\:gap-3 {
+            gap: 0.75rem !important;
           }
 
-          .print-no-data {
-            text-align: center;
-            padding: 24px 0;
-            color: #8a8278;
+          .print\\:mb-6 {
+            margin-bottom: 1.5rem !important;
           }
 
-          .print-page-total-row {
-            background: #f9fafb;
-            font-weight: 600;
+          .print\\:p-6 {
+            padding: 1.5rem !important;
           }
 
-          .print-grand-total-row {
-            background: #eff6ff;
-            font-weight: 700;
+          .print\\:text-xl {
+            font-size: 1.25rem !important;
           }
 
-          .print-total-label {
-            text-align: right;
+          .print\\:text-gray-600 {
+            color: #4b5563 !important;
           }
 
-          /* ----- Footer ----- */
-          .print-footer {
-            text-align: center;
-            font-size: 10px;
-            color: #9ca3af;
-            margin-top: 10px;
-            padding-top: 6px;
-            border-top: 1px solid #e5e7eb;
+          .print\\:text-gray-400 {
+            color: #9ca3af !important;
+          }
+
+          .print\\:bg-white {
+            background-color: white !important;
+          }
+
+          .print\\:bg-gray-100 {
+            background-color: #f3f4f6 !important;
+          }
+
+          .print\\:bg-gray-50 {
+            background-color: #f9fafb !important;
+          }
+
+          .print\\:bg-blue-50 {
+            background-color: #eff6ff !important;
+          }
+
+          .print\\:max-w-full {
+            max-width: 100% !important;
+          }
+
+          .print\\:overflow-visible {
+            overflow: visible !important;
+          }
+
+          .print\\:border {
+            border: 1px solid #d1d5db !important;
+          }
+
+          .print\\:border-gray-300 {
+            border-color: #d1d5db !important;
+          }
+
+          .print\\:border-blue-300 {
+            border-color: #93c5fd !important;
+          }
+
+          .print\\:shadow-none {
+            box-shadow: none !important;
+          }
+
+          .print\\:mt-2 {
+            margin-top: 0.5rem !important;
+          }
+
+          .print\\:pt-1 {
+            padding-top: 0.25rem !important;
+          }
+
+          .print\\:my-4 {
+            margin-top: 1rem !important;
+            margin-bottom: 1rem !important;
+          }
+
+          .print\\:rounded-lg {
+            border-radius: 0.5rem !important;
+          }
+
+          .print\\:rounded-t-lg {
+            border-top-left-radius: 0.5rem !important;
+            border-top-right-radius: 0.5rem !important;
+          }
+
+          .print\\:rounded-b-lg {
+            border-bottom-left-radius: 0.5rem !important;
+            border-bottom-right-radius: 0.5rem !important;
+          }
+
+          .print\\:border-b-4 {
+            border-bottom-width: 4px !important;
+          }
+
+          .print\\:border-b {
+            border-bottom-width: 1px !important;
+          }
+
+          .print\\:border-t {
+            border-top-width: 1px !important;
+          }
+
+          .print\\:border-x {
+            border-left-width: 1px !important;
+            border-right-width: 1px !important;
+          }
+
+          .print\\:text-right {
+            text-align: right !important;
+          }
+
+          .print\\:text-center {
+            text-align: center !important;
+          }
+
+          .print\\:p-5 {
+            padding: 1.25rem !important;
+          }
+
+          .print\\:p-3 {
+            padding: 0.75rem !important;
+          }
+
+          .print\\:p-2 {
+            padding: 0.5rem !important;
+          }
+
+          .print\\:px-2 {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+          }
+
+          .print\\:py-1 {
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+          }
+
+          .print\\:pb-2 {
+            padding-bottom: 0.5rem !important;
           }
         }
       `}</style>
