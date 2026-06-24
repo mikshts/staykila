@@ -71,19 +71,43 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
+      console.log("🔍 Fetching analytics for hotel:", hotel.id);
 
-      // Fetch from revenue_summary (historical, never reset)
+      // 1. Fetch revenue_summary for lifetime totals
       const { data: summaryData, error: summaryError } = await supabase
         .from("revenue_summary")
         .select("*")
         .eq("hotel_id", hotel.id)
         .single();
 
-      if (summaryError && summaryError.code !== "PGRST116") {
-        console.error("Revenue summary error:", summaryError);
+      if (summaryError) {
+        if (summaryError.code === "PGRST116") {
+          console.log(
+            "ℹ️ No revenue summary found - this is normal for new hotels",
+          );
+        } else {
+          console.error("❌ Revenue summary error:", summaryError);
+        }
       }
 
-      // Fetch all completed bookings for detailed analytics
+      console.log("📊 Revenue summary data:", summaryData);
+
+      // 2. Fetch ALL completed bookings for lifetime stats (no date filter)
+      const { data: allCompletedBookings, error: allBookingsError } =
+        await supabase
+          .from("bookings")
+          .select("price, hours, room_id, created_at, status")
+          .eq("hotel_id", hotel.id)
+          .eq("status", "completed");
+
+      if (allBookingsError) {
+        console.error(
+          "❌ Error fetching all completed bookings:",
+          allBookingsError,
+        );
+      }
+
+      // 3. Fetch completed bookings for the selected date range (for charts)
       const { data: bookings, error: bookingsError } = await supabase
         .from("bookings")
         .select(
@@ -98,14 +122,36 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
         .lte("created_at", new Date(dateRange.end + "T23:59:59").toISOString())
         .order("created_at", { ascending: true });
 
-      if (bookingsError) throw bookingsError;
+      if (bookingsError) {
+        console.error(
+          "❌ Error fetching bookings for date range:",
+          bookingsError,
+        );
+        throw bookingsError;
+      }
 
-      // Calculate analytics from completed bookings
-      const totalRevenue =
+      console.log(
+        `📋 Found ${bookings?.length || 0} completed bookings in date range`,
+      );
+      console.log(
+        `📋 Found ${allCompletedBookings?.length || 0} total completed bookings lifetime`,
+      );
+
+      // 4. Calculate lifetime totals from ALL completed bookings
+      const lifetimeRevenue =
+        allCompletedBookings?.reduce((sum, b) => sum + (b.price || 0), 0) || 0;
+      const lifetimeCheckins = allCompletedBookings?.length || 0;
+
+      // 5. Calculate period totals from date range bookings
+      const periodRevenue =
         bookings?.reduce((sum, b) => sum + (b.price || 0), 0) || 0;
-      const totalCheckins = bookings?.length || 0;
+      const periodCheckins = bookings?.length || 0;
 
-      // Monthly breakdown
+      console.log(
+        `💰 Lifetime revenue: ₱${lifetimeRevenue}, Period revenue: ₱${periodRevenue}`,
+      );
+
+      // 6. Monthly breakdown
       const monthlyMap = {};
       const dailyMap = {};
       const durationMap = {};
@@ -125,7 +171,7 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
         roomTypeMap[roomType] = (roomTypeMap[roomType] || 0) + 1;
       });
 
-      // Calculate room type stats
+      // 7. Calculate room type stats
       const roomTypeStats = Object.entries(roomTypeMap).map(
         ([type, count]) => ({
           type: type.charAt(0).toUpperCase() + type.slice(1),
@@ -138,7 +184,7 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
           ? roomTypeStats.reduce((a, b) => (a.count > b.count ? a : b)).type
           : "N/A";
 
-      // Find best and worst days
+      // 8. Find best and worst days
       const dailyEntries = Object.entries(dailyMap);
       let topDay = "N/A";
       let slowDay = "N/A";
@@ -149,23 +195,33 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
         slowDay = sorted[sorted.length - 1][0];
       }
 
-      // Calculate occupancy rate
-      const activeBookings =
-        bookings?.filter((b) => b.status === "active") || [];
+      // 9. Calculate CURRENT occupancy rate (from active bookings)
+      const { data: activeBookings, error: activeError } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("hotel_id", hotel.id)
+        .eq("status", "active");
+
+      if (activeError) {
+        console.error("❌ Error fetching active bookings:", activeError);
+      }
+
+      const activeCount = activeBookings?.length || 0;
+      const totalRooms = rooms?.length || 0;
       const occupancy =
-        rooms?.length > 0
-          ? Math.round((activeBookings.length / rooms.length) * 100)
+        totalRooms > 0 ? Math.round((activeCount / totalRooms) * 100) : 0;
+
+      // 10. Calculate average rate from lifetime bookings
+      const averageRate =
+        lifetimeCheckins > 0
+          ? Math.round(lifetimeRevenue / lifetimeCheckins)
           : 0;
 
-      // Calculate average rate
-      const averageRate =
-        totalCheckins > 0 ? Math.round(totalRevenue / totalCheckins) : 0;
-
-      // Set analytics data
+      // 11. Set analytics data - use lifetime values for the KPI cards
       setAnalyticsData({
-        totalRevenue: summaryData?.total_revenue || totalRevenue,
-        totalCheckins: summaryData?.total_checkins || totalCheckins,
-        totalBookings: summaryData?.total_bookings || totalCheckins,
+        totalRevenue: lifetimeRevenue, // Use lifetime, not summaryData
+        totalCheckins: lifetimeCheckins,
+        totalBookings: lifetimeCheckins,
         monthlyRevenue: Object.entries(monthlyMap).map(([month, revenue]) => ({
           month,
           revenue,
@@ -191,13 +247,13 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
         slowDay,
         occupancy,
         averageRate,
-        revenue: totalRevenue,
-        bookings: totalCheckins,
-        checkins: activeBookings.length,
+        // These are used for display in the chart section
+        periodRevenue: periodRevenue,
+        periodBookings: periodCheckins,
       });
     } catch (error) {
-      console.error("Error fetching analytics:", error);
-      toast.error("Failed to load analytics");
+      console.error("❌ Error fetching analytics:", error);
+      toast.error("Failed to load analytics data");
     } finally {
       setLoading(false);
     }
@@ -260,7 +316,7 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
           ))}
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Cards - Using LIFETIME values */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
             <div className="text-xs text-blue-600 font-medium">
@@ -289,7 +345,7 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
 
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
             <div className="text-xs text-purple-600 font-medium">
-              Occupancy Rate
+              Current Occupancy
             </div>
             <div className="text-2xl font-bold text-[#0f1b2d]">
               {currentStats.occupancy || 0}%
@@ -308,27 +364,37 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
               ₱{currentStats.averageRate || 0}
             </div>
             <div className="text-[10px] text-amber-500 mt-1">
-              <i className="fas fa-tag mr-1"></i> Per booking
+              <i className="fas fa-tag mr-1"></i> Per booking (lifetime)
             </div>
           </div>
         </div>
 
-        {/* Daily Revenue Chart */}
+        {/* Daily Revenue Chart - Using period data */}
         <div className="bg-white border border-[#e5e2db] rounded-xl p-4 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-[#0f1b2d]">
               <i className="fas fa-chart-bar mr-2 text-[#c9a84c]"></i>
-              Daily Revenue (Selected Period)
+              Daily Revenue (
+              {period === "weekly"
+                ? "This Week"
+                : period === "15days"
+                  ? "15 Days"
+                  : "This Month"}
+              )
             </h3>
             <span className="text-xs text-[#8a8278]">
-              {dailyData.length} days
+              {dailyData.length} days • ₱
+              {currentStats.periodRevenue?.toLocaleString() || 0} total
             </span>
           </div>
 
           {dailyData.length === 0 ? (
             <div className="text-center py-8 text-[#8a8278]">
               <i className="fas fa-inbox text-3xl mb-2 block opacity-40"></i>
-              <p className="text-sm">No data available for this period</p>
+              <p className="text-sm">No bookings completed in this period</p>
+              <p className="text-xs mt-1">
+                Try selecting a different date range
+              </p>
             </div>
           ) : (
             <div className="flex items-end gap-2 h-48">
@@ -444,9 +510,7 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
                   <div className="text-sm font-bold text-green-600">
                     Highest
                   </div>
-                  <div className="text-[10px] text-[#8a8278]">
-                    Revenue & occupancy
-                  </div>
+                  <div className="text-[10px] text-[#8a8278]">Revenue</div>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-2 bg-red-50 border border-red-200 rounded-lg">
@@ -463,9 +527,7 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
                 </div>
                 <div className="ml-auto text-right">
                   <div className="text-sm font-bold text-red-600">Lowest</div>
-                  <div className="text-[10px] text-[#8a8278]">
-                    Revenue & occupancy
-                  </div>
+                  <div className="text-[10px] text-[#8a8278]">Revenue</div>
                 </div>
               </div>
             </div>
@@ -496,7 +558,9 @@ export default function AnalyticsPanel({ hotel, rooms, onClose }) {
               </div>
             </div>
             <div>
-              <div className="text-[10px] text-[#8a8278]">Occupancy</div>
+              <div className="text-[10px] text-[#8a8278]">
+                Current Occupancy
+              </div>
               <div className="text-lg font-bold text-[#0f1b2d]">
                 {currentStats.occupancy || 0}%
               </div>
