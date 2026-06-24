@@ -1,7 +1,13 @@
 // src/components/dashboard/TopBar.jsx
 import React from "react";
 
-export default function TopBar({ onMenuClick, view, onViewChange }) {
+export default function TopBar({
+  onMenuClick,
+  view,
+  onViewChange,
+  soundEnabled, // ← Add this
+  onSoundToggle, // ← Add this (or setSoundEnabled)
+}) {
   return (
     <header className="bg-white border-b border-[#e5e2db] sticky top-0 z-30 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
       <div className="flex items-center gap-3 min-w-0">
@@ -40,6 +46,20 @@ export default function TopBar({ onMenuClick, view, onViewChange }) {
             }`}>
             <i className="fas fa-list"></i>
             <span className="hidden sm:inline ml-1">List</span>
+          </button>
+
+          {/* Sound Toggle Button */}
+          <button
+            onClick={onSoundToggle}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
+              soundEnabled
+                ? "bg-green-100 text-green-700 border border-green-200 hover:bg-green-200"
+                : "bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200"
+            }`}
+            title={soundEnabled ? "Sound alerts on" : "Sound alerts off"}>
+            <i
+              className={`fas ${soundEnabled ? "fa-volume-up" : "fa-volume-mute"}`}></i>
+            {soundEnabled ? "Sound On" : "Sound Off"}
           </button>
         </div>
       </div>

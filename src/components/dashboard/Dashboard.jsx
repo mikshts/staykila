@@ -14,6 +14,7 @@ import QRDownload from "./QRDownload";
 import { buildGuestUrl } from "../../lib/guestUrl";
 import CalendarManager from "../settings/CalendarManager";
 import AnalyticsPanel from "../analytics/AnalyticsPanel";
+import { useSoundAlert } from "../../hooks/useSoundAlert";
 
 import {
   CheckinModal,
@@ -58,6 +59,8 @@ export default function Dashboard() {
   const [checkoutRoom, setCheckoutRoom] = useState(null);
   const [activityLog, setActivityLog] = useState([]);
   const [messages, setMessages] = useState({});
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
   const [stats, setStats] = useState({
     available: 0,
     occupied: 0,
@@ -224,7 +227,42 @@ export default function Dashboard() {
       console.error("Error fetching messages:", error);
     }
   };
+  useEffect(() => {
+    if (!soundEnabled) return;
 
+    // Check for expiring rooms every second
+    const checkExpiringRooms = () => {
+      const now = new Date();
+      const expiringRooms = rooms.filter((room) => {
+        if (!room.booking || !room.booking.end_time) return false;
+        const endTime = new Date(room.booking.end_time);
+        const diff = (endTime - now) / 1000;
+        return diff <= 10 && diff > 0;
+      });
+
+      expiringRooms.forEach((room) => {
+        // Play sound for each expiring room
+        playExpiringAlert();
+
+        // Also show a toast notification
+        const diff = Math.round((new Date(room.booking.end_time) - now) / 1000);
+        toast(`⚠️ ${room.name} expires in ${diff} seconds!`, {
+          duration: 5000,
+          icon: "⏰",
+          style: {
+            background: "#f97316",
+            color: "white",
+            fontWeight: "bold",
+          },
+        });
+      });
+    };
+
+    // Check every second
+    const interval = setInterval(checkExpiringRooms, 1000);
+
+    return () => clearInterval(interval);
+  }, [rooms, soundEnabled]);
   const fetchActivityLogs = async () => {
     try {
       const { data, error } = await supabase
@@ -966,6 +1004,8 @@ export default function Dashboard() {
           onMenuClick={() => setSidebarOpen(true)}
           view={view}
           onViewChange={setView}
+          soundEnabled={soundEnabled}
+          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
         />
 
         <div className="p-4">
