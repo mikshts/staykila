@@ -137,6 +137,7 @@ export default function Dashboard() {
       fetchHotelSettings();
       fetchMessages();
       fetchActivityLogs();
+      fetchDashboardMetrics(); // Add this
     }
 
     // Add event listener for refreshRooms
@@ -240,6 +241,8 @@ export default function Dashboard() {
       console.error("Error fetching activity logs:", error);
     }
   };
+
+  // Updated fetchRooms - no longer calculates revenue from bookings
   const fetchRooms = async () => {
     try {
       setLoading(true);
@@ -248,22 +251,22 @@ export default function Dashboard() {
         .from("rooms")
         .select(
           `
-        *,
-        bookings:bookings(
-          id,
-          start_time,
-          end_time,
-          hours,
-          price,
-          status,
-          guest_name,
-          guest_email,
-          guest_phone,
-          booking_source,
-          booking_type,
-          notes    
-        )
-      `,
+                *,
+                bookings:bookings(
+                    id,
+                    start_time,
+                    end_time,
+                    hours,
+                    price,
+                    status,
+                    guest_name,
+                    guest_email,
+                    guest_phone,
+                    booking_source,
+                    booking_type,
+                    notes    
+                )
+            `,
         )
         .eq("hotel_id", hotel.id)
         .order("room_number");
@@ -326,6 +329,8 @@ export default function Dashboard() {
       });
 
       setRooms(processedRooms);
+
+      // Calculate room stats
       const newStats = {
         available: 0,
         occupied: 0,
@@ -334,24 +339,6 @@ export default function Dashboard() {
         cleaning: 0,
         booked: 0,
       };
-
-      // ✅ StatsCards: ACTIVE bookings LANG
-      let totalRevenue = 0;
-      let totalCheckins = 0;
-
-      const { data: activeBookings, error: revenueError } = await supabase
-        .from("bookings")
-        .select("price, status")
-        .eq("hotel_id", hotel.id)
-        .eq("status", "active"); // <-- ACTIVE LANG
-
-      if (!revenueError && activeBookings) {
-        totalRevenue = activeBookings.reduce(
-          (sum, b) => sum + (b.price || 0),
-          0,
-        );
-        totalCheckins = activeBookings.length;
-      }
 
       processedRooms.forEach((room) => {
         const status = room.status || "available";
@@ -367,12 +354,17 @@ export default function Dashboard() {
       const occupancyRate =
         totalRooms > 0 ? Math.round((occupied / totalRooms) * 100) : 0;
 
-      setRevenue({
-        total: totalRevenue,
-        totalCheckins: totalCheckins,
-        totalBookings: totalCheckins,
+      // Revenue is now from dashboard_metrics
+      // We'll set it from fetchDashboardMetrics
+
+      // Only set occupancy rate here
+      setRevenue((prev) => ({
+        ...prev,
         occupancyRate: occupancyRate,
-      });
+      }));
+
+      // Fetch dashboard metrics separately
+      await fetchDashboardMetrics();
     } catch (error) {
       console.error("Error fetching rooms:", error);
       toast.error("Failed to load rooms");
@@ -473,8 +465,43 @@ export default function Dashboard() {
       return true;
     });
   };
+  const [dashboardMetrics, setDashboardMetrics] = useState({
+    totalRevenue: 0,
+    totalCheckins: 0,
+    totalActiveBookings: 0,
+  });
+  useEffect(() => {
+    setRevenue((prev) => ({
+      ...prev,
+      total: dashboardMetrics.totalRevenue || 0,
+      totalCheckins: dashboardMetrics.totalCheckins || 0,
+      totalBookings: dashboardMetrics.totalCheckins || 0,
+    }));
+  }, [dashboardMetrics]);
+  // Fetch dashboard metrics separately
+  const fetchDashboardMetrics = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("dashboard_metrics")
+        .select("*")
+        .eq("hotel_id", hotel.id)
+        .single();
 
-  // Room actions
+      if (error && error.code !== "PGRST116") throw error;
+
+      if (data) {
+        setDashboardMetrics({
+          totalRevenue: data.total_revenue || 0,
+          totalCheckins: data.total_checkins || 0,
+          totalActiveBookings: data.total_active_bookings || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard metrics:", error);
+    }
+  };
+
+  // Updated handleCheckin
   const handleCheckin = async (roomId, hours, calculatedPrice, roomType) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
@@ -513,6 +540,9 @@ export default function Dashboard() {
 
       if (roomError) throw roomError;
 
+      // Dashboard revenue is now updated automatically by the trigger
+      // But we fetch it to keep UI in sync
+
       const roomTypeLabel = roomType
         ? roomType.charAt(0).toUpperCase() + roomType.slice(1)
         : "Single";
@@ -526,8 +556,9 @@ export default function Dashboard() {
         `${room.name} checked in for ${hours} hours (${roomTypeLabel})`,
       );
       setShowCheckinModal(false);
-      fetchRooms();
-      fetchMessages();
+      await fetchRooms();
+      await fetchDashboardMetrics();
+      await fetchMessages();
     } catch (error) {
       console.error("Checkin error:", error);
       toast.error("Failed to check in");
@@ -568,11 +599,17 @@ export default function Dashboard() {
     }
   };
 
+  // Updated handleCheckout
   const handleCheckout = async (roomId) => {
     try {
       const room = rooms.find((r) => r.id === roomId);
       if (!room || !room.booking) return;
 
+      // NOTE: We do NOT subtract revenue here!
+      // The booking status changes from 'active' to 'completed'
+      // The trigger will:
+      // 1. Update analytics (revenue_summary) with the completed booking
+      // 2. Remove from dashboard active bookings count (but keep revenue)
       const { error: bookingError } = await supabase
         .from("bookings")
         .update({
@@ -605,8 +642,9 @@ export default function Dashboard() {
       toast.success(`${room.name} checked out successfully`);
       setShowCheckoutModal(false);
       setCheckoutRoom(null);
-      fetchRooms();
-      fetchMessages();
+      await fetchRooms();
+      await fetchDashboardMetrics();
+      await fetchMessages();
     } catch (error) {
       console.error("Checkout error:", error);
       toast.error("Failed to checkout");
@@ -618,45 +656,27 @@ export default function Dashboard() {
     setShowCheckoutModal(true);
   };
 
+  // Updated handleResetTotals
   const handleResetTotals = async () => {
     try {
       setLoading(true);
 
-      // 🔥 ACTIVE bookings LANG ang i-delete
-      const { data: activeBookings, error: fetchError } = await supabase
-        .from("bookings")
-        .select("id")
-        .eq("hotel_id", hotel.id)
-        .eq("status", "active");
+      // Call the database function to reset dashboard metrics
+      const { error } = await supabase.rpc("reset_dashboard_metrics", {
+        p_hotel_id: hotel.id,
+      });
 
-      if (fetchError) throw fetchError;
+      if (error) throw error;
 
-      if (activeBookings && activeBookings.length > 0) {
-        const { error: deleteError } = await supabase
-          .from("bookings")
-          .delete()
-          .eq("hotel_id", hotel.id)
-          .eq("status", "active");
+      await logActivity("reset", `Dashboard metrics reset to 0`);
 
-        if (deleteError) throw deleteError;
+      toast.success("Dashboard totals have been reset");
+      setShowResetModal(false);
 
-        await logActivity(
-          "reset",
-          `Reset active bookings - Deleted ${activeBookings.length} active bookings`,
-        );
-
-        toast.success(
-          `Successfully reset ${activeBookings.length} active booking(s)`,
-        );
-      } else {
-        toast("No active bookings to reset", {
-          icon: "ℹ️",
-        });
-      }
-
+      // Refresh dashboard metrics
+      await fetchDashboardMetrics();
       await fetchRooms();
       await fetchActivityLogs();
-      setShowResetModal(false);
     } catch (error) {
       console.error("Error resetting totals:", error);
       toast.error("Failed to reset totals: " + error.message);
@@ -1049,20 +1069,33 @@ export default function Dashboard() {
           onClose={() => setShowAnalyticsPanel(false)}
         />
       )}
+
       {showResetModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
             <div className="text-center mb-4">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <i className="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i className="fas fa-undo-alt text-amber-600 text-2xl"></i>
               </div>
               <h3 className="text-lg font-bold text-[#0f1b2d] mb-2">
-                Reset All Totals?
+                Reset Dashboard Totals?
               </h3>
               <p className="text-sm text-[#8a8278]">
-                This will permanently delete ALL completed bookings and reset
-                your revenue totals. This action cannot be undone!
+                This will reset your <strong>Dashboard revenue counters</strong>{" "}
+                to zero.
               </p>
+              <p className="text-sm text-[#8a8278] mt-2">
+                ✅ Historical analytics data will NOT be affected
+                <br />
+                ✅ Booking records will NOT be deleted
+                <br />✅ Revenue history will NOT be lost
+              </p>
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+                <i className="fas fa-info-circle mr-1"></i>
+                Dashboard = Operational counter (resettable)
+                <br />
+                Analytics = Permanent historical record (never reset)
+              </div>
             </div>
             <div className="flex gap-3">
               <button
@@ -1072,14 +1105,13 @@ export default function Dashboard() {
               </button>
               <button
                 onClick={handleResetTotals}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
-                Yes, Reset All
+                className="flex-1 px-4 py-2 bg-[#c9a84c] text-white rounded-lg text-sm font-medium hover:bg-[#b8963a] transition">
+                Yes, Reset Dashboard
               </button>
             </div>
           </div>
         </div>
       )}
-
       {showExtendModal && selectedRoom && (
         <ExtendModal
           room={selectedRoom}

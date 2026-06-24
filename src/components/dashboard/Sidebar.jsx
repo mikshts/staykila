@@ -89,7 +89,6 @@ export default function Sidebar({
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pb-2">
             Operations
           </div>
-
           {/* 1. Rooms (Primary) */}
           <button
             onClick={() => onFilterChange("all")}
@@ -102,7 +101,6 @@ export default function Sidebar({
             Rooms
             <span className="ml-auto text-white/30 text-xs">{roomCount}</span>
           </button>
-
           {/* 2. Alerts (Conditional) */}
           {stats.expiring + stats.expired > 0 && (
             <button
@@ -115,7 +113,6 @@ export default function Sidebar({
               </span>
             </button>
           )}
-
           {/* 3. Messages */}
           <button
             onClick={onMessagesClick}
@@ -128,7 +125,6 @@ export default function Sidebar({
               </span>
             )}
           </button>
-
           {/* 4. Activity */}
           <button
             onClick={onActivityClick}
@@ -136,12 +132,10 @@ export default function Sidebar({
             <i className="fas fa-list-ul w-5 text-center"></i>
             Activity
           </button>
-
           {/* ===== SECTION 2: ANALYTICS ===== */}
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Analytics
           </div>
-
           {/* 5. Analytics Dashboard */}
           <button
             onClick={onAnalyticsClick}
@@ -152,7 +146,6 @@ export default function Sidebar({
               <i className="fas fa-chart-line"></i>
             </span>
           </button>
-
           {/* 6. Night Audit / Reports */}
           <button
             onClick={onReportsClick}
@@ -163,7 +156,6 @@ export default function Sidebar({
               <i className="fas fa-print"></i>
             </span>
           </button>
-
           {/* 7. Calendar Manager */}
           <button
             onClick={onCalendarClick}
@@ -171,12 +163,10 @@ export default function Sidebar({
             <i className="fas fa-calendar-alt w-5 text-center"></i>
             <span className="text-sm font-medium">Calendar Manager</span>
           </button>
-
           {/* ===== SECTION 3: MANAGEMENT ===== */}
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Management
           </div>
-
           {/* 8. QR Codes */}
           <button
             onClick={onQRDownloadClick}
@@ -187,7 +177,6 @@ export default function Sidebar({
               <i className="fas fa-download"></i>
             </span>
           </button>
-
           {/* 9. Prices */}
           <button
             onClick={onPriceClick}
@@ -195,7 +184,6 @@ export default function Sidebar({
             <i className="fas fa-tag w-5 text-center"></i>
             Edit Prices
           </button>
-
           {/* 10. WiFi Settings */}
           <button
             onClick={onWifiClick}
@@ -203,7 +191,6 @@ export default function Sidebar({
             <i className="fas fa-wifi w-5 text-center"></i>
             WiFi Settings
           </button>
-
           {/* 11. Room Service Menu */}
           <button
             onClick={onMenuClick}
@@ -211,7 +198,6 @@ export default function Sidebar({
             <i className="fas fa-utensils w-5 text-center"></i>
             Room Service Menu
           </button>
-
           {/* 12. Settings (General) */}
           <button
             onClick={onSettingsClick}
@@ -219,23 +205,23 @@ export default function Sidebar({
             <i className="fas fa-gear w-5 text-center"></i>
             Settings
           </button>
-
           {/* ===== SECTION 4: DANGER ZONE ===== */}
           <div className="text-white/30 text-[9px] font-semibold tracking-wider uppercase px-4 pt-6 pb-2">
             Danger Zone
           </div>
+          {/* 13. Reset Totals */}
 
           {/* 13. Reset Totals */}
           <button
             onClick={onResetTotals}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition">
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+            title="Resets dashboard totals only. Historical analytics data is NOT affected.">
             <i className="fas fa-trash w-5 text-center"></i>
-            Reset Totals
+            Reset Dashboard Totals
             <span className="ml-auto text-red-400/30 text-[9px]">
               <i className="fas fa-exclamation-triangle"></i>
             </span>
           </button>
-
           <div className="h-20" />
         </div>
 

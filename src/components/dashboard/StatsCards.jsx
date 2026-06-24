@@ -5,27 +5,31 @@ export default function StatsCards({ stats, revenue }) {
   const statItems = [
     {
       key: "totalRevenue",
-      label: "Total Revenue",
+      label: "Dashboard Revenue",
       icon: "fa-coins",
-      value: `₱${revenue.total}`,
+      value: `₱${revenue.total || 0}`,
+      subtitle: "Operational counter",
     },
     {
       key: "totalCheckins",
-      label: "Total Check-ins",
+      label: "Active Check-ins",
       icon: "fa-users",
-      value: revenue.totalCheckins,
+      value: revenue.totalCheckins || 0,
+      subtitle: "Currently checked in",
     },
     {
       key: "totalBookings",
-      label: "Total Bookings",
+      label: "Active Bookings",
       icon: "fa-clock",
-      value: revenue.totalBookings,
+      value: revenue.totalBookings || 0,
+      subtitle: "Current active stays",
     },
     {
       key: "occupancyRate",
       label: "Occupancy Rate",
       icon: "fa-chart-line",
-      value: `${revenue.occupancyRate}%`,
+      value: `${revenue.occupancyRate || 0}%`,
+      subtitle: "Current occupancy",
     },
   ];
 
@@ -81,6 +85,11 @@ export default function StatsCards({ stats, revenue }) {
             </div>
             <div className="text-lg font-bold text-[#0f1b2d]">{item.value}</div>
             <div className="text-[10px] text-[#8a8278]">{item.label}</div>
+            {item.subtitle && (
+              <div className="text-[8px] text-[#8a8278]/50 mt-0.5">
+                {item.subtitle}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -100,6 +109,12 @@ export default function StatsCards({ stats, revenue }) {
             <div className="text-[9px] text-[#8a8278]">{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* System Status Note */}
+      <div className="text-[9px] text-[#8a8278] text-center border-t border-[#e5e2db] pt-2 mt-1">
+        <i className="fas fa-info-circle mr-1"></i>
+        Dashboard shows operational data • Analytics for historical reporting
       </div>
     </>
   );
