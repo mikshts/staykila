@@ -25,7 +25,7 @@ export default function ReportsPanel({ hotel, onClose }) {
     revenueByDuration: {},
   });
   const [period, setPeriod] = useState("today");
-  const [showDetailed, setShowDetailed] = useState(false);
+  const [showDetailed, setShowDetailed] = useState(true);
   const panelRef = useRef(null);
   const printRef = useRef(null);
 
@@ -91,7 +91,6 @@ export default function ReportsPanel({ hotel, onClose }) {
     try {
       setLoading(true);
 
-      // 1. Fetch completed bookings for the date range
       const { data: completedBookings, error: completedError } = await supabase
         .from("bookings")
         .select(
@@ -108,7 +107,6 @@ export default function ReportsPanel({ hotel, onClose }) {
 
       if (completedError) throw completedError;
 
-      // 2. Fetch current active bookings for snapshot
       const { data: activeBookings, error: activeError } = await supabase
         .from("bookings")
         .select(
@@ -123,7 +121,6 @@ export default function ReportsPanel({ hotel, onClose }) {
       if (activeError)
         console.error("Error fetching active bookings:", activeError);
 
-      // 3. Fetch cancelled bookings for the date range
       const { data: cancelledBookings, error: cancelledError } = await supabase
         .from("bookings")
         .select(
@@ -140,7 +137,6 @@ export default function ReportsPanel({ hotel, onClose }) {
       if (cancelledError)
         console.error("Error fetching cancelled bookings:", cancelledError);
 
-      // 4. Calculate comprehensive summary
       const totalRevenue =
         completedBookings?.reduce((sum, b) => sum + (b.price || 0), 0) || 0;
       const totalBookings = completedBookings?.length || 0;
@@ -149,7 +145,6 @@ export default function ReportsPanel({ hotel, onClose }) {
       const averageStay =
         totalBookings > 0 ? Math.round(totalHours / totalBookings) : 0;
 
-      // Revenue by source
       const revenueBySource = {};
       const revenueByDuration = {};
       let cashRevenue = 0;
@@ -182,13 +177,11 @@ export default function ReportsPanel({ hotel, onClose }) {
         }
       });
 
-      // Calculate total checkins and checkouts
       const totalCheckins =
         completedBookings?.filter((b) => b.checked_in_at).length || 0;
       const totalCheckouts =
         completedBookings?.filter((b) => b.checked_out_at).length || 0;
 
-      // Get today's active bookings count
       const todayActive =
         activeBookings?.filter(
           (b) =>
@@ -212,7 +205,6 @@ export default function ReportsPanel({ hotel, onClose }) {
         cancelledCount: cancelledBookings?.length || 0,
       });
 
-      // Combine all data for report
       setReports({
         completed: completedBookings || [],
         active: activeBookings || [],
@@ -268,7 +260,6 @@ export default function ReportsPanel({ hotel, onClose }) {
       headers.join(","),
       ...rows.map((row) => row.join(",")),
     ].join("\n");
-
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -287,7 +278,6 @@ export default function ReportsPanel({ hotel, onClose }) {
     }).format(amount);
   };
 
-  // Get source label
   const getSourceLabel = (source) => {
     const labels = {
       agoda: "🏨 Agoda",
@@ -297,6 +287,15 @@ export default function ReportsPanel({ hotel, onClose }) {
       other: "📋 Other",
     };
     return labels[source] || source || "🚶 Walk-in";
+  };
+
+  // Split data into pages for printing (max 20 rows per page)
+  const getPageData = (data, rowsPerPage = 20) => {
+    const pages = [];
+    for (let i = 0; i < data.length; i += rowsPerPage) {
+      pages.push(data.slice(i, i + rowsPerPage));
+    }
+    return pages;
   };
 
   if (loading) {
@@ -312,14 +311,15 @@ export default function ReportsPanel({ hotel, onClose }) {
   const reportData = reports.completed || [];
   const sourceKeys = Object.keys(summary.revenueBySource);
   const durationKeys = Object.keys(summary.revenueByDuration);
+  const pages = getPageData(reportData);
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
       <div
         ref={panelRef}
-        className="bg-white w-full max-w-5xl h-full overflow-y-auto print:max-w-full print:bg-white">
-        {/* Header */}
-        <div className="sticky top-0 bg-[#0f1b2d] text-white p-4 flex items-center justify-between z-10 print:bg-black print:text-white">
+        className="bg-white w-full max-w-5xl h-full overflow-y-auto print:max-w-full print:bg-white print:overflow-visible">
+        {/* Header - Screen only */}
+        <div className="sticky top-0 bg-[#0f1b2d] text-white p-4 flex items-center justify-between z-10 print:hidden">
           <div>
             <div className="font-bold text-lg flex items-center gap-2">
               <i className="fas fa-file-invoice text-[#c9a84c]"></i>
@@ -335,15 +335,28 @@ export default function ReportsPanel({ hotel, onClose }) {
               })}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="no-print text-white/60 hover:text-white">
+          <button onClick={onClose} className="text-white/60 hover:text-white">
             <i className="fas fa-times text-xl"></i>
           </button>
         </div>
 
-        <div className="p-4 print:p-2" ref={printRef}>
-          {/* Period Selector */}
+        <div className="p-4 print:p-6" ref={printRef}>
+          {/* PRINT HEADER - Visible only when printing */}
+          <div className="hidden print:block text-center border-b border-gray-300 pb-4 mb-4">
+            <h1 className="text-2xl font-bold text-[#0f1b2d]">
+              🏨 Night Audit Report
+            </h1>
+            <p className="text-sm text-gray-600">{hotel?.name}</p>
+            <p className="text-sm text-gray-600">
+              {new Date(dateRange.start).toLocaleDateString()} to{" "}
+              {new Date(dateRange.end).toLocaleDateString()}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Generated: {new Date().toLocaleString()}
+            </p>
+          </div>
+
+          {/* Period Selector - Screen only */}
           <div className="no-print bg-[#f7f3ee] rounded-xl p-4 mb-6">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex gap-1">
@@ -392,73 +405,72 @@ export default function ReportsPanel({ hotel, onClose }) {
               <div className="flex gap-1">
                 <button
                   onClick={handlePrint}
-                  className="no-print px-3 py-1.5 border border-[#e5e2db] rounded-lg text-sm hover:bg-[#f7f3ee] transition">
+                  className="px-3 py-1.5 bg-[#0f1b2d] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
                   <i className="fas fa-print mr-1"></i> Print
                 </button>
                 <button
                   onClick={handleExportCSV}
-                  className="no-print px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
-                  <i className="fas fa-file-export mr-1"></i> Export
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
+                  <i className="fas fa-file-export mr-1"></i> Export CSV
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Executive Summary - Key Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
-              <div className="text-xs text-blue-600 font-medium">
+          {/* Executive Summary */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 print:grid-cols-4 print:gap-4">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 print:bg-gray-100 print:border print:border-gray-300">
+              <div className="text-xs text-blue-600 print:text-gray-700 font-medium">
                 Total Revenue
               </div>
               <div className="text-2xl font-bold text-[#0f1b2d]">
                 {formatCurrency(summary.totalRevenue)}
               </div>
-              <div className="text-[10px] text-blue-500 mt-1">
-                {summary.totalBookings} bookings completed
+              <div className="text-[10px] text-blue-500 print:text-gray-600 mt-1">
+                {summary.totalBookings} bookings
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
-              <div className="text-xs text-green-600 font-medium">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4 print:bg-gray-100 print:border print:border-gray-300">
+              <div className="text-xs text-green-600 print:text-gray-700 font-medium">
                 Active Check-ins
               </div>
               <div className="text-2xl font-bold text-[#0f1b2d]">
                 {summary.todayActive || 0}
               </div>
-              <div className="text-[10px] text-green-500 mt-1">
-                Currently checked in
+              <div className="text-[10px] text-green-500 print:text-gray-600 mt-1">
+                Currently staying
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
-              <div className="text-xs text-purple-600 font-medium">
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 print:bg-gray-100 print:border print:border-gray-300">
+              <div className="text-xs text-purple-600 print:text-gray-700 font-medium">
                 Avg Stay
               </div>
               <div className="text-2xl font-bold text-[#0f1b2d]">
                 {summary.averageStay}h
               </div>
-              <div className="text-[10px] text-purple-500 mt-1">
+              <div className="text-[10px] text-purple-500 print:text-gray-600 mt-1">
                 Average duration
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4">
-              <div className="text-xs text-amber-600 font-medium">
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4 print:bg-gray-100 print:border print:border-gray-300">
+              <div className="text-xs text-amber-600 print:text-gray-700 font-medium">
                 Total Hours
               </div>
               <div className="text-2xl font-bold text-[#0f1b2d]">
                 {summary.totalHours}h
               </div>
-              <div className="text-[10px] text-amber-500 mt-1">
+              <div className="text-[10px] text-amber-500 print:text-gray-600 mt-1">
                 Room usage total
               </div>
             </div>
           </div>
 
-          {/* Revenue Breakdown by Source & Duration */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Revenue by Source */}
-            <div className="bg-white border border-[#e5e2db] rounded-xl p-4">
+          {/* Revenue Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:grid-cols-2 print:gap-6">
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 print:border print:border-gray-300">
               <h3 className="font-semibold text-[#0f1b2d] text-sm mb-3 flex items-center gap-2">
                 <i className="fas fa-chart-pie text-[#c9a84c]"></i>
                 Revenue by Source
@@ -494,7 +506,7 @@ export default function ReportsPanel({ hotel, onClose }) {
                         </div>
                         <div className="h-1.5 bg-[#f7f3ee] rounded-full mt-1 overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-500 ${color}`}
+                            className={`h-full rounded-full ${color}`}
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -505,13 +517,13 @@ export default function ReportsPanel({ hotel, onClose }) {
               )}
               <div className="mt-3 pt-3 border-t border-[#e5e2db] grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-[#8a8278]">OTA Revenue:</span>
+                  <span className="text-[#8a8278]">OTA Revenue:</span>{" "}
                   <span className="font-medium ml-1">
                     {formatCurrency(summary.otaRevenue)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[#8a8278]">Walk-in Revenue:</span>
+                  <span className="text-[#8a8278]">Walk-in Revenue:</span>{" "}
                   <span className="font-medium ml-1">
                     {formatCurrency(summary.walkInRevenue)}
                   </span>
@@ -519,8 +531,7 @@ export default function ReportsPanel({ hotel, onClose }) {
               </div>
             </div>
 
-            {/* Revenue by Duration */}
-            <div className="bg-white border border-[#e5e2db] rounded-xl p-4">
+            <div className="bg-white border border-[#e5e2db] rounded-xl p-4 print:border print:border-gray-300">
               <h3 className="font-semibold text-[#0f1b2d] text-sm mb-3 flex items-center gap-2">
                 <i className="fas fa-clock text-[#c9a84c]"></i>
                 Revenue by Duration
@@ -567,7 +578,7 @@ export default function ReportsPanel({ hotel, onClose }) {
                           </div>
                           <div className="h-1.5 bg-[#f7f3ee] rounded-full mt-1 overflow-hidden">
                             <div
-                              className="h-full rounded-full transition-all duration-500"
+                              className="h-full rounded-full"
                               style={{
                                 width: `${percentage}%`,
                                 backgroundColor: colors[idx % colors.length],
@@ -582,33 +593,33 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
           </div>
 
-          {/* Additional Stats */}
-          <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-6">
-            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center">
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-6 print:grid-cols-5 print:gap-3">
+            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center print:bg-gray-100">
               <div className="text-lg font-bold text-[#0f1b2d]">
                 {summary.totalCheckins}
               </div>
               <div className="text-[9px] text-[#8a8278]">Check-ins</div>
             </div>
-            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center">
+            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center print:bg-gray-100">
               <div className="text-lg font-bold text-[#0f1b2d]">
                 {summary.totalCheckouts}
               </div>
               <div className="text-[9px] text-[#8a8278]">Check-outs</div>
             </div>
-            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center">
+            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center print:bg-gray-100">
               <div className="text-lg font-bold text-[#0f1b2d]">
                 {summary.cancelledCount || 0}
               </div>
               <div className="text-[9px] text-[#8a8278]">Cancellations</div>
             </div>
-            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center">
+            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center print:bg-gray-100">
               <div className="text-lg font-bold text-[#0f1b2d]">
                 {summary.totalBookings}
               </div>
               <div className="text-[9px] text-[#8a8278]">Completed</div>
             </div>
-            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center">
+            <div className="bg-[#f7f3ee] rounded-lg p-3 text-center print:bg-gray-100">
               <div className="text-lg font-bold text-[#0f1b2d]">
                 {formatCurrency(summary.totalRevenue)}
               </div>
@@ -616,9 +627,9 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
           </div>
 
-          {/* Detailed Report Table */}
-          <div className="bg-white border border-[#e5e2db] rounded-xl overflow-hidden">
-            <div className="flex justify-between items-center p-3 border-b border-[#e5e2db]">
+          {/* Transaction Details - Print optimized with pagination */}
+          <div className="bg-white border border-[#e5e2db] rounded-xl overflow-hidden print:border print:border-gray-300 print:overflow-visible">
+            <div className="flex justify-between items-center p-3 border-b border-[#e5e2db] print:bg-gray-100">
               <h3 className="font-semibold text-[#0f1b2d] text-sm flex items-center gap-2">
                 <i className="fas fa-list-ul text-[#c9a84c]"></i>
                 Transaction Details
@@ -628,7 +639,7 @@ export default function ReportsPanel({ hotel, onClose }) {
               </h3>
               <button
                 onClick={() => setShowDetailed(!showDetailed)}
-                className="text-xs text-[#8a8278] hover:text-[#0f1b2d]">
+                className="no-print text-xs text-[#8a8278] hover:text-[#0f1b2d]">
                 <i
                   className={`fas fa-chevron-${showDetailed ? "up" : "down"} mr-1`}></i>
                 {showDetailed ? "Collapse" : "Expand"}
@@ -636,10 +647,11 @@ export default function ReportsPanel({ hotel, onClose }) {
             </div>
 
             {showDetailed && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-[#fafafa] border-b border-[#e5e2db]">
+              <div className="overflow-x-auto print:overflow-visible">
+                {/* Screen Table */}
+                <table className="w-full text-sm print:table print:w-full">
+                  <thead className="print:bg-gray-100">
+                    <tr className="bg-[#fafafa] border-b border-[#e5e2db] print:border print:border-gray-300">
                       <th className="text-left p-2 font-semibold text-[#8a8278] text-[10px] uppercase tracking-wider">
                         Date
                       </th>
@@ -667,14 +679,15 @@ export default function ReportsPanel({ hotel, onClose }) {
                           colSpan="6"
                           className="text-center py-8 text-[#8a8278]">
                           <i className="fas fa-inbox text-2xl block mb-2 opacity-40"></i>
-                          No completed bookings found for this period
+                          No completed bookings found
                         </td>
                       </tr>
                     ) : (
+                      // Render all rows for screen, but they will auto-paginate on print
                       reportData.map((booking) => (
                         <tr
                           key={booking.id}
-                          className="border-b border-[#e5e2db] hover:bg-[#f7f3ee] transition">
+                          className="border-b border-[#e5e2db] hover:bg-[#f7f3ee] transition print:hover:bg-transparent">
                           <td className="p-2 text-xs">
                             {new Date(booking.created_at).toLocaleDateString()}
                           </td>
@@ -696,7 +709,7 @@ export default function ReportsPanel({ hotel, onClose }) {
                     )}
                   </tbody>
                   {reportData.length > 0 && (
-                    <tfoot className="bg-[#fafafa] border-t border-[#e5e2db]">
+                    <tfoot className="bg-[#fafafa] border-t border-[#e5e2db] print:bg-gray-100">
                       <tr>
                         <td
                           colSpan="3"
@@ -714,19 +727,106 @@ export default function ReportsPanel({ hotel, onClose }) {
                     </tfoot>
                   )}
                 </table>
+
+                {/* Print Pagination - Only visible when printing */}
+                <div className="hidden print:block mt-8">
+                  {pages.map((pageData, pageIndex) => (
+                    <div key={pageIndex} className="page-break">
+                      <table className="w-full text-sm mt-4">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                              Date
+                            </th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                              Room
+                            </th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                              Hours
+                            </th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                              Price
+                            </th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                              Guest
+                            </th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                              Source
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageData.map((booking) => (
+                            <tr
+                              key={booking.id}
+                              className="border border-gray-200">
+                              <td className="p-2 text-xs border border-gray-200">
+                                {new Date(
+                                  booking.created_at,
+                                ).toLocaleDateString()}
+                              </td>
+                              <td className="p-2 font-medium text-xs border border-gray-200">
+                                {booking.rooms?.name || "Unknown"}
+                              </td>
+                              <td className="p-2 text-xs border border-gray-200">
+                                {booking.hours}h
+                              </td>
+                              <td className="p-2 font-medium text-xs border border-gray-200">
+                                ₱{booking.price}
+                              </td>
+                              <td className="p-2 text-xs border border-gray-200">
+                                {booking.guest_name || "N/A"}
+                              </td>
+                              <td className="p-2 text-xs border border-gray-200">
+                                {getSourceLabel(booking.booking_source)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        {pageIndex === pages.length - 1 && (
+                          <tfoot>
+                            <tr>
+                              <td
+                                colSpan="3"
+                                className="p-2 font-semibold text-right text-xs border border-gray-200">
+                                Total:
+                              </td>
+                              <td className="p-2 font-bold text-xs border border-gray-200">
+                                {formatCurrency(summary.totalRevenue)}
+                              </td>
+                              <td
+                                colSpan="2"
+                                className="p-2 text-xs border border-gray-200">
+                                {summary.totalBookings} bookings •{" "}
+                                {summary.totalHours}h total
+                              </td>
+                            </tr>
+                          </tfoot>
+                        )}
+                        <tr>
+                          <td
+                            colSpan="6"
+                            className="text-center text-xs text-gray-500 pt-2">
+                            Page {pageIndex + 1} of {pages.length}
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="mt-4 text-xs text-[#8a8278] text-center border-t border-[#e5e2db] pt-4">
+          <div className="mt-4 text-xs text-[#8a8278] text-center border-t border-[#e5e2db] pt-4 print:border-t print:border-gray-300 print:mt-8 print:pt-4">
             <p>
               <i className="fas fa-calendar-alt mr-1"></i>
-              Report generated on {new Date().toLocaleString()}
+              Report: {dateRange.start} to {dateRange.end}
             </p>
             <p className="mt-1">
-              <i className="fas fa-info-circle mr-1"></i>
-              This report is for {dateRange.start} to {dateRange.end}
+              <i className="fas fa-clock mr-1"></i>
+              Generated: {new Date().toLocaleString()}
             </p>
             <p className="mt-1 no-print">
               <i className="fas fa-print mr-1"></i> Click Print for PDF •
@@ -736,6 +836,96 @@ export default function ReportsPanel({ hotel, onClose }) {
           </div>
         </div>
       </div>
+
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: visible !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .page-break {
+            page-break-after: always;
+          }
+          .print\\:block {
+            display: block !important;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+          .print\\:bg-gray-100 {
+            background-color: #f3f4f6 !important;
+          }
+          .print\\:border {
+            border: 1px solid #d1d5db !important;
+          }
+          .print\\:border-gray-300 {
+            border-color: #d1d5db !important;
+          }
+          .print\\:p-6 {
+            padding: 1.5rem !important;
+          }
+          .print\\:mt-8 {
+            margin-top: 2rem !important;
+          }
+          .print\\:pt-4 {
+            padding-top: 1rem !important;
+          }
+          .print\\:overflow-visible {
+            overflow: visible !important;
+          }
+          .print\\:w-full {
+            width: 100% !important;
+          }
+          .print\\:table {
+            display: table !important;
+          }
+          .print\\:grid-cols-4 {
+            grid-template-columns: repeat(4, 1fr) !important;
+          }
+          .print\\:grid-cols-5 {
+            grid-template-columns: repeat(5, 1fr) !important;
+          }
+          .print\\:grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .print\\:gap-4 {
+            gap: 1rem !important;
+          }
+          .print\\:gap-6 {
+            gap: 1.5rem !important;
+          }
+          .print\\:gap-3 {
+            gap: 0.75rem !important;
+          }
+          .print\\:bg-white {
+            background-color: white !important;
+          }
+          .print\\:text-black {
+            color: black !important;
+          }
+          .print\\:text-gray-700 {
+            color: #374151 !important;
+          }
+          .print\\:text-gray-600 {
+            color: #4b5563 !important;
+          }
+          .print\\:border-gray-300 {
+            border-color: #d1d5db !important;
+          }
+          .print\\:shadow-none {
+            box-shadow: none !important;
+          }
+          .print\\:max-w-full {
+            max-width: 100% !important;
+          }
+          .print\\:overflow-visible {
+            overflow: visible !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
