@@ -10,7 +10,7 @@ import {
 } from "framer-motion";
 
 /* ------------------------------------------------------------------ */
-/*  Fonts — same pairing as Login.jsx, so the handoff from landing to */
+/*  Fonts — same pairing as Login.jsx, so the handoff from landing to  */
 /*  login feels like one continuous brand, not two different apps.   */
 /* ------------------------------------------------------------------ */
 function useBrandFonts() {
@@ -162,6 +162,7 @@ function Navbar() {
   const navLinks = [
     { href: "#rooms", label: "Rooms" },
     { href: "#qr", label: "QR System" },
+    { href: "#calendar", label: "Calendar" },
     { href: "#analytics", label: "Analytics" },
     { href: "#pricing", label: "Pricing" },
   ];
@@ -808,6 +809,314 @@ function QRSystem() {
 }
 
 /* ============================================================ */
+/*  SECTION 3.5 — CALENDAR SYSTEM                                */
+/*  NEW: Visual calendar preview showing booking management      */
+/* ============================================================ */
+function CalendarPreview() {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedRoom, setSelectedRoom] = useState("Room 214");
+
+  // Sample booked dates for demo
+  const bookedDates = [
+    { date: new Date(2024, 11, 5), source: "agoda", room: "Room 214" },
+    { date: new Date(2024, 11, 6), source: "booking", room: "Room 214" },
+    { date: new Date(2024, 11, 12), source: "walk-in", room: "Room 101" },
+    { date: new Date(2024, 11, 15), source: "agoda", room: "Room 214" },
+    { date: new Date(2024, 11, 20), source: "maintenance", room: "Room 102" },
+  ];
+
+  const getSourceColor = (source) => {
+    const colors = {
+      agoda: "bg-blue-500",
+      booking: "bg-purple-500",
+      "walk-in": "bg-green-500",
+      maintenance: "bg-orange-500",
+      other: "bg-gray-500",
+    };
+    return colors[source] || colors["other"];
+  };
+
+  const getSourceLabel = (source) => {
+    const labels = {
+      agoda: "Agoda",
+      booking: "Booking.com",
+      "walk-in": "Walk-in",
+      maintenance: "Maintenance",
+      other: "Other",
+    };
+    return labels[source] || source;
+  };
+
+  // Generate calendar grid for current month
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDay = firstDay.getDay();
+
+    const days = [];
+    // Previous month days
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startingDay - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, prevMonthLastDay - i),
+        isCurrentMonth: false,
+      });
+    }
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true,
+      });
+    }
+    // Next month days
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false,
+      });
+    }
+    return days;
+  };
+
+  const days = getDaysInMonth(selectedDate);
+
+  const isDateBooked = (date) => {
+    return bookedDates.some(
+      (b) =>
+        b.date.toDateString() === date.toDateString() &&
+        b.room === selectedRoom,
+    );
+  };
+
+  const getBookingForDate = (date) => {
+    return bookedDates.find(
+      (b) =>
+        b.date.toDateString() === date.toDateString() &&
+        b.room === selectedRoom,
+    );
+  };
+
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const changeMonth = (delta) => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() + delta);
+    setSelectedDate(newDate);
+  };
+
+  const rooms = ["Room 214", "Room 101", "Room 102", "Room 103"];
+
+  return (
+    <section
+      id="calendar"
+      className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_60%,rgba(201,168,76,0.08),transparent_55%)]" />
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-16">
+          <Eyebrow>Visual booking management</Eyebrow>
+          <h2
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-4 md:mb-5">
+            Calendar at a <span className="italic text-[#c9a84c]">Glance.</span>
+          </h2>
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
+            See all bookings, block dates, and manage room availability from one
+            intuitive calendar view.
+          </p>
+        </Reveal>
+
+        <div className="grid lg:grid-cols-[280px_1fr] gap-6 lg:gap-8">
+          {/* Room selector sidebar */}
+          <Reveal variants={scaleIn} className="order-2 lg:order-1">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl p-4 shadow-xl shadow-black/30">
+              <h3 className="text-xs uppercase tracking-widest text-gray-400 mb-3">
+                Select Room
+              </h3>
+              <div className="space-y-2">
+                {rooms.map((room) => (
+                  <button
+                    key={room}
+                    onClick={() => setSelectedRoom(room)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition ${
+                      selectedRoom === room
+                        ? "bg-[#c9a84c]/20 border border-[#c9a84c]/40 text-white"
+                        : "bg-white/[0.03] border border-transparent text-gray-400 hover:bg-white/[0.08] hover:text-white"
+                    }`}>
+                    {room}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <h4 className="text-xs uppercase tracking-widest text-gray-400 mb-2">
+                  Legend
+                </h4>
+                <div className="space-y-1.5">
+                  {[
+                    { color: "bg-blue-500", label: "Agoda" },
+                    { color: "bg-purple-500", label: "Booking.com" },
+                    { color: "bg-green-500", label: "Walk-in" },
+                    { color: "bg-orange-500", label: "Maintenance" },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center gap-2 text-xs text-gray-400">
+                      <span
+                        className={`w-3 h-3 rounded-full ${item.color}`}></span>
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <button className="w-full text-center text-sm font-medium text-[#c9a84c] border border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 rounded-lg px-4 py-2 transition">
+                  + Book New Date
+                </button>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Calendar */}
+          <Reveal variants={scaleIn} className="order-1 lg:order-2">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-xl p-4 sm:p-6 shadow-xl shadow-black/30">
+              {/* Calendar header */}
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => changeMonth(-1)}
+                  className="w-8 h-8 rounded-lg border border-white/10 hover:bg-white/10 transition flex items-center justify-center text-gray-400 hover:text-white">
+                  <i className="fas fa-chevron-left text-sm"></i>
+                </button>
+                <h3 className="text-base sm:text-lg font-semibold text-white">
+                  {monthNames[selectedDate.getMonth()]}{" "}
+                  {selectedDate.getFullYear()}
+                </h3>
+                <button
+                  onClick={() => changeMonth(1)}
+                  className="w-8 h-8 rounded-lg border border-white/10 hover:bg-white/10 transition flex items-center justify-center text-gray-400 hover:text-white">
+                  <i className="fas fa-chevron-right text-sm"></i>
+                </button>
+              </div>
+
+              {/* Day names */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+                  <div
+                    key={day}
+                    className="text-center text-xs text-gray-500 font-medium py-1">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {days.map((day, index) => {
+                  const booked = isDateBooked(day.date);
+                  const booking = getBookingForDate(day.date);
+                  const isToday =
+                    day.date.toDateString() === new Date().toDateString();
+
+                  return (
+                    <div
+                      key={index}
+                      className={`aspect-square rounded-lg p-1 flex flex-col items-center justify-center transition ${
+                        day.isCurrentMonth
+                          ? booked
+                            ? `bg-${getSourceColor(booking?.source)}/20 border border-${getSourceColor(booking?.source)}/30`
+                            : "hover:bg-white/5 cursor-pointer"
+                          : "opacity-30"
+                      } ${isToday ? "ring-2 ring-[#c9a84c]" : ""}`}>
+                      <span
+                        className={`text-sm ${
+                          day.isCurrentMonth
+                            ? booked
+                              ? "text-white font-medium"
+                              : "text-gray-300"
+                            : "text-gray-600"
+                        }`}>
+                        {day.date.getDate()}
+                      </span>
+                      {booked && booking && (
+                        <span className="text-[8px] text-gray-300 truncate w-full text-center">
+                          {getSourceLabel(booking.source)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Selected date info */}
+              <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-gray-500">Selected:</span>
+                  <span className="text-sm text-white ml-2">
+                    {selectedDate.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500">{selectedRoom}</span>
+                  <span className="w-px h-5 bg-white/10" />
+                  <span className="text-xs text-emerald-400">
+                    {isDateBooked(selectedDate) ? "🔴 Booked" : "✅ Available"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick stats */}
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-3 text-center">
+                <p className="text-lg font-semibold text-white">42</p>
+                <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                  Total Bookings
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-3 text-center">
+                <p className="text-lg font-semibold text-emerald-400">18</p>
+                <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                  Available Rooms
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-3 text-center">
+                <p className="text-lg font-semibold text-[#c9a84c]">70%</p>
+                <p className="text-[10px] uppercase tracking-wide text-gray-500">
+                  Occupancy
+                </p>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================ */
 /*  SECTION 4 — GUEST MESSAGING                                 */
 /* ============================================================ */
 const CHAT_MESSAGES = [
@@ -1132,6 +1441,247 @@ function Operations() {
 }
 
 /* ============================================================ */
+/*  SECTION 9 — HOW IT WORKS                                     */
+/*  This is the one place numbering earns its keep: these are    */
+/*  genuinely sequential setup steps, not a feature list dressed */
+/*  up as a process.                                              */
+/* ============================================================ */
+const HOW_IT_WORKS_STEPS = [
+  { n: "01", label: "Create Hotel Account", icon: "fa-user-plus" },
+  { n: "02", label: "Select Number Of Rooms", icon: "fa-bed" },
+  { n: "03", label: "Generate QR Codes", icon: "fa-qrcode" },
+  { n: "04", label: "Manage Guests", icon: "fa-users" },
+  { n: "05", label: "Track Revenue", icon: "fa-chart-line" },
+  { n: "06", label: "Grow Your Business", icon: "fa-arrow-trend-up" },
+];
+
+function HowItWorks() {
+  return (
+    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.06),transparent_60%)]" />
+      <div className="relative max-w-5xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-16">
+          <Eyebrow>From signup to scale</Eyebrow>
+          <h2
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight">
+            How It <span className="italic text-[#c9a84c]">Works.</span>
+          </h2>
+        </Reveal>
+
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={staggerContainer}
+          className="relative">
+          {/* Vertical line for mobile, horizontal-ish rhythm for desktop via spacing */}
+          <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#c9a84c]/30 to-transparent md:-translate-x-1/2" />
+
+          <div className="space-y-6 md:space-y-0">
+            {HOW_IT_WORKS_STEPS.map((step, i) => {
+              const isEven = i % 2 === 0;
+              return (
+                <motion.div
+                  key={step.n}
+                  variants={fadeUp}
+                  className={`relative flex items-center gap-5 md:gap-0 md:py-7 ${
+                    isEven ? "md:flex-row" : "md:flex-row-reverse"
+                  }`}>
+                  <div
+                    className={`hidden md:block flex-1 ${
+                      isEven ? "text-right pr-10" : "text-left pl-10"
+                    }`}>
+                    <p className="text-sm font-medium text-white">
+                      {step.label}
+                    </p>
+                  </div>
+
+                  <div className="relative z-10 w-11 h-11 md:w-12 md:h-12 rounded-full bg-[#0f1b2d] border border-[#c9a84c]/50 flex items-center justify-center shrink-0 shadow-[0_0_20px_-4px_rgba(201,168,76,0.4)]">
+                    <i
+                      className={`fas ${step.icon} text-[#c9a84c] text-sm`}></i>
+                  </div>
+
+                  <div className="flex-1 md:hidden">
+                    <p className="text-[11px] text-[#c9a84c] font-semibold tracking-wide mb-0.5">
+                      Step {step.n}
+                    </p>
+                    <p className="text-sm font-medium text-white">
+                      {step.label}
+                    </p>
+                  </div>
+
+                  <div
+                    className={`hidden md:block flex-1 ${isEven ? "pl-10" : "pr-10"}`}>
+                    <p className="text-[11px] text-[#c9a84c] font-semibold tracking-wide">
+                      Step {step.n}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================ */
+/*  SECTION 10 — PARTNERS                                        */
+/*  NEW: Show partner logos with proper spacing                  */
+/* ============================================================ */
+function Partners() {
+  const partners = [
+    { id: 1, src: "/partner1.png", name: "Partner 1" },
+    { id: 2, src: "/partner2.png", name: "Partner 2" },
+  ];
+
+  return (
+    <section className="relative min-h-[60vh] w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden pt-24 pb-12 md:pt-28">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.06),transparent_60%)]" />
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-12">
+          <Eyebrow>Trusted partners</Eyebrow>
+          <h2
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight">
+            Our <span className="italic text-[#c9a84c]">Partners.</span>
+          </h2>
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed mt-3">
+            We collaborate with industry leaders to deliver the best experience.
+          </p>
+        </Reveal>
+
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={staggerContainer}
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          {partners.map((partner, index) => (
+            <motion.div
+              key={partner.id}
+              variants={fadeUp}
+              whileHover={{ y: -8, scale: 1.02 }}
+              transition={{ duration: 0.3 }}
+              className="group rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-sm p-6 flex items-center justify-center hover:border-[#c9a84c]/40 hover:bg-white/[0.08] transition-all duration-300">
+              <div className="w-full aspect-square flex items-center justify-center relative">
+                <img
+                  src={partner.src}
+                  alt={partner.name}
+                  className="max-w-full max-h-full object-contain rounded-xl filter brightness-90 group-hover:brightness-100 transition-all duration-300"
+                  style={{
+                    imageRendering: "crisp-edges",
+                    backgroundColor: "transparent",
+                  }}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%231a2d44'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' fill='%23c9a84c' text-anchor='middle' dy='.3em'%3EPartner%3C/text%3E%3C/svg%3E";
+                  }}
+                />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-[#c9a84c]/0 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================ */
+/*  SECTION 11 — TESTIMONIALS                                     */
+/* ============================================================ */
+const TESTIMONIALS = [
+  {
+    quote:
+      "We replaced three different spreadsheets with StayKila in a single afternoon. Our front desk has never been calmer.",
+    name: "A. Mercado",
+    role: "Owner, Marea Boutique Lodge",
+  },
+  {
+    quote:
+      "The QR check-in alone cut our front desk queue time in half during peak season.",
+    name: "D. Whitfield",
+    role: "General Manager, Northshore Inn",
+  },
+  {
+    quote:
+      "Revenue reporting that used to take my accountant a day now updates itself. It's the calmest our books have ever looked.",
+    name: "R. Santos",
+    role: "Founder, Casa Alba Resorts",
+  },
+];
+
+function Testimonials() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % TESTIMONIALS.length);
+    }, 5500);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden pt-24 pb-12 md:pt-28">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,168,76,0.08),transparent_55%)]" />
+      <div className="relative max-w-3xl mx-auto px-5 sm:px-6 text-center w-full">
+        <Reveal>
+          <Eyebrow>Trusted by hoteliers</Eyebrow>
+          <h2
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-10 md:mb-14">
+            What Owners{" "}
+            <span className="italic text-[#c9a84c]">Are Saying.</span>
+          </h2>
+        </Reveal>
+
+        <div className="relative min-h-[220px] flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute inset-0 flex flex-col items-center justify-center px-4">
+              <i className="fas fa-quote-left text-[#c9a84c]/40 text-2xl mb-5"></i>
+              <p
+                style={{ fontFamily: "'Cormorant Garamond', serif" }}
+                className="text-xl sm:text-2xl text-white italic leading-relaxed mb-6">
+                "{TESTIMONIALS[index].quote}"
+              </p>
+              <p className="text-sm font-semibold text-white">
+                {TESTIMONIALS[index].name}
+              </p>
+              <p className="text-xs text-gray-500">
+                {TESTIMONIALS[index].role}
+              </p>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 mt-8">
+          {TESTIMONIALS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIndex(i)}
+              aria-label={`Show testimonial ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === index ? "w-6 bg-[#c9a84c]" : "w-1.5 bg-white/20"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================ */
 /*  SECTION 8 — PRICING                                          */
 /*  Simple, transparent pricing for properties of all sizes.     */
 /* ============================================================ */
@@ -1271,184 +1821,7 @@ function Pricing() {
 }
 
 /* ============================================================ */
-/*  SECTION 9 — HOW IT WORKS                                     */
-/*  This is the one place numbering earns its keep: these are    */
-/*  genuinely sequential setup steps, not a feature list dressed */
-/*  up as a process.                                              */
-/* ============================================================ */
-const HOW_IT_WORKS_STEPS = [
-  { n: "01", label: "Create Hotel Account", icon: "fa-user-plus" },
-  { n: "02", label: "Select Number Of Rooms", icon: "fa-bed" },
-  { n: "03", label: "Generate QR Codes", icon: "fa-qrcode" },
-  { n: "04", label: "Manage Guests", icon: "fa-users" },
-  { n: "05", label: "Track Revenue", icon: "fa-chart-line" },
-  { n: "06", label: "Grow Your Business", icon: "fa-arrow-trend-up" },
-];
-
-function HowItWorks() {
-  return (
-    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.06),transparent_60%)]" />
-      <div className="relative max-w-5xl mx-auto px-5 sm:px-6 w-full">
-        <Reveal className="text-center max-w-2xl mx-auto mb-10 md:mb-16">
-          <Eyebrow>From signup to scale</Eyebrow>
-          <h2
-            style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight">
-            How It <span className="italic text-[#c9a84c]">Works.</span>
-          </h2>
-        </Reveal>
-
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.1 }}
-          variants={staggerContainer}
-          className="relative">
-          {/* Vertical line for mobile, horizontal-ish rhythm for desktop via spacing */}
-          <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#c9a84c]/30 to-transparent md:-translate-x-1/2" />
-
-          <div className="space-y-6 md:space-y-0">
-            {HOW_IT_WORKS_STEPS.map((step, i) => {
-              const isEven = i % 2 === 0;
-              return (
-                <motion.div
-                  key={step.n}
-                  variants={fadeUp}
-                  className={`relative flex items-center gap-5 md:gap-0 md:py-7 ${
-                    isEven ? "md:flex-row" : "md:flex-row-reverse"
-                  }`}>
-                  <div
-                    className={`hidden md:block flex-1 ${
-                      isEven ? "text-right pr-10" : "text-left pl-10"
-                    }`}>
-                    <p className="text-sm font-medium text-white">
-                      {step.label}
-                    </p>
-                  </div>
-
-                  <div className="relative z-10 w-11 h-11 md:w-12 md:h-12 rounded-full bg-[#0f1b2d] border border-[#c9a84c]/50 flex items-center justify-center shrink-0 shadow-[0_0_20px_-4px_rgba(201,168,76,0.4)]">
-                    <i
-                      className={`fas ${step.icon} text-[#c9a84c] text-sm`}></i>
-                  </div>
-
-                  <div className="flex-1 md:hidden">
-                    <p className="text-[11px] text-[#c9a84c] font-semibold tracking-wide mb-0.5">
-                      Step {step.n}
-                    </p>
-                    <p className="text-sm font-medium text-white">
-                      {step.label}
-                    </p>
-                  </div>
-
-                  <div
-                    className={`hidden md:block flex-1 ${isEven ? "pl-10" : "pr-10"}`}>
-                    <p className="text-[11px] text-[#c9a84c] font-semibold tracking-wide">
-                      Step {step.n}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-/* ============================================================ */
-/*  SECTION 10 — TESTIMONIALS                                     */
-/* ============================================================ */
-const TESTIMONIALS = [
-  {
-    quote:
-      "We replaced three different spreadsheets with StayKila in a single afternoon. Our front desk has never been calmer.",
-    name: "A. Mercado",
-    role: "Owner, Marea Boutique Lodge",
-  },
-  {
-    quote:
-      "The QR check-in alone cut our front desk queue time in half during peak season.",
-    name: "D. Whitfield",
-    role: "General Manager, Northshore Inn",
-  },
-  {
-    quote:
-      "Revenue reporting that used to take my accountant a day now updates itself. It's the calmest our books have ever looked.",
-    name: "R. Santos",
-    role: "Founder, Casa Alba Resorts",
-  },
-];
-
-function Testimonials() {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIndex((i) => (i + 1) % TESTIMONIALS.length);
-    }, 5500);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <section className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden pt-24 pb-12 md:pt-28">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,168,76,0.08),transparent_55%)]" />
-      <div className="relative max-w-3xl mx-auto px-5 sm:px-6 text-center w-full">
-        <Reveal>
-          <Eyebrow>Trusted by hoteliers</Eyebrow>
-          <h2
-            style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-10 md:mb-14">
-            What Owners{" "}
-            <span className="italic text-[#c9a84c]">Are Saying.</span>
-          </h2>
-        </Reveal>
-
-        <div className="relative min-h-[220px] flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute inset-0 flex flex-col items-center justify-center px-4">
-              <i className="fas fa-quote-left text-[#c9a84c]/40 text-2xl mb-5"></i>
-              <p
-                style={{ fontFamily: "'Cormorant Garamond', serif" }}
-                className="text-xl sm:text-2xl text-white italic leading-relaxed mb-6">
-                "{TESTIMONIALS[index].quote}"
-              </p>
-              <p className="text-sm font-semibold text-white">
-                {TESTIMONIALS[index].name}
-              </p>
-              <p className="text-xs text-gray-500">
-                {TESTIMONIALS[index].role}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        <div className="flex items-center justify-center gap-2 mt-8">
-          {TESTIMONIALS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setIndex(i)}
-              aria-label={`Show testimonial ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === index ? "w-6 bg-[#c9a84c]" : "w-1.5 bg-white/20"
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ============================================================ */
-/*  SECTION 11 — FINAL CTA                                       */
+/*  SECTION 12 — FINAL CTA                                       */
 /* ============================================================ */
 function FinalCTA() {
   const navigate = useNavigate();
@@ -1565,6 +1938,8 @@ function Footer() {
 /* ============================================================ */
 /*  PAGE ASSEMBLY                                                */
 /* ============================================================ */
+// In the page assembly section at the bottom, update the container and footer:
+
 export default function LandingPage() {
   useBrandFonts();
 
@@ -1576,14 +1951,18 @@ export default function LandingPage() {
       <Hero />
       <RoomManagement />
       <QRSystem />
+      <CalendarPreview />
       <GuestMessaging />
       <CheckInSystem />
       <RevenueAnalytics />
       <Operations />
-      <Pricing />
       <HowItWorks />
+      <Partners />
       <Testimonials />
+      <Pricing />
+
       <FinalCTA />
+      {/* Footer needs to be inside the snap container but without snap-start */}
       <Footer />
     </div>
   );
