@@ -611,6 +611,7 @@ export default function Dashboard() {
       const newEndTime = new Date(room.booking.end_time);
       newEndTime.setHours(newEndTime.getHours() + hours);
 
+      // 1. Update the booking
       const { error } = await supabase
         .from("bookings")
         .update({
@@ -622,6 +623,22 @@ export default function Dashboard() {
 
       if (error) throw error;
 
+      // 2. ✅ Add extension revenue to dashboard
+      const { error: dashboardError } = await supabase.rpc(
+        "add_extension_revenue",
+        {
+          p_hotel_id: hotel.id,
+          p_additional_price: price,
+        },
+      );
+
+      if (dashboardError) {
+        console.error("Failed to update dashboard revenue:", dashboardError);
+        toast.warning(
+          "Booking extended but dashboard revenue may be out of sync",
+        );
+      }
+
       await logActivity(
         "extend",
         `${room.name} extended by ${hours}h (₱${price})`,
@@ -630,6 +647,7 @@ export default function Dashboard() {
       toast.success(`${room.name} extended by ${hours} hours`);
       setShowExtendModal(false);
       fetchRooms();
+      await fetchDashboardMetrics(); // ✅ Refresh dashboard metrics
     } catch (error) {
       console.error("Extend error:", error);
       toast.error("Failed to extend stay");
