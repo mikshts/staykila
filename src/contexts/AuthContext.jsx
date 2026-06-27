@@ -39,43 +39,24 @@ export function AuthProvider({ children }) {
 
   const fetchHotel = async (userId) => {
     try {
-      // Step 1: Get hotel_id
-      const { data: userData, error: userError } = await supabase
+      const { data, error } = await supabase
         .from("users")
-        .select("hotel_id")
+        .select("hotel_id, hotels(*)")
         .eq("id", userId)
         .single();
 
-      if (userError) {
-        if (userError.code === "PGRST116") {
+      if (error) {
+        if (error.code === "PGRST116") {
           setHotel(null);
           return;
         }
-        console.error("User fetch error:", userError);
+        console.error("Error fetching hotel:", error);
         return;
       }
 
-      if (!userData?.hotel_id) {
-        setHotel(null);
-        return;
-      }
-
-      // Step 2: Get hotel
-      const { data: hotelData, error: hotelError } = await supabase
-        .from("hotels")
-        .select("*")
-        .eq("id", userData.hotel_id)
-        .single();
-
-      if (hotelError) {
-        console.error("Hotel fetch error:", hotelError);
-        setHotel(null);
-        return;
-      }
-
-      setHotel(hotelData);
+      setHotel(data.hotels);
     } catch (error) {
-      console.error("fetchHotel error:", error);
+      console.error("Error fetching hotel:", error);
     }
   };
 
