@@ -1,4 +1,3 @@
-// src/components/guest/GuestPortal.jsx
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -12,7 +11,7 @@ import {
   GuestPortalLoading,
 } from "../ui";
 import QRCode from "qrcode";
-import ImageViewer from "./ImageViewer"; // Import the new component
+import ImageViewer from "./ImageViewer";
 
 export default function GuestPortal() {
   const [searchParams] = useSearchParams();
@@ -29,6 +28,8 @@ export default function GuestPortal() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("info");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [error, setError] = useState(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const chatEndRef = useRef(null);
   const subscriptionRef = useRef(null);
   const qrContainerRef = useRef(null);
@@ -39,20 +40,78 @@ export default function GuestPortal() {
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
 
+  // ------------------------------
+  // 1. Offline/Online event listeners
+  // ------------------------------
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      // Auto-retry when back online
+      loadRoomData();
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      setError("You are offline. Please check your internet connection.");
+    };
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // ------------------------------
+  // 2. Load room data (with caching)
+  // ------------------------------
   const loadRoomData = async () => {
     try {
       setLoading(true);
+      setError(null);
 
       const parsed = parseRoomParam(roomParam);
       const hotelId = parsed?.hotelId;
       const roomId = parsed?.roomId;
 
+      // --- Check cache first ---
+      let cachedData = null;
+      if (roomId) {
+        const cached = localStorage.getItem(`guest_room_${roomId}`);
+        if (cached) {
+          try {
+            cachedData = JSON.parse(cached);
+            // Immediately apply cached data
+            setRoom(cachedData.room);
+            setHotel(cachedData.hotel);
+            setWifiPassword(cachedData.wifiPassword || "");
+            setMenuImages(cachedData.menuImages || []);
+            if (cachedData.room?.booking) {
+              setTimeRemaining(
+                new Date(cachedData.room.booking.end_time).getTime() -
+                  Date.now(),
+              );
+              setIsExpired(false);
+            } else {
+              setIsExpired(true);
+            }
+            setLoading(false); // show cached content immediately
+          } catch (e) {
+            console.warn("Invalid cache, ignoring");
+          }
+        }
+      }
+
+      // --- Fetch fresh data from server ---
+      let freshRoom = null;
+      let freshHotel = null;
+      let freshWifi = "";
+      let freshMenu = [];
+
       if (!hotelId && roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
+          freshRoom = roomData;
           const newHotelId = roomData.hotel_id;
-          setRoom(roomData);
-
           if (newHotelId) {
             const { data: hotelData } = await supabase
               .from("hotels")
@@ -60,17 +119,16 @@ export default function GuestPortal() {
               .eq("id", newHotelId)
               .single();
             if (hotelData) {
-              setHotel(hotelData);
-              setWifiPassword(hotelData.wifi_password || "");
+              freshHotel = hotelData;
+              freshWifi = hotelData.wifi_password || "";
             }
           }
         }
       } else if (roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
-          setRoom(roomData);
+          freshRoom = roomData;
         }
-
         if (hotelId) {
           const { data: hotelData } = await supabase
             .from("hotels")
@@ -78,16 +136,17 @@ export default function GuestPortal() {
             .eq("id", hotelId)
             .single();
           if (hotelData) {
-            setHotel(hotelData);
-            setWifiPassword(hotelData.wifi_password || "");
+            freshHotel = hotelData;
+            freshWifi = hotelData.wifi_password || "";
           }
         }
       }
 
-      if (!room && roomId) {
+      // If room still not found, try again
+      if (!freshRoom && roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
-          setRoom(roomData);
+          freshRoom = roomData;
           if (!hotelId && roomData.hotel_id) {
             const newHotelId = roomData.hotel_id;
             const { data: hotelData } = await supabase
@@ -96,23 +155,33 @@ export default function GuestPortal() {
               .eq("id", newHotelId)
               .single();
             if (hotelData) {
-              setHotel(hotelData);
-              setWifiPassword(hotelData.wifi_password || "");
+              freshHotel = hotelData;
+              freshWifi = hotelData.wifi_password || "";
             }
           }
         }
       }
 
-      const currentHotelId = hotel?.id || hotelId;
+      // Update state with fresh data
+      if (freshRoom) setRoom(freshRoom);
+      if (freshHotel) setHotel(freshHotel);
+      if (freshWifi) setWifiPassword(freshWifi);
+
+      // Fetch menu images
+      const currentHotelId = freshHotel?.id || hotelId;
       if (currentHotelId) {
         const { data: menuData } = await supabase
           .from("menu_images")
           .select("*")
           .eq("hotel_id", currentHotelId)
           .order("display_order");
-        setMenuImages(menuData || []);
+        if (menuData) {
+          freshMenu = menuData;
+          setMenuImages(menuData);
+        }
       }
 
+      // Fetch active booking
       if (roomId) {
         const { data: bookings } = await supabase
           .from("bookings")
@@ -131,6 +200,7 @@ export default function GuestPortal() {
           setIsExpired(true);
         }
 
+        // Messages
         const msgs = await messageService.getMessages(roomId);
         const uniqueMsgs = [];
         const seenIds = new Set();
@@ -143,6 +213,7 @@ export default function GuestPortal() {
         setMessages(uniqueMsgs);
         uniqueMsgs.forEach((msg) => messageIdsRef.current.add(msg.id));
 
+        // Guest session token
         let token = localStorage.getItem(`guest_${roomId}_token`);
         if (!token) {
           const session = await messageService.createGuestSession(roomId);
@@ -151,6 +222,7 @@ export default function GuestPortal() {
         }
         setGuestToken(token);
 
+        // Real-time subscription
         if (subscriptionRef.current) {
           subscriptionRef.current.unsubscribe();
         }
@@ -165,14 +237,39 @@ export default function GuestPortal() {
           },
         );
       }
-    } catch (error) {
-      console.error("Error loading room:", error);
+
+      // Save to cache after successful fetch
+      if (roomId && (freshRoom || room) && (freshHotel || hotel)) {
+        const cachePayload = {
+          room: freshRoom || room,
+          hotel: freshHotel || hotel,
+          wifiPassword: freshWifi || wifiPassword,
+          menuImages: freshMenu.length ? freshMenu : menuImages,
+        };
+        localStorage.setItem(
+          `guest_room_${roomId}`,
+          JSON.stringify(cachePayload),
+        );
+      }
+
+      // If we had cached data, loading was set to false already, but we need to ensure it's false after fetch
+      setLoading(false);
+    } catch (err) {
+      console.error("Error loading room:", err);
+      setError(err.message || "Failed to load room data");
+      if (!navigator.onLine) {
+        setIsOffline(true);
+      }
       toast.error("Failed to load room data");
-    } finally {
+      // If we have cached data, we keep showing it; otherwise show error UI
+      // But loading is already false if we had cache; if no cache, we need to set loading false
       setLoading(false);
     }
   };
 
+  // ------------------------------
+  // 3. Other functions (existing)
+  // ------------------------------
   const getRoomTypeInfo = (roomType) => {
     const types = {
       single: {
@@ -197,13 +294,11 @@ export default function GuestPortal() {
     return types[roomType] || types.single;
   };
 
-  // Function to handle quick message sending
   const sendQuickMessage = async (messageText) => {
     if (!guestToken) {
       toast.error("No active session");
       return;
     }
-
     try {
       const roomId = room?.id;
       const hotelId = hotel?.id;
@@ -211,14 +306,12 @@ export default function GuestPortal() {
         toast.error("Missing room or hotel information");
         return;
       }
-
       const msg = await messageService.sendGuestMessage(
         roomId,
         hotelId,
         messageText,
         guestToken,
       );
-
       if (!messageIdsRef.current.has(msg.id)) {
         messageIdsRef.current.add(msg.id);
         setMessages((prev) => [...prev, msg]);
@@ -231,7 +324,6 @@ export default function GuestPortal() {
     }
   };
 
-  // Most common hotel requests
   const quickActions = [
     {
       icon: "fa-towel",
@@ -258,11 +350,7 @@ export default function GuestPortal() {
       label: "Late Checkout",
       message: "Can I request a late checkout?",
     },
-    {
-      icon: "fa-car",
-      label: "Parking",
-      message: "Where can I park my car?",
-    },
+    { icon: "fa-car", label: "Parking", message: "Where can I park my car?" },
     {
       icon: "fa-mug-saucer",
       label: "Coffee",
@@ -278,13 +366,10 @@ export default function GuestPortal() {
       label: "AC Issue",
       message: "The AC isn't working properly",
     },
-    {
-      icon: "fa-tv",
-      label: "TV Issue",
-      message: "Having trouble with the TV",
-    },
+    { icon: "fa-tv", label: "TV Issue", message: "Having trouble with the TV" },
   ];
 
+  // Initial load
   useEffect(() => {
     if (roomParam) {
       loadRoomData();
@@ -299,34 +384,28 @@ export default function GuestPortal() {
     };
   }, [roomParam]);
 
+  // QR code generation
   useEffect(() => {
     if (room && hotel && qrContainerRef.current) {
       qrContainerRef.current.innerHTML = "";
-
       const url = buildGuestUrl(hotel.id, room.id, room.name);
-
       QRCode.toCanvas(
         qrContainerRef.current,
         url,
         {
           width: 120,
           margin: 1,
-          color: {
-            dark: "#c9a84c",
-            light: "#0f1b2d",
-          },
+          color: { dark: "#c9a84c", light: "#0f1b2d" },
           errorCorrectionLevel: "H",
         },
         function (error) {
-          if (error) {
-            console.error("QR generation error:", error);
-          }
+          if (error) console.error("QR generation error:", error);
         },
       );
     }
   }, [room, hotel]);
 
-  // Timer effect - Runs continuously
+  // Timer update
   useEffect(() => {
     if (timeRemaining <= 0) {
       if (timerIntervalRef.current) {
@@ -335,11 +414,9 @@ export default function GuestPortal() {
       }
       return;
     }
-
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
-
     timerIntervalRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         const newTime = prev - 1000;
@@ -351,7 +428,6 @@ export default function GuestPortal() {
         return newTime;
       });
     }, 1000);
-
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
@@ -376,12 +452,6 @@ export default function GuestPortal() {
     return "ok";
   };
 
-  const getStatusText = () => {
-    if (isExpired) return "⏰ Stay has ended";
-    if (timeRemaining < 10 * 60 * 1000) return "⚠️ Expiring soon!";
-    return " Active stay";
-  };
-
   const sendMessage = async () => {
     if (!newMessage.trim()) {
       toast.error("Please type a message");
@@ -391,7 +461,6 @@ export default function GuestPortal() {
       toast.error("No active session");
       return;
     }
-
     try {
       const roomId = room?.id;
       const hotelId = hotel?.id;
@@ -399,14 +468,12 @@ export default function GuestPortal() {
         toast.error("Missing room or hotel information");
         return;
       }
-
       const msg = await messageService.sendGuestMessage(
         roomId,
         hotelId,
         newMessage,
         guestToken,
       );
-
       if (!messageIdsRef.current.has(msg.id)) {
         messageIdsRef.current.add(msg.id);
         setMessages((prev) => [...prev, msg]);
@@ -425,10 +492,56 @@ export default function GuestPortal() {
     toast.success("Copied to clipboard!");
   };
 
+  // ------------------------------
+  // 4. Offline/Error UI
+  // ------------------------------
+  if (isOffline || error) {
+    return (
+      <div className="min-h-screen bg-[#0f1b2d] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/10 p-8 text-center">
+          <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+            <i
+              className={`fas ${
+                isOffline ? "fa-wifi-slash" : "fa-exclamation-triangle"
+              } text-3xl text-amber-400`}></i>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">
+            {isOffline ? "No Internet Connection" : "Something went wrong"}
+          </h2>
+          <p className="text-gray-400 text-sm mb-6">
+            {isOffline
+              ? "Please connect to the hotel Wi-Fi network and try again."
+              : error || "An unexpected error occurred. Please try again."}
+          </p>
+          <button
+            onClick={() => {
+              setError(null);
+              setIsOffline(!navigator.onLine);
+              loadRoomData();
+            }}
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl font-medium hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300">
+            <i className="fas fa-sync-alt"></i>
+            Retry
+          </button>
+          <div className="mt-4 text-xs text-gray-500">
+            <i className="fas fa-info-circle mr-1"></i>
+            Make sure you are connected to{" "}
+            <span className="text-[#c9a84c]">
+              {hotel?.name || "hotel"}
+            </span>{" "}
+            Wi-Fi.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading skeleton (if no cached data and still loading)
   if (loading) {
     return <GuestPortalLoading />;
   }
 
+  // Room not found
   if (!room) {
     return <RoomNotFoundSkeleton />;
   }
@@ -446,6 +559,9 @@ export default function GuestPortal() {
       )
     : 0;
 
+  // ------------------------------
+  // 5. Main UI (unchanged except footer is already updated)
+  // ------------------------------
   return (
     <div className="min-h-screen bg-[#0f1b2d]">
       {/* Background Pattern */}
@@ -464,8 +580,7 @@ export default function GuestPortal() {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,168,76,0.08),transparent_55%)] pointer-events-none" />
 
       <div className="relative max-w-md mx-auto px-4 py-6 min-h-screen flex flex-col">
-        {/* Header - Matching Landing Page */}
-        {/* GuestPortal.jsx - Header section */}
+        {/* Header */}
         <div className="text-center mb-8 pt-4">
           <img
             src="/favicon1.png"
@@ -490,9 +605,7 @@ export default function GuestPortal() {
           {/* Gold Accent Bar */}
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#c9a84c] to-transparent" />
 
-          {/* Room Header - Key Card Style */}
-
-          {/* Room Header - Key Card Style */}
+          {/* Room Header */}
           <div className="px-6 pt-8 pb-6 text-center border-b border-white/5 bg-gradient-to-b from-[#c9a84c]/5 to-transparent">
             <p className="text-[#c9a84c] text-[10px] font-semibold tracking-[0.2em] uppercase">
               Your Room
@@ -502,8 +615,6 @@ export default function GuestPortal() {
               className="text-4xl font-medium text-white mt-1">
               {room.name}
             </h2>
-
-            {/* ADD ROOM TYPE DISPLAY HERE */}
             <div className="flex items-center justify-center gap-2 mt-2">
               <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getRoomTypeInfo(room.room_type).color}`}>
@@ -511,7 +622,6 @@ export default function GuestPortal() {
                 {getRoomTypeInfo(room.room_type).label}
               </span>
             </div>
-
             <div className="flex items-center justify-center gap-2 mt-2">
               <span className="text-xs font-mono text-gray-500">
                 {room.token}
@@ -567,7 +677,10 @@ export default function GuestPortal() {
                     <p className="text-sm font-semibold text-white mt-0.5">
                       {new Date(room.booking.start_time).toLocaleTimeString(
                         [],
-                        { hour: "2-digit", minute: "2-digit" },
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
                       )}
                     </p>
                   </div>
@@ -612,7 +725,7 @@ export default function GuestPortal() {
               </div>
             )}
 
-            {/* Tab Navigation - Gold Themed */}
+            {/* Tab Navigation */}
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: "info", icon: "fa-info-circle", label: "Info" },
@@ -648,7 +761,6 @@ export default function GuestPortal() {
               {/* Info Tab */}
               {activeTab === "info" && (
                 <div className="space-y-4 animate-fadeIn">
-                  {/* Room Type Card */}
                   <div
                     className={`bg-white/5 rounded-2xl p-4 border border-white/10`}>
                     <div className="flex items-center gap-3">
@@ -668,7 +780,6 @@ export default function GuestPortal() {
                       </div>
                     </div>
                   </div>
-                  {/* WiFi */}
                   {wifiPassword && (
                     <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
                       <div className="flex items-center justify-between">
@@ -707,8 +818,6 @@ export default function GuestPortal() {
                       )}
                     </div>
                   )}
-
-                  {/* Room Notes */}
                   {room.notes && (
                     <div className="bg-amber-500/5 rounded-2xl p-4 border border-amber-500/20">
                       <div className="flex items-start gap-3">
@@ -724,8 +833,6 @@ export default function GuestPortal() {
                       </div>
                     </div>
                   )}
-
-                  {/* Refresh Button */}
                   <div className="text-center pt-2">
                     <button
                       onClick={() => window.location.reload()}
@@ -740,7 +847,6 @@ export default function GuestPortal() {
               {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
-                  {/* Messages */}
                   <div className="p-4 max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
                     {messages.length === 0 ? (
                       <div className="text-center py-8">
@@ -797,7 +903,6 @@ export default function GuestPortal() {
                     <div ref={chatEndRef} />
                   </div>
 
-                  {/* Quick Actions - 2 Rows Horizontal Scrollable */}
                   {showQuickActions ? (
                     <div className="p-3 border-t border-white/5 bg-black/10">
                       <div className="flex items-center justify-between mb-2">
@@ -810,10 +915,8 @@ export default function GuestPortal() {
                           <i className="fas fa-times"></i>
                         </button>
                       </div>
-                      {/* Horizontal scrollable container with 2 rows */}
                       <div className="overflow-x-auto overflow-y-visible pb-2 -mx-1 px-1">
                         <div className="flex flex-col gap-2 min-w-max">
-                          {/* Row 1 - First 5 items */}
                           <div className="flex gap-2">
                             {quickActions.slice(0, 5).map((action, index) => (
                               <button
@@ -829,7 +932,6 @@ export default function GuestPortal() {
                               </button>
                             ))}
                           </div>
-                          {/* Row 2 - Last 5 items */}
                           <div className="flex gap-2">
                             {quickActions.slice(5, 10).map((action, index) => (
                               <button
@@ -849,7 +951,6 @@ export default function GuestPortal() {
                       </div>
                     </div>
                   ) : (
-                    /* Show Quick Actions Button - appears when hidden */
                     <div className="p-2 border-t border-white/5 bg-black/10">
                       <button
                         onClick={() => setShowQuickActions(true)}
@@ -860,7 +961,6 @@ export default function GuestPortal() {
                     </div>
                   )}
 
-                  {/* Message Input */}
                   <div className="p-3 border-t border-white/10 bg-black/20">
                     <div className="flex gap-2">
                       <input
@@ -882,7 +982,6 @@ export default function GuestPortal() {
               )}
 
               {/* Menu Tab */}
-              {/* Menu Tab */}
               {activeTab === "menu" && (
                 <div className="animate-fadeIn">
                   {menuImages.length > 0 ? (
@@ -898,15 +997,12 @@ export default function GuestPortal() {
                               alt={`Menu ${i + 1}`}
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                             />
-                            {/* Overlay gradient - always visible at bottom */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            {/* Center expand icon - appears on hover */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                               <div className="bg-black/60 rounded-full p-3 backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-300">
                                 <i className="fas fa-expand text-white text-lg"></i>
                               </div>
                             </div>
-                            {/* Bottom text - always visible with gradient background */}
                             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                               <p className="text-[10px] font-medium text-white/80 text-center group-hover:text-white transition-colors duration-300">
                                 <i className="fas fa-eye text-[#c9a84c] mr-1.5 text-[8px]"></i>
@@ -916,7 +1012,6 @@ export default function GuestPortal() {
                           </div>
                         ))}
                       </div>
-                      {/* Image count indicator */}
                       <div className="text-center mt-3">
                         <p className="text-[10px] text-gray-500">
                           <i className="fas fa-images text-[#c9a84c] mr-1"></i>
@@ -940,16 +1035,14 @@ export default function GuestPortal() {
             </div>
           </div>
         </div>
-        {/* Footer - Premium Version */}
+
+        {/* Footer - Premium Version (already updated) */}
         <div className="text-center mt-6 pb-4 space-y-3">
-          {/* Divider */}
           <div className="flex items-center justify-center gap-2">
             <span className="h-px w-8 bg-white/10" />
             <span className="text-[#c9a84c]">✦</span>
             <span className="h-px w-8 bg-white/10" />
           </div>
-
-          {/* Powered by - clickable StayKila */}
           <p className="text-[9px] text-gray-600 tracking-wider">
             Powered by{" "}
             <a
@@ -962,7 +1055,7 @@ export default function GuestPortal() {
         </div>
       </div>
 
-      {/* Image Viewer Modal - Using imported component */}
+      {/* Image Viewer Modal */}
       {selectedImage && (
         <ImageViewer
           images={menuImages.map((img) => img.image_url)}
@@ -976,8 +1069,6 @@ export default function GuestPortal() {
         />
       )}
 
-      {/* Animations */}
-      {/* Animations - using regular style tag since animations are in tailwind.config */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
