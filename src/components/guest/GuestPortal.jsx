@@ -949,25 +949,15 @@ export default function GuestPortal() {
             <span className="h-px w-8 bg-white/10" />
           </div>
 
-          {/* Tagline */}
-          <p className="text-[10px] text-gray-500 tracking-wider">
-            <i className="fas fa-crown text-[#c9a84c] mr-1"></i>
-            Premium Hotel Management System
-          </p>
-
-          {/* CTA Button */}
-          <a
-            href="mailto:founder@staykila.com?subject=Interested in StayKila&body=Hello! I'm a hotel owner and I'd like to learn more about StayKila. Please send me details."
-            className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-full text-xs font-medium hover:shadow-lg hover:shadow-[#c9a84c]/30 transition-all duration-300 group">
-            <i className="fas fa-envelope"></i>
-            <span>Contact Founder</span>
-            <i className="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
-          </a>
-
-          {/* Powered by */}
+          {/* Powered by - clickable StayKila */}
           <p className="text-[9px] text-gray-600 tracking-wider">
-            Powered by <span className="text-[#c9a84c]">StayKila</span> Lodge
-            Management
+            Powered by{" "}
+            <a
+              href="mailto:villacampamichael123@gmail.com?subject=Interested in StayKila Hotel Management&body=Hello! I'm a hotel owner and I'd like to learn more about StayKila. Please send me more information."
+              className="text-[#c9a84c] hover:text-[#e8d189] transition-colors hover:underline">
+              StayKila
+            </a>{" "}
+            Lodge Management
           </p>
         </div>
       </div>
