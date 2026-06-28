@@ -1,29 +1,4 @@
 // src/lib/guestUrl.js
-//
-// Single source of truth for building and parsing the guest portal URL.
-//
-// IMPORTANT — why this does NOT use URLSearchParams to build the URL:
-// URLSearchParams.set() encodes spaces as "+" (the application/x-www-form
-// -urlencoded convention used by HTML forms). That's correct for a normal
-// browser address bar, which decodes "+" back to a space before handing
-// the query string to your router — which is why this looked fine on
-// desktop. But a URL embedded in a QR code is read by a camera app and
-// handed to the OS as a generic URI, not submitted as a form. The URI
-// spec (RFC 3986) does NOT define "+" as meaning space — only form
-// encoding does. Many mobile camera-to-browser intent handoffs parse the
-// QR payload as a plain URI and never apply the form-decode step, so
-// "+" can arrive as a literal character (or worse, destabilize how the
-// "&" delimiters are re-parsed during the handoff) ONLY on the mobile
-// scan path — exactly matching "works on desktop, fails when scanned".
-//
-// Fix: encode manually with encodeURIComponent, which always emits %20
-// for a space. %20 is unambiguous in every context — form-encoded query
-// string, plain URI, QR payload — so it survives every parsing pass.
-
-/**
- * Build the guest portal URL for a room. Encodes manually with
- * encodeURIComponent (NOT URLSearchParams) so spaces become %20, not "+".
- */
 export function buildGuestUrl(hotelId, roomId, roomName) {
   const base = `${window.location.origin}/guest`;
   const roomPart = encodeURIComponent(`${hotelId}_${roomId}`);
