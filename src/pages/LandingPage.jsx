@@ -661,451 +661,124 @@ function RoomManagement() {
     </section>
   );
 }
+
 /* ============================================================ */
-/*  SECTION 3 — QR CODE SYSTEM (PREMIUM FAN REVEAL)             */
-/*  Cinematic fan-formation animation with cards flying in       */
-/*  from different directions and locking into a luxury layout.  */
+/*  SECTION 3 — QR CODE SYSTEM (signature moment)                */
+/*  A literal key-card shape carries the brand's "room key"      */
+/*  metaphor from Login.jsx into the marketing surface — instead */
+/*  of a generic square QR tile, it's cut and bordered like a    */
+/*  physical hotel key card with a perforated stub and chip.     */
 /* ============================================================ */
 function QRSystem() {
-  const [isVisible, setIsVisible] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const sectionRef = useRef(null);
-  const containerRef = useRef(null);
-
-  // 7 QR cards with different room data
-  const qrCards = [
-    {
-      id: 1,
-      room: "Room 101",
-      status: "Available",
-      color: "#34d399",
-      features: ["Ocean View", "King Bed"],
-      guest: "—",
-      tagline: "Ready for arrival",
-    },
-    {
-      id: 2,
-      room: "Room 102",
-      status: "Occupied",
-      color: "#f472b6",
-      features: ["City View", "Queen Bed"],
-      guest: "Mr. Johnson",
-      tagline: "Currently occupied",
-    },
-    {
-      id: 3,
-      room: "Room 103",
-      status: "Available",
-      color: "#34d399",
-      features: ["Pool View", "Twin Beds"],
-      guest: "—",
-      tagline: "Fresh & ready",
-    },
-    {
-      id: 4,
-      room: "Room 104",
-      status: "Maintenance",
-      color: "#fbbf24",
-      features: ["Garden View", "King Bed"],
-      guest: "—",
-      tagline: "Under maintenance",
-    },
-    {
-      id: 5,
-      room: "Room 105",
-      status: "Occupied",
-      color: "#f472b6",
-      features: ["Ocean View", "Queen Bed"],
-      guest: "Ms. Davis",
-      tagline: "Guest enjoying stay",
-    },
-    {
-      id: 6,
-      room: "Room 106",
-      status: "Available",
-      color: "#34d399",
-      features: ["City View", "Twin Beds"],
-      guest: "—",
-      tagline: "Ready to book",
-    },
-    {
-      id: 7,
-      room: "Room 107",
-      status: "Expiring",
-      color: "#f87171",
-      features: ["Pool View", "King Bed"],
-      guest: "Mr. Smith",
-      tagline: "Checking out soon",
-    },
-  ];
-
-  // Trigger the reveal animation after a short delay when component mounts
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Auto-reset and re-trigger after a pause (like a loop)
-  useEffect(() => {
-    let resetTimer;
-    let showTimer;
-    if (isVisible) {
-      // After 5 seconds, hide and re-show
-      resetTimer = setTimeout(() => {
-        setIsVisible(false);
-        showTimer = setTimeout(() => {
-          setIsVisible(true);
-        }, 800);
-      }, 5000);
-    }
-    return () => {
-      clearTimeout(resetTimer);
-      clearTimeout(showTimer);
-    };
-  }, [isVisible]);
-
-  // Define final fan positions (relative to container)
-  // Container size: we'll use a fixed aspect ratio container with relative units
-  // We'll use percentages for x,y to be responsive within container
-  const fanPositions = [
-    // Card 1 (bottom-left)
-    { x: -25, y: 25, rotate: -12, scale: 0.92, zIndex: 1 },
-    // Card 2 (middle-left)
-    { x: -12, y: 0, rotate: -6, scale: 0.95, zIndex: 2 },
-    // Card 3 (top-center)
-    { x: 0, y: -20, rotate: 0, scale: 1, zIndex: 5 },
-    // Card 4 (middle-right)
-    { x: 12, y: 0, rotate: 6, scale: 0.95, zIndex: 3 },
-    // Card 5 (bottom-right)
-    { x: 25, y: 25, rotate: 12, scale: 0.92, zIndex: 1 },
-    // Card 6 (lower-left, under Card2)
-    { x: -18, y: 12, rotate: -8, scale: 0.9, zIndex: 1 },
-    // Card 7 (lower-right, under Card4)
-    { x: 18, y: 12, rotate: 8, scale: 0.9, zIndex: 1 },
-  ];
-
-  // Entrance directions for each card (x and y offset, plus rotation)
-  const entranceFrom = [
-    { x: -200, y: 100, rotate: 35 }, // Card 1 from left-bottom
-    { x: -150, y: -80, rotate: 25 }, // Card 2 from left-top
-    { x: 0, y: -180, rotate: 18 }, // Card 3 from top
-    { x: 150, y: -80, rotate: -25 }, // Card 4 from right-top
-    { x: 200, y: 100, rotate: -35 }, // Card 5 from right-bottom
-    { x: -120, y: 180, rotate: 20 }, // Card 6 from lower-left
-    { x: 120, y: 180, rotate: -20 }, // Card 7 from lower-right
-  ];
-
-  // Stagger delays: each card appears after the previous with 0.08s gap
-  const staggerDelays = [0, 0.08, 0.16, 0.24, 0.32, 0.4, 0.48];
-
-  // Variants for each card entrance
-  const cardVariants = (index) => ({
-    hidden: {
-      x: entranceFrom[index].x,
-      y: entranceFrom[index].y,
-      rotate: entranceFrom[index].rotate,
-      scale: 0.7,
-      opacity: 0,
-      filter: "blur(8px)",
-    },
-    visible: {
-      x: fanPositions[index].x,
-      y: fanPositions[index].y,
-      rotate: fanPositions[index].rotate,
-      scale: fanPositions[index].scale,
-      opacity: 1,
-      filter: "blur(0px)",
-      transition: {
-        type: "spring",
-        stiffness: 260,
-        damping: 25,
-        mass: 0.8,
-        delay: staggerDelays[index],
-      },
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.5,
-      rotate: entranceFrom[index].rotate * 0.5,
-      transition: { duration: 0.3 },
-    },
-  });
-
-  // Idle floating animation (subtle)
-  const floatingAnimation = {
-    y: [0, -4, 0],
-    rotate: [0, 0.5, 0, -0.5, 0],
-    transition: {
-      y: {
-        duration: 4,
-        repeat: Infinity,
-        ease: "easeInOut",
-      },
-      rotate: {
-        duration: 4,
-        repeat: Infinity,
-        ease: "easeInOut",
-        times: [0, 0.25, 0.5, 0.75, 1],
-      },
-    },
-  };
-
-  // Hover effect: separate cards slightly
-  const hoverSeparation = (index) => {
-    // Map each card to a different offset
-    const offsets = [-18, -10, -6, 0, 6, 12, 18];
-    return {
-      x: fanPositions[index].x + offsets[index],
-      y: fanPositions[index].y + (index % 2 === 0 ? -4 : 4),
-      rotate: fanPositions[index].rotate + offsets[index] * 0.1,
-      scale: fanPositions[index].scale + 0.02,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 25,
-      },
-    };
-  };
-
   return (
     <section
       id="qr"
-      ref={sectionRef}
       className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0c1522] overflow-hidden pt-24 pb-12 md:pt-28">
-      {/* Premium background with gradient and subtle particles */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_50%,rgba(201,168,76,0.08),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_50%,rgba(201,168,76,0.05),transparent_40%)]" />
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(30)].map((_, i) => (
-          <motion.div
-            key={i}
-            animate={{
-              y: [0, -80, 0],
-              x: [0, 40, 0],
-              opacity: [0.1, 0.4, 0.1],
-            }}
-            transition={{
-              duration: 8 + i * 0.3,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: i * 0.2,
-            }}
-            className="absolute w-0.5 h-0.5 rounded-full bg-[#c9a84c]"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${1 + Math.random() * 2}px`,
-              height: `${1 + Math.random() * 2}px`,
-            }}
-          />
-        ))}
-      </div>
-
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_60%,rgba(201,168,76,0.1),transparent_50%)]" />
       <div className="relative max-w-7xl mx-auto px-5 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center w-full">
-        {/* QR Card Fan Animation */}
-        <div className="order-2 lg:order-1 flex justify-center">
-          <div
-            ref={containerRef}
-            className="relative w-[300px] sm:w-[380px] md:w-[440px] h-[320px] sm:h-[380px] md:h-[420px]"
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}>
-            {/* Central glow behind the fan */}
+        {/* Key-card visual */}
+        <Reveal
+          variants={scaleIn}
+          className="order-2 lg:order-1 flex justify-center">
+          <div className="relative w-[240px] sm:w-[280px] md:w-[300px] h-[340px] sm:h-[400px] md:h-[420px]">
+            {/* Key card body */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={
-                isVisible
-                  ? { opacity: 1, scale: 1 }
-                  : { opacity: 0, scale: 0.8 }
-              }
-              transition={{ duration: 0.8, delay: 0.5 }}
-              className="absolute inset-0 rounded-full bg-[#c9a84c]/5 blur-3xl"
-              style={{ transform: "translate(0, -10%)" }}
-            />
+              initial={{ rotate: -6 }}
+              whileInView={{ rotate: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute inset-0 rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#16243a] to-[#0c1522] border border-white/10 shadow-2xl shadow-black/50 p-5 sm:p-7 flex flex-col">
+              {/* QRSystem component - Key card header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {/* Updated logo with border and glow effect to match login page */}
+                  <div className="relative">
+                    <img
+                      src="/favicon1.png"
+                      alt="StayKila"
+                      className="w-6 h-6 rounded-lg border border-[#c9a84c]/30 shadow-xl object-cover"
+                    />
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#c9a84c]/20 rounded-full blur-sm"></div>
+                  </div>
+                  <span
+                    style={{ fontFamily: "'Cormorant Garamond', serif" }}
+                    className="text-white text-base sm:text-lg">
+                    StayKila
+                  </span>
+                </div>
+                <i className="fas fa-hotel text-[#c9a84c] text-sm"></i>
+              </div>
+              <p className="text-[10px] sm:text-[11px] tracking-widest uppercase text-gray-500 mt-1">
+                Room 214 · Key Access
+              </p>
 
-            {/* Cards */}
-            <AnimatePresence mode="wait">
-              {isVisible &&
-                qrCards.map((card, index) => (
-                  <motion.div
-                    key={card.id}
-                    variants={cardVariants(index)}
-                    initial="hidden"
-                    animate={
-                      isHovering ? hoverSeparation(index) : floatingAnimation
-                    }
-                    exit="exit"
-                    className="absolute w-[140px] sm:w-[180px] md:w-[200px] aspect-[3/4]"
+              <div className="flex-1 flex items-center justify-center">
+                <motion.div
+                  animate={{ rotate: [0, 3, 0, -3, 0] }}
+                  transition={{
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-xl bg-white p-3 shadow-[0_0_40px_-10px_rgba(201,168,76,0.5)]">
+                  <div
+                    className="w-full h-full rounded-md"
                     style={{
-                      left: "50%",
-                      top: "50%",
-                      transformOrigin: "center center",
-                      x: fanPositions[index].x,
-                      y: fanPositions[index].y,
-                      zIndex: fanPositions[index].zIndex,
-                      willChange: "transform, opacity",
+                      backgroundImage:
+                        "repeating-linear-gradient(0deg, #0f1b2d 0 4px, transparent 4px 8px), repeating-linear-gradient(90deg, #0f1b2d 0 4px, transparent 4px 8px)",
+                      backgroundBlendMode: "multiply",
                     }}
-                    whileHover={{ scale: 1.02 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 20,
-                    }}>
-                    {/* Card Content */}
-                    <motion.div
-                      animate={{
-                        borderColor: `${card.color}60`,
-                        boxShadow: `0 30px 70px rgba(201,168,76,0.18), 0 0 40px rgba(201,168,76,0.10)`,
-                      }}
-                      transition={{ duration: 0.6, delay: 0.6 + index * 0.03 }}
-                      className="relative w-full h-full rounded-2xl bg-gradient-to-br from-[#16243a] to-[#0c1522] border backdrop-blur-xl p-3 sm:p-4 flex flex-col overflow-hidden"
-                      style={{
-                        background: `linear-gradient(145deg, ${card.color}15, #0c1522)`,
-                        borderColor: `${card.color}40`,
-                      }}>
-                      {/* Glow accent */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#c9a84c]/5 to-transparent pointer-events-none" />
+                  />
+                </motion.div>
+              </div>
 
-                      {/* Card Number - subtle */}
-                      <div className="absolute top-2 right-2 text-[8px] font-mono text-gray-600 opacity-50">
-                        #{String(index + 1).padStart(2, "0")}
-                      </div>
-
-                      {/* Header */}
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1.5">
-                          <div className="relative">
-                            <img
-                              src="/favicon1.png"
-                              alt="StayKila"
-                              className="w-4 h-4 rounded border border-[#c9a84c]/30 object-cover"
-                            />
-                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#c9a84c]/20 rounded-full blur-sm" />
-                          </div>
-                          <span
-                            style={{
-                              fontFamily: "'Cormorant Garamond', serif",
-                            }}
-                            className="text-white text-xs sm:text-sm">
-                            StayKila
-                          </span>
-                        </div>
-                        <span
-                          className="text-[7px] sm:text-[8px] font-medium px-1.5 py-0.5 rounded-full"
-                          style={{
-                            backgroundColor: `${card.color}25`,
-                            color: card.color,
-                            border: `1px solid ${card.color}30`,
-                          }}>
-                          {card.status}
-                        </span>
-                      </div>
-
-                      <p className="text-[7px] sm:text-[8px] tracking-widest uppercase text-gray-500">
-                        {card.room}
-                      </p>
-
-                      {/* QR Code - smaller */}
-                      <div className="flex-1 flex items-center justify-center py-1">
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-white p-1.5 shadow-[0_0_20px_-5px_rgba(201,168,76,0.3)]">
-                          <div
-                            className="w-full h-full rounded"
-                            style={{
-                              backgroundImage:
-                                "repeating-linear-gradient(0deg, #0f1b2d 0 2px, transparent 2px 4px), repeating-linear-gradient(90deg, #0f1b2d 0 2px, transparent 2px 4px)",
-                              backgroundBlendMode: "multiply",
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Features - compact */}
-                      <div className="flex justify-center gap-2 mt-1">
-                        {card.features.map((feature, i) => (
-                          <div key={i} className="flex items-center gap-1">
-                            <span
-                              className="w-1 h-1 rounded-full"
-                              style={{ backgroundColor: card.color }}
-                            />
-                            <span className="text-[6px] sm:text-[7px] text-gray-400">
-                              {feature}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Footer */}
-                      <div className="mt-1.5 pt-1.5 border-t border-white/10 flex items-center justify-between">
-                        <span className="text-[6px] sm:text-[7px] text-gray-500 truncate max-w-[60px]">
-                          {card.guest !== "—" ? card.guest : "Available"}
-                        </span>
-                        <span className="flex items-center gap-1 text-[6px] sm:text-[7px] text-gray-500">
-                          <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                          Live
-                        </span>
-                      </div>
-
-                      {/* Tagline overlay on hover */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        whileHover={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-2xl p-2">
-                        <span className="text-[8px] sm:text-[9px] text-[#c9a84c] font-medium text-center">
-                          {card.tagline}
-                        </span>
-                      </motion.div>
-                    </motion.div>
-                  </motion.div>
-                ))}
-            </AnimatePresence>
-
-            {/* Status indicator */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: isVisible ? 1 : 0 }}
-              transition={{ delay: 0.8 }}
-              className="absolute -bottom-8 left-0 right-0 text-center">
-              <p className="text-[10px] text-gray-400 tracking-widest">
-                {isVisible ? "✦ 7 smart keys ready ✦" : "Loading..."}
+              <p className="text-center text-[10px] sm:text-[11px] text-gray-500">
+                Scan to unlock your stay
               </p>
             </motion.div>
+
+            {/* Phone mockup, peeking from behind. Hidden on small phones
+                where there isn't room for it without overlapping. */}
+            <motion.div
+              initial={{ opacity: 0, x: 30, rotate: 8 }}
+              whileInView={{ opacity: 1, x: 0, rotate: 8 }}
+              viewport={{ once: true }}
+              transition={{
+                duration: 0.8,
+                delay: 0.3,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className="absolute -right-10 sm:-right-14 md:-right-16 bottom-[-1.5rem] sm:bottom-[-2rem] w-24 sm:w-28 md:w-32 h-48 sm:h-56 md:h-64 rounded-[18px] sm:rounded-[22px] bg-[#0f1b2d] border-4 border-[#1d2c42] shadow-2xl shadow-black/60 p-2 hidden md:block">
+              <div className="w-full h-full rounded-2xl bg-gradient-to-b from-white/10 to-transparent flex flex-col items-center justify-center gap-2 px-3">
+                <i className="fas fa-wifi text-[#c9a84c] text-sm"></i>
+                <p className="text-[9px] text-gray-300 text-center leading-tight">
+                  WiFi connected
+                </p>
+                <div className="w-full h-px bg-white/10 my-1" />
+                <i className="fas fa-utensils text-[#c9a84c] text-sm"></i>
+                <p className="text-[9px] text-gray-300 text-center leading-tight">
+                  Digital menu ready
+                </p>
+              </div>
+            </motion.div>
           </div>
-        </div>
+        </Reveal>
 
         {/* Copy */}
         <Reveal className="order-1 lg:order-2">
           <Eyebrow>Contactless by design</Eyebrow>
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", damping: 15, stiffness: 100 }}
+          <h2
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
             className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-4 md:mb-5">
             A QR Code For{" "}
             <span className="italic text-[#c9a84c]">Every Room.</span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.7 }}
-            className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-md mb-6 md:mb-7">
+          </h2>
+          <p className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-md mb-6 md:mb-7">
             StayKila generates a unique QR code for every room automatically.
             One scan gives guests everything they need, without a single app
             download.
-          </motion.p>
-          <motion.ul
-            className="space-y-3 sm:space-y-3.5"
-            variants={{
-              hidden: { opacity: 0 },
-              show: {
-                opacity: 1,
-                transition: { staggerChildren: 0.08, delayChildren: 0.4 },
-              },
-            }}
-            initial="hidden"
-            animate="show">
+          </p>
+          <ul className="space-y-3 sm:space-y-3.5">
             {[
               {
                 icon: "fa-circle-info",
@@ -1119,29 +792,22 @@ function QRSystem() {
               },
               { icon: "fa-headset", text: "Direct line to guest support" },
             ].map((item) => (
-              <motion.li
+              <li
                 key={item.text}
-                variants={{
-                  hidden: { opacity: 0, x: -15 },
-                  show: { opacity: 1, x: 0 },
-                }}
-                whileHover={{ x: 5 }}
                 className="group flex items-center gap-3 text-sm text-gray-300 transition-colors hover:text-gray-100">
-                <motion.span
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6 }}
-                  className="w-8 h-8 rounded-lg bg-[#c9a84c]/15 flex items-center justify-center shrink-0 transition-colors group-hover:bg-[#c9a84c]/25">
-                  <i className={`fas ${item.icon} text-[#c9a84c] text-xs`} />
-                </motion.span>
+                <span className="w-8 h-8 rounded-lg bg-[#c9a84c]/15 flex items-center justify-center shrink-0 transition-colors group-hover:bg-[#c9a84c]/25">
+                  <i className={`fas ${item.icon} text-[#c9a84c] text-xs`}></i>
+                </span>
                 <span>{item.text}</span>
-              </motion.li>
+              </li>
             ))}
-          </motion.ul>
+          </ul>
         </Reveal>
       </div>
     </section>
   );
 }
+
 /* ============================================================ */
 /*  SECTION 3.5 — CALENDAR SYSTEM                                */
 /*  NEW: Visual calendar preview showing booking management      */
