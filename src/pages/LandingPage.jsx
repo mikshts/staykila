@@ -807,11 +807,6 @@ function QRSystem() {
     </section>
   );
 }
-
-/* ============================================================ */
-/*  SECTION 3.5 — CALENDAR SYSTEM                                */
-/*  NEW: Visual calendar preview showing booking management      */
-/* ============================================================ */
 function CalendarPreview() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedRoom, setSelectedRoom] = useState("Room 214");
@@ -834,17 +829,6 @@ function CalendarPreview() {
       other: "bg-gray-500",
     };
     return colors[source] || colors["other"];
-  };
-
-  const getSourceLabel = (source) => {
-    const labels = {
-      agoda: "Agoda",
-      booking: "Booking.com",
-      "walk-in": "Walk-in",
-      maintenance: "Maintenance",
-      other: "Other",
-    };
-    return labels[source] || source;
   };
 
   // Generate calendar grid for current month
@@ -965,33 +949,7 @@ function CalendarPreview() {
                 ))}
               </div>
 
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <h4 className="text-xs uppercase tracking-widest text-gray-400 mb-2">
-                  Legend
-                </h4>
-                <div className="space-y-1.5">
-                  {[
-                    { color: "bg-blue-500", label: "Agoda" },
-                    { color: "bg-purple-500", label: "Booking.com" },
-                    { color: "bg-green-500", label: "Walk-in" },
-                    { color: "bg-orange-500", label: "Maintenance" },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center gap-2 text-xs text-gray-400">
-                      <span
-                        className={`w-3 h-3 rounded-full ${item.color}`}></span>
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <button className="w-full text-center text-sm font-medium text-[#c9a84c] border border-[#c9a84c]/30 hover:bg-[#c9a84c]/10 rounded-lg px-4 py-2 transition">
-                  + Book New Date
-                </button>
-              </div>
+              {/* Legend removed – no longer needed */}
             </div>
           </Reveal>
 
@@ -1027,7 +985,7 @@ function CalendarPreview() {
                 ))}
               </div>
 
-              {/* Calendar grid */}
+              {/* Calendar grid – smaller squares */}
               <div className="grid grid-cols-7 gap-1">
                 {days.map((day, index) => {
                   const booked = isDateBooked(day.date);
@@ -1038,7 +996,7 @@ function CalendarPreview() {
                   return (
                     <div
                       key={index}
-                      className={`aspect-square rounded-lg p-1 flex flex-col items-center justify-center transition ${
+                      className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${
                         day.isCurrentMonth
                           ? booked
                             ? `bg-${getSourceColor(booking?.source)}/20 border border-${getSourceColor(booking?.source)}/30`
@@ -1055,59 +1013,12 @@ function CalendarPreview() {
                         }`}>
                         {day.date.getDate()}
                       </span>
-                      {booked && booking && (
-                        <span className="text-[8px] text-gray-300 truncate w-full text-center">
-                          {getSourceLabel(booking.source)}
-                        </span>
-                      )}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Selected date info */}
-              <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-gray-500">Selected:</span>
-                  <span className="text-sm text-white ml-2">
-                    {selectedDate.toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-500">{selectedRoom}</span>
-                  <span className="w-px h-5 bg-white/10" />
-                  <span className="text-xs text-emerald-400">
-                    {isDateBooked(selectedDate) ? "🔴 Booked" : "✅ Available"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick stats */}
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-3 text-center">
-                <p className="text-lg font-semibold text-white">42</p>
-                <p className="text-[10px] uppercase tracking-wide text-gray-500">
-                  Total Bookings
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-3 text-center">
-                <p className="text-lg font-semibold text-emerald-400">18</p>
-                <p className="text-[10px] uppercase tracking-wide text-gray-500">
-                  Available Rooms
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-3 text-center">
-                <p className="text-lg font-semibold text-[#c9a84c]">70%</p>
-                <p className="text-[10px] uppercase tracking-wide text-gray-500">
-                  Occupancy
-                </p>
-              </div>
+              {/* Footer and stats removed entirely */}
             </div>
           </Reveal>
         </div>
@@ -1115,7 +1026,6 @@ function CalendarPreview() {
     </section>
   );
 }
-
 /* ============================================================ */
 /*  SECTION 4 — GUEST MESSAGING                                 */
 /* ============================================================ */
