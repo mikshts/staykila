@@ -1445,6 +1445,8 @@ function Partners() {
   const partners = [
     { id: 1, src: "/partner1.png", name: "Partner 1" },
     { id: 2, src: "/partner2.png", name: "Partner 2" },
+    { id: 3, src: "/partner3.png", name: "Partner 3" }, // unique id
+    { id: 4, src: "/partner4.png", name: "Partner 4" }, // unique id
   ];
 
   return (
@@ -1471,7 +1473,7 @@ function Partners() {
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
           {partners.map((partner, index) => (
             <motion.div
-              key={partner.id}
+              key={partner.id} // now unique: 1, 2, 3, 4
               variants={fadeUp}
               whileHover={{ y: -8, scale: 1.02 }}
               transition={{ duration: 0.3 }}
