@@ -144,7 +144,7 @@ export default function Register() {
         </div>
 
         <p className="text-center text-gray-500 text-xs mt-6">
-          Secure sign-up • Protected by encryption
+          Secure • Protected • encrypted data
         </p>
       </div>
     </div>
