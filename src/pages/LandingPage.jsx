@@ -1695,11 +1695,19 @@ function Pricing() {
                 <p className="text-sm text-gray-400">{plan.rooms}</p>
               </div>
 
+              {/* Price with strikethrough and "Free" */}
               <div className="mb-4">
-                <span className="text-4xl font-bold text-white">
-                  {plan.price}
-                </span>
-                <span className="text-gray-400 text-sm ml-1">/month</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-4xl font-bold text-gray-400 line-through">
+                    {plan.price}
+                  </span>
+                  <span className="text-gray-400 text-sm line-through">
+                    /month
+                  </span>
+                  <span className="text-4xl font-bold text-[#c9a84c] ml-2">
+                    Free
+                  </span>
+                </div>
               </div>
 
               <p className="text-sm text-gray-400 mb-4">{plan.description}</p>
