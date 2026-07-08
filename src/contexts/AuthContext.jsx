@@ -40,20 +40,27 @@ export function AuthProvider({ children }) {
 
   const fetchHotel = async (userId) => {
     try {
-      const { data, error } = await supabase
+      // 1. Get the hotel_id
+      const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("hotel_id, hotels(*)")
+        .select("hotel_id")
         .eq("id", userId)
-        .maybeSingle(); // ✅ Use maybeSingle() to avoid 406
+        .maybeSingle();
 
-      if (error) {
-        console.error("Error fetching hotel:", error);
+      if (userError || !userData?.hotel_id) {
         setHotel(null);
         return;
       }
 
-      // If data is null or no hotels field, set null
-      setHotel(data?.hotels ?? null);
+      // 2. Fetch the hotel
+      const { data: hotelData, error: hotelError } = await supabase
+        .from("hotels")
+        .select("*")
+        .eq("id", userData.hotel_id)
+        .single();
+
+      if (hotelError) throw hotelError;
+      setHotel(hotelData);
     } catch (error) {
       console.error("Error fetching hotel:", error);
       setHotel(null);
