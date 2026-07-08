@@ -14,7 +14,8 @@ import QRDownload from "./QRDownload";
 import { buildGuestUrl } from "../../lib/guestUrl";
 import CalendarManager from "../settings/CalendarManager";
 import AnalyticsPanel from "../analytics/AnalyticsPanel";
-
+import SubscriptionManager from "./SubscriptionManager";
+import { useSubscription } from "../../hooks/useSubscription";
 import {
   CheckinModal,
   ExtendModal,
@@ -32,6 +33,7 @@ import {
 
 export default function Dashboard() {
   const { user, hotel, logout } = useAuth();
+  const { subscription, isLoading: subLoading } = useSubscription();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -1027,7 +1029,8 @@ export default function Dashboard() {
 
         <div className="p-4">
           <StatsCards stats={stats} revenue={revenue} />
-
+          {/* Subscription Banner */}
+          <SubscriptionManager />
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
             {/* All button - always shows total rooms */}
             <button
