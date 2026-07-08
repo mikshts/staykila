@@ -71,7 +71,7 @@ export function AuthProvider({ children }) {
       setHotel(null);
     }
   };
-  //we
+  //wee
   const login = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
