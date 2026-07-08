@@ -1,6 +1,9 @@
 // src/pages/LandingPage.jsx
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import PricingCalculator from "../components/pricing/PricingCalculator";
+import { useBrandFonts } from "../hooks/useBrandFonts";
+import { Eyebrow } from "../components/common/Eyebrow";
 import {
   motion,
   useScroll,
@@ -8,22 +11,6 @@ import {
   useSpring,
   AnimatePresence,
 } from "framer-motion";
-
-/* ------------------------------------------------------------------ */
-/*  Fonts — same pairing as Login.jsx, so the handoff from landing to  */
-/*  login feels like one continuous brand, not two different apps.   */
-/* ------------------------------------------------------------------ */
-function useBrandFonts() {
-  useEffect(() => {
-    if (document.getElementById("staykila-fonts")) return;
-    const link = document.createElement("link");
-    link.id = "staykila-fonts";
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600;700;800&display=swap";
-    document.head.appendChild(link);
-  }, []);
-}
 
 /* ------------------------------------------------------------------ */
 /*  Shared motion variants                                            */
@@ -74,23 +61,6 @@ function Reveal({ children, variants = fadeUp, className = "", ...rest }) {
       {...rest}>
       {children}
     </motion.div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Eyebrow / chapter mark — reused from Login.jsx's visual language. */
-/* ------------------------------------------------------------------ */
-function Eyebrow({ children, light = false }) {
-  return (
-    <div className="flex items-center gap-3 mb-5 justify-center md:justify-start">
-      <span className="h-px w-8 bg-[#c9a84c]" />
-      <span
-        className={`text-xs tracking-[0.25em] uppercase font-semibold ${
-          light ? "text-[#0f1b2d]/70" : "text-[#c9a84c]"
-        }`}>
-        {children}
-      </span>
-    </div>
   );
 }
 
@@ -164,7 +134,7 @@ function Navbar() {
     { href: "#qr", label: "QR System" },
     { href: "#calendar", label: "Calendar" },
     { href: "#analytics", label: "Analytics" },
-    { href: "#pricing", label: "Pricing" },
+    { href: "/pricing", label: "Pricing" }, // changed
   ];
 
   return (
@@ -210,7 +180,7 @@ function Navbar() {
             Login
           </button>
           <button
-            onClick={() => navigate("/signin")}
+            onClick={() => navigate("/pricing")}
             className="text-sm font-semibold text-[#0f1b2d] bg-gradient-to-r from-[#c9a84c] to-[#e8d189] px-4 py-2 rounded-lg hover:shadow-[0_8px_24px_-8px_rgba(201,168,76,0.6)] hover:-translate-y-0.5 transition-all duration-200">
             Start Free Trial
           </button>
@@ -1349,7 +1319,59 @@ function Operations() {
     </section>
   );
 }
+/* ============================================================ */
+/*  SECTION 8 — PRICING (Dynamic, room‑based)                   */
+/* ============================================================ */
+function Pricing() {
+  const navigate = useNavigate();
+  const [selectedRooms, setSelectedRooms] = useState(25);
 
+  const handleStartTrial = () => {
+    sessionStorage.setItem("preferredRooms", selectedRooms.toString());
+    navigate("/signin");
+  };
+
+  return (
+    <section
+      id="pricing"
+      className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.06),transparent_60%)]" />
+      <div className="relative max-w-4xl mx-auto px-5 sm:px-6 w-full">
+        <Reveal className="text-center max-w-2xl mx-auto mb-8 md:mb-12">
+          <Eyebrow>Simple pricing</Eyebrow>
+          <h2
+            style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-3">
+            Only pay for the rooms you manage.
+          </h2>
+          <p className="text-gray-400 text-sm sm:text-base">
+            No fixed tiers. No hidden fees. Scale with your property.
+          </p>
+        </Reveal>
+
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 md:p-8 border border-white/10 shadow-2xl shadow-black/30">
+          <PricingCalculator
+            initialRooms={25}
+            onRoomCountChange={setSelectedRooms}
+            showYearly={false}
+          />
+          <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+            <button
+              onClick={() => navigate("/pricing")}
+              className="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl hover:bg-white/20 transition-colors">
+              See full pricing
+            </button>
+            <button
+              onClick={handleStartTrial}
+              className="px-6 py-3 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] font-semibold rounded-xl hover:shadow-[0_8px_24px_-8px_rgba(201,168,76,0.6)] hover:-translate-y-0.5 transition-all duration-200">
+              Start Free Trial
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 /* ============================================================ */
 /*  SECTION 9 — HOW IT WORKS                                     */
 /*  This is the one place numbering earns its keep: these are    */
@@ -1588,153 +1610,6 @@ function Testimonials() {
             />
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
-
-/* ============================================================ */
-/*  SECTION 8 — PRICING                                          */
-/*  Simple, transparent pricing for properties of all sizes.     */
-/* ============================================================ */
-function Pricing() {
-  const navigate = useNavigate();
-
-  const plans = [
-    {
-      name: "Starter",
-      price: "₱150",
-      rooms: "Up to 15 Rooms",
-      description: "Perfect for small boutique hotels and inns",
-      features: [
-        "Room management",
-        "QR check-in system",
-        "Basic analytics",
-        "Guest messaging",
-        "Email support",
-      ],
-      recommended: false,
-    },
-    {
-      name: "Professional",
-      price: "₱250",
-      rooms: "Up to 40 Rooms",
-      description: "Ideal for growing hotels and resorts",
-      features: [
-        "Everything in Starter",
-        "Advanced analytics",
-        "Revenue tracking",
-        "Staff management",
-        "Priority support",
-        "Custom branding",
-      ],
-      recommended: true,
-    },
-    {
-      name: "Enterprise",
-      price: "₱400",
-      rooms: "Up to 50 Rooms",
-      description: "For large properties and hotel groups",
-      features: [
-        "Everything in Professional",
-        "Multi-property management",
-        "Advanced reporting",
-        "Dedicated account manager",
-        "API access",
-        "24/7 phone support",
-      ],
-      recommended: false,
-    },
-  ];
-
-  return (
-    <section
-      id="pricing"
-      className="relative min-h-screen w-full snap-start snap-always flex items-center justify-center bg-[#0f1b2d] overflow-hidden pt-24 pb-12 md:pt-28">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.06),transparent_60%)]" />
-      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 py-8 md:py-12 w-full">
-        <Reveal className="text-center max-w-2xl mx-auto mb-8 md:mb-12">
-          <Eyebrow>Simple, transparent pricing</Eyebrow>
-          <h2
-            style={{ fontFamily: "'Cormorant Garamond', serif" }}
-            className="text-3xl sm:text-4xl md:text-5xl text-white font-medium leading-tight mb-3 md:mb-4">
-            Choose Your <span className="italic text-[#c9a84c]">Plan.</span>
-          </h2>
-          <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
-            Start with what you need — upgrade as you grow.
-          </p>
-        </Reveal>
-
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.15 }}
-          variants={staggerContainer}
-          className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 max-w-5xl mx-auto">
-          {plans.map((plan) => (
-            <motion.div
-              key={plan.name}
-              variants={fadeUp}
-              whileHover={{ y: -8 }}
-              transition={{ duration: 0.3 }}
-              className={`relative rounded-2xl p-6 flex flex-col ${
-                plan.recommended
-                  ? "bg-gradient-to-br from-[#c9a84c]/20 to-[#0f1b2d] border-2 border-[#c9a84c] shadow-xl shadow-[#c9a84c]/10"
-                  : "bg-white/5 border border-white/10 hover:border-[#c9a84c]/30"
-              }`}>
-              {plan.recommended && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#c9a84c] text-[#0f1b2d] text-xs font-semibold px-4 py-1 rounded-full whitespace-nowrap">
-                  Most Popular
-                </div>
-              )}
-
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-white">
-                  {plan.name}
-                </h3>
-                <p className="text-sm text-gray-400">{plan.rooms}</p>
-              </div>
-
-              {/* Price with strikethrough and "Free" */}
-              <div className="mb-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-4xl font-bold text-gray-400 line-through">
-                    {plan.price}
-                  </span>
-                  <span className="text-gray-400 text-sm line-through">
-                    /month
-                  </span>
-                  <span className="text-4xl font-bold text-[#c9a84c] ml-2">
-                    Free
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-400 mb-4">{plan.description}</p>
-
-              <ul className="space-y-2 mb-6 flex-1">
-                {plan.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-start gap-2 text-sm text-gray-300">
-                    <i className="fas fa-check text-[#c9a84c] text-xs mt-1"></i>
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => navigate("/signin")}
-                className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 ${
-                  plan.recommended
-                    ? "bg-[#c9a84c] text-[#0f1b2d] hover:bg-[#b8973a] hover:shadow-lg hover:shadow-[#c9a84c]/30"
-                    : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
-                }`}>
-                Get Started
-              </button>
-            </motion.div>
-          ))}
-        </motion.div>
       </div>
     </section>
   );

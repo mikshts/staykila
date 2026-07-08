@@ -1,6 +1,11 @@
 // src/components/auth/HotelSetup.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  PRICING_CONFIG,
+  calculateMonthlyPrice,
+  calculateYearlyPrice,
+} from "../../lib/pricing";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
@@ -9,10 +14,15 @@ export default function HotelSetup() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
+  // ✅ MUST call useSearchParams BEFORE useState that uses its value
+  const [searchParams] = useSearchParams();
+  const initialRooms = parseInt(searchParams.get("rooms"), 10) || 10;
+
   const [formData, setFormData] = useState({
     name: "",
     owner: "",
-    rooms: 10,
+    rooms: initialRooms, // now defined
   });
 
   const handleSubmit = async (e) => {
@@ -51,17 +61,14 @@ export default function HotelSetup() {
           room_number: i,
           name: `Room ${i}`,
           status: "available",
-          room_type: "single", // Default room type
+          room_type: "single",
         });
       }
 
       const { error: roomsError } = await supabase.from("rooms").insert(rooms);
-
       if (roomsError) throw roomsError;
 
-      // ======================================================
-      // UPDATED: Create default pricing for ALL room types
-      // ======================================================
+      // Create default pricing for all room types
       const roomTypes = ["single", "double", "family"];
       const defaultPrices = {
         single: { 1: 100, 3: 250, 6: 450, 12: 800, 24: 1500 },
@@ -84,8 +91,27 @@ export default function HotelSetup() {
       const { error: pricingError } = await supabase
         .from("pricing")
         .insert(pricing);
-
       if (pricingError) throw pricingError;
+
+      // ✅ Create subscription with 30‑day trial
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + PRICING_CONFIG.trialDays);
+
+      const { error: subError } = await supabase.from("subscriptions").insert({
+        hotel_id: hotel.id,
+        room_count: formData.rooms,
+        price_per_room: PRICING_CONFIG.pricePerRoom,
+        monthly_amount: calculateMonthlyPrice(formData.rooms),
+        yearly_amount: calculateYearlyPrice(formData.rooms),
+        currency: PRICING_CONFIG.currencyCode,
+        trial_start: new Date().toISOString(),
+        trial_end: trialEnd.toISOString(),
+        subscription_status: "trial",
+        current_period_start: new Date().toISOString(),
+        current_period_end: trialEnd.toISOString(),
+      });
+
+      if (subError) throw subError;
 
       toast.success("Hotel setup complete!");
       navigate("/");

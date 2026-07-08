@@ -35,10 +35,14 @@ export default function AuthCallback() {
             console.error("User lookup error:", userError);
           }
 
+          // inside AuthCallback.jsx, where you check if user has no hotel
           if (!data || !data.hotel_id) {
-            // User needs to set up a hotel
+            // Get the room count from sessionStorage (set by PricingPage or LandingPage)
+            const preferredRooms =
+              sessionStorage.getItem("preferredRooms") || 10;
+            sessionStorage.removeItem("preferredRooms"); // clean up
             toast.success("Welcome! Please set up your hotel.");
-            navigate("/setup");
+            navigate(`/setup?rooms=${preferredRooms}`);
           } else {
             toast.success("Signed in successfully!");
             navigate("/");

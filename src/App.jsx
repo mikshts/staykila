@@ -12,6 +12,7 @@ import Dashboard from "./components/dashboard/Dashboard";
 import GuestPortal from "./components/guest/GuestPortal";
 import AuthCallback from "./components/auth/AuthCallback";
 import HotelSetup from "./components/auth/HotelSetup";
+import PricingPage from "./pages/PricingPage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <HotelProvider>
           <Toaster position="bottom-center" />
           <Routes>
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/login" element={<LandingPage />} />
             <Route path="/signin" element={<Login />} />
             <Route path="/register" element={<Register />} />
