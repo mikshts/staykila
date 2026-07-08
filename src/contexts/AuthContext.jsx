@@ -37,22 +37,27 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
   // src/contexts/AuthContext.jsx (updated fetchHotel)
-
   const fetchHotel = async (userId) => {
     try {
-      // 1. Get the hotel_id
+      // 1. Get hotel_id from users
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("hotel_id")
         .eq("id", userId)
         .maybeSingle();
 
-      if (userError || !userData?.hotel_id) {
+      if (userError) {
+        console.error("Error fetching user:", userError);
         setHotel(null);
         return;
       }
 
-      // 2. Fetch the hotel
+      if (!userData || !userData.hotel_id) {
+        setHotel(null);
+        return;
+      }
+
+      // 2. Fetch the hotel by its ID
       const { data: hotelData, error: hotelError } = await supabase
         .from("hotels")
         .select("*")
