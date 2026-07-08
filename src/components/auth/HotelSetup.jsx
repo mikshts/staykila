@@ -15,22 +15,31 @@ export default function HotelSetup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // ✅ MUST call useSearchParams BEFORE useState that uses its value
+  // Read the room count from the URL query param (passed from AuthCallback)
   const [searchParams] = useSearchParams();
   const initialRooms = parseInt(searchParams.get("rooms"), 10) || 10;
 
   const [formData, setFormData] = useState({
     name: "",
     owner: "",
-    rooms: initialRooms, // now defined
+    rooms: initialRooms,
   });
+
+  // Safe handler for the room number input (prevents NaN)
+  const handleRoomChange = (e) => {
+    const val = parseInt(e.target.value, 10);
+    setFormData({
+      ...formData,
+      rooms: isNaN(val) ? 1 : Math.min(Math.max(val, 1), 300),
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Create hotel
+      // 1. Create hotel
       const { data: hotel, error: hotelError } = await supabase
         .from("hotels")
         .insert({
@@ -43,7 +52,7 @@ export default function HotelSetup() {
 
       if (hotelError) throw hotelError;
 
-      // Create user record
+      // 2. Create user record (links auth user to this hotel)
       const { error: userError } = await supabase.from("users").insert({
         id: user.id,
         hotel_id: hotel.id,
@@ -53,7 +62,7 @@ export default function HotelSetup() {
 
       if (userError) throw userError;
 
-      // Create rooms
+      // 3. Create rooms
       const rooms = [];
       for (let i = 1; i <= formData.rooms; i++) {
         rooms.push({
@@ -68,7 +77,7 @@ export default function HotelSetup() {
       const { error: roomsError } = await supabase.from("rooms").insert(rooms);
       if (roomsError) throw roomsError;
 
-      // Create default pricing for all room types
+      // 4. Create default pricing for all room types
       const roomTypes = ["single", "double", "family"];
       const defaultPrices = {
         single: { 1: 100, 3: 250, 6: 450, 12: 800, 24: 1500 },
@@ -93,7 +102,7 @@ export default function HotelSetup() {
         .insert(pricing);
       if (pricingError) throw pricingError;
 
-      // ✅ Create subscription with 30‑day trial
+      // 5. Create subscription with 30-day trial
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() + PRICING_CONFIG.trialDays);
 
@@ -173,14 +182,15 @@ export default function HotelSetup() {
             <input
               type="number"
               value={formData.rooms}
-              onChange={(e) =>
-                setFormData({ ...formData, rooms: parseInt(e.target.value) })
-              }
+              onChange={handleRoomChange}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#c9a84c]"
               min={1}
               max={300}
               required
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Pre‑filled from your pricing selection. You can adjust it now.
+            </p>
           </div>
 
           <button
