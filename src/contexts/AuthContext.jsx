@@ -36,6 +36,7 @@ export function AuthProvider({ children }) {
 
     return () => subscription.unsubscribe();
   }, []);
+  // src/contexts/AuthContext.jsx (updated fetchHotel)
 
   const fetchHotel = async (userId) => {
     try {
@@ -43,20 +44,19 @@ export function AuthProvider({ children }) {
         .from("users")
         .select("hotel_id, hotels(*)")
         .eq("id", userId)
-        .single();
+        .maybeSingle(); // ✅ Use maybeSingle() to avoid 406
 
       if (error) {
-        if (error.code === "PGRST116") {
-          setHotel(null);
-          return;
-        }
         console.error("Error fetching hotel:", error);
+        setHotel(null);
         return;
       }
 
-      setHotel(data.hotels);
+      // If data is null or no hotels field, set null
+      setHotel(data?.hotels ?? null);
     } catch (error) {
       console.error("Error fetching hotel:", error);
+      setHotel(null);
     }
   };
 
