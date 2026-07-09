@@ -39,52 +39,60 @@ export default function HotelSetup() {
     setLoading(true);
 
     try {
-      // 0. Check if this user already has a hotel (re-entry / retry case)
+      // 0. Check if this user already has a hotel linked
       const { data: existingUserRow } = await supabase
         .from("users")
         .select("hotel_id")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (existingUserRow?.hotel_id) {
-        toast.success("Hotel already set up!");
-        navigate("/");
-        return;
-      }
-
-      // 1. Check if an orphaned hotel already exists for this email
-      //    (leftover from a previous failed attempt)
       let hotel;
-      const { data: existingHotel } = await supabase
-        .from("hotels")
-        .select("*")
-        .eq("email", user.email)
-        .maybeSingle();
 
-      if (existingHotel) {
-        hotel = existingHotel;
-      } else {
-        const { data: newHotel, error: hotelError } = await supabase
+      if (existingUserRow?.hotel_id) {
+        // User already linked to a hotel — fetch it and CONTINUE
+        // (do NOT bail out here — still need to verify rooms/pricing/subscription exist)
+        const { data: linkedHotel, error: hotelFetchError } = await supabase
           .from("hotels")
-          .insert({
-            name: formData.name,
-            owner: formData.owner || user.user_metadata?.full_name || "Owner",
-            email: user.email,
-          })
-          .select()
+          .select("*")
+          .eq("id", existingUserRow.hotel_id)
           .single();
-        if (hotelError) throw hotelError;
-        hotel = newHotel;
-      }
 
-      // 2. Link user to hotel (upsert in case of retry)
-      const { error: userError } = await supabase.from("users").upsert({
-        id: user.id,
-        hotel_id: hotel.id,
-        full_name: formData.owner || user.user_metadata?.full_name || "Owner",
-        role: "admin",
-      });
-      if (userError) throw userError;
+        if (hotelFetchError) throw hotelFetchError;
+        hotel = linkedHotel;
+      } else {
+        // 1. Check if an orphaned hotel already exists for this email
+        //    (leftover from a previous failed attempt)
+        const { data: existingHotel } = await supabase
+          .from("hotels")
+          .select("*")
+          .eq("email", user.email)
+          .maybeSingle();
+
+        if (existingHotel) {
+          hotel = existingHotel;
+        } else {
+          const { data: newHotel, error: hotelError } = await supabase
+            .from("hotels")
+            .insert({
+              name: formData.name,
+              owner: formData.owner || user.user_metadata?.full_name || "Owner",
+              email: user.email,
+            })
+            .select()
+            .single();
+          if (hotelError) throw hotelError;
+          hotel = newHotel;
+        }
+
+        // 2. Link user to hotel (upsert in case of retry)
+        const { error: userError } = await supabase.from("users").upsert({
+          id: user.id,
+          hotel_id: hotel.id,
+          full_name: formData.owner || user.user_metadata?.full_name || "Owner",
+          role: "admin",
+        });
+        if (userError) throw userError;
+      }
 
       // 3. Rooms — only create if none exist yet for this hotel
       const { count: existingRoomCount } = await supabase
