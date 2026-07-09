@@ -1,11 +1,11 @@
 // src/components/dashboard/SubscriptionManager.jsx
 import { useState } from "react";
 import { useSubscription } from "../../hooks/useSubscription";
-import { useHotel } from "../../contexts/HotelContext";
+import { useAuth } from "../../contexts/AuthContext"; // ← was useHotel from HotelContext
 
 export default function SubscriptionManager() {
   const { subscription, isLoading } = useSubscription();
-  const { hotel } = useHotel();
+  const { hotel } = useAuth(); // ← use the real hotel
   const [loading, setLoading] = useState(false);
 
   const isActive =
