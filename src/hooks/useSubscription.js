@@ -1,10 +1,10 @@
 // src/hooks/useSubscription.js
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { useHotel } from "../contexts/HotelContext";
+import { useAuth } from "../contexts/AuthContext"; // ← changed from useHotel/HotelContext
 
 export function useSubscription() {
-  const { hotel } = useHotel();
+  const { hotel } = useAuth(); // ← real, populated hotel
   const [subscription, setSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -18,7 +18,7 @@ export function useSubscription() {
         .from("subscriptions")
         .select("*")
         .eq("hotel_id", hotel.id)
-        .maybeSingle(); // better than .single() to avoid error if none
+        .maybeSingle();
 
       if (error) {
         console.error("Subscription fetch error:", error);

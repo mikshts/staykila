@@ -2,7 +2,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./contexts/AuthContext.jsx";
-import { HotelProvider } from "./contexts/HotelContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Login from "./components/auth/Login";
 import LandingPage from "./pages/LandingPage";
@@ -18,27 +17,25 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <HotelProvider>
-          <Toaster position="bottom-center" />
-          <Routes>
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/login" element={<LandingPage />} />
-            <Route path="/signin" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/setup" element={<HotelSetup />} />
-            <Route path="/guest" element={<GuestPortal />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </HotelProvider>
+        <Toaster position="bottom-center" />
+        <Routes>
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/login" element={<LandingPage />} />
+          <Route path="/signin" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/setup" element={<HotelSetup />} />
+          <Route path="/guest" element={<GuestPortal />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
       </AuthProvider>
     </BrowserRouter>
   );
