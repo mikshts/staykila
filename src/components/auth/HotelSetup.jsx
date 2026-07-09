@@ -39,94 +39,129 @@ export default function HotelSetup() {
     setLoading(true);
 
     try {
-      // 1. Create hotel
-      const { data: hotel, error: hotelError } = await supabase
+      // 0. Check if this user already has a hotel (re-entry / retry case)
+      const { data: existingUserRow } = await supabase
+        .from("users")
+        .select("hotel_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (existingUserRow?.hotel_id) {
+        toast.success("Hotel already set up!");
+        navigate("/");
+        return;
+      }
+
+      // 1. Check if an orphaned hotel already exists for this email
+      //    (leftover from a previous failed attempt)
+      let hotel;
+      const { data: existingHotel } = await supabase
         .from("hotels")
-        .insert({
-          name: formData.name,
-          owner: formData.owner || user.user_metadata?.full_name || "Owner",
-          email: user.email,
-        })
-        .select()
-        .single();
+        .select("*")
+        .eq("email", user.email)
+        .maybeSingle();
 
-      if (hotelError) throw hotelError;
+      if (existingHotel) {
+        hotel = existingHotel;
+      } else {
+        const { data: newHotel, error: hotelError } = await supabase
+          .from("hotels")
+          .insert({
+            name: formData.name,
+            owner: formData.owner || user.user_metadata?.full_name || "Owner",
+            email: user.email,
+          })
+          .select()
+          .single();
+        if (hotelError) throw hotelError;
+        hotel = newHotel;
+      }
 
-      // 2. Create user record (links auth user to this hotel)
-      const { error: userError } = await supabase.from("users").insert({
+      // 2. Link user to hotel (upsert in case of retry)
+      const { error: userError } = await supabase.from("users").upsert({
         id: user.id,
         hotel_id: hotel.id,
         full_name: formData.owner || user.user_metadata?.full_name || "Owner",
         role: "admin",
       });
-
       if (userError) throw userError;
 
-      // 3. Create rooms
-      const rooms = [];
-      for (let i = 1; i <= formData.rooms; i++) {
-        rooms.push({
+      // 3. Rooms — only create if none exist yet for this hotel
+      const { count: existingRoomCount } = await supabase
+        .from("rooms")
+        .select("*", { count: "exact", head: true })
+        .eq("hotel_id", hotel.id);
+
+      if (!existingRoomCount) {
+        const rooms = Array.from({ length: formData.rooms }, (_, i) => ({
           hotel_id: hotel.id,
-          room_number: i,
-          name: `Room ${i}`,
+          room_number: i + 1,
+          name: `Room ${i + 1}`,
           status: "available",
           room_type: "single",
-        });
+        }));
+        const { error: roomsError } = await supabase
+          .from("rooms")
+          .insert(rooms);
+        if (roomsError) throw roomsError;
       }
 
-      const { error: roomsError } = await supabase.from("rooms").insert(rooms);
-      if (roomsError) throw roomsError;
-
-      // 4. Create default pricing for all room types
+      // 4. Pricing — upsert instead of insert so retries don't fail on constraint
       const roomTypes = ["single", "double", "family"];
       const defaultPrices = {
         single: { 1: 100, 3: 250, 6: 450, 12: 800, 24: 1500 },
         double: { 1: 150, 3: 350, 6: 600, 12: 1000, 24: 1800 },
         family: { 1: 250, 3: 500, 6: 800, 12: 1300, 24: 2200 },
       };
-
       const pricing = [];
       roomTypes.forEach((roomType) => {
         Object.entries(defaultPrices[roomType]).forEach(([hours, price]) => {
           pricing.push({
             hotel_id: hotel.id,
             duration_hours: parseInt(hours),
-            price: price,
+            price,
             room_type: roomType,
           });
         });
       });
-
       const { error: pricingError } = await supabase
         .from("pricing")
-        .insert(pricing);
+        .upsert(pricing, { onConflict: "hotel_id,duration_hours,room_type" });
       if (pricingError) throw pricingError;
 
-      // 5. Create subscription with 30-day trial
-      const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + PRICING_CONFIG.trialDays);
+      // 5. Subscription — only create if none exists
+      const { data: existingSub } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("hotel_id", hotel.id)
+        .maybeSingle();
 
-      const { error: subError } = await supabase.from("subscriptions").insert({
-        hotel_id: hotel.id,
-        room_count: formData.rooms,
-        price_per_room: PRICING_CONFIG.pricePerRoom,
-        monthly_amount: calculateMonthlyPrice(formData.rooms),
-        yearly_amount: calculateYearlyPrice(formData.rooms),
-        currency: PRICING_CONFIG.currencyCode,
-        trial_start: new Date().toISOString(),
-        trial_end: trialEnd.toISOString(),
-        subscription_status: "trial",
-        current_period_start: new Date().toISOString(),
-        current_period_end: trialEnd.toISOString(),
-      });
-
-      if (subError) throw subError;
+      if (!existingSub) {
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + PRICING_CONFIG.trialDays);
+        const { error: subError } = await supabase
+          .from("subscriptions")
+          .insert({
+            hotel_id: hotel.id,
+            room_count: formData.rooms,
+            price_per_room: PRICING_CONFIG.pricePerRoom,
+            monthly_amount: calculateMonthlyPrice(formData.rooms),
+            yearly_amount: calculateYearlyPrice(formData.rooms),
+            currency: PRICING_CONFIG.currencyCode,
+            trial_start: new Date().toISOString(),
+            trial_end: trialEnd.toISOString(),
+            subscription_status: "trial",
+            current_period_start: new Date().toISOString(),
+            current_period_end: trialEnd.toISOString(),
+          });
+        if (subError) throw subError;
+      }
 
       toast.success("Hotel setup complete!");
       navigate("/");
     } catch (error) {
       console.error("Setup error:", error);
-      toast.error("Failed to setup hotel");
+      toast.error(error.message || "Failed to setup hotel");
     } finally {
       setLoading(false);
     }
