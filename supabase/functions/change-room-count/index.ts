@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY"); // renamed
 const PRICE_PER_ROOM = 1499;
 
 const corsHeaders = {
@@ -32,7 +32,7 @@ serve(async (req) => {
       throw new Error("Invalid room count. Must be between 1 and 300.");
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY); // renamed
 
     // Fetch current subscription
     console.log("🔍 Fetching subscription for hotel:", hotelId);

@@ -1,11 +1,10 @@
-// supabase/functions/create-checkout/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const PAYMONGO_SECRET = Deno.env.get("PAYMONGO_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const PRICE_PER_ROOM = 1499; // could also be stored in DB
+const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY"); // renamed
+const PRICE_PER_ROOM = 1499;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +24,7 @@ serve(async (req) => {
       throw new Error("Missing required fields");
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY); // renamed
 
     // Fetch or create subscription for hotel
     let { data: subscription, error: subError } = await supabase
@@ -63,7 +62,7 @@ serve(async (req) => {
 
     const currentRooms = roomCount || subscription.room_count;
     const monthlyAmount = currentRooms * PRICE_PER_ROOM;
-    const amountInCents = monthlyAmount * 100; // PayMongo uses centavos
+    const amountInCents = monthlyAmount * 100;
 
     // Create PayMongo checkout session
     const response = await fetch(

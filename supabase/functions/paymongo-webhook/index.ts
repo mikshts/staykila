@@ -1,12 +1,11 @@
-// supabase/functions/paymongo-webhook/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const PAYMONGO_WEBHOOK_SECRET = Deno.env.get("PAYMONGO_WEBHOOK_SECRET"); // optional
+const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY"); // renamed
+const PAYMONGO_WEBHOOK_SECRET = Deno.env.get("PAYMONGO_WEBHOOK_SECRET");
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY); // renamed
 
 serve(async (req) => {
   // Optional: verify webhook signature
@@ -17,15 +16,13 @@ serve(async (req) => {
 
   const payload = await req.json();
   const event = payload.data;
-
   const eventType = event.attributes.type;
 
   try {
     if (eventType === "checkout_session.payment.paid") {
       const sessionId = event.attributes.data.id;
-      const metadata = event.attributes.data.attributes.metadata;
       const paymentMethod =
-        event.attributes.data.attributes.payment_method_types[0]; // assuming one
+        event.attributes.data.attributes.payment_method_types[0];
 
       // Get the subscription by provider_subscription_id
       const { data: subscription, error: subError } = await supabase
@@ -75,7 +72,6 @@ serve(async (req) => {
           status: "paid",
           paid_at: now.toISOString(),
           payment_method: paymentMethod,
-          // receipt_url: event.attributes.data.attributes.receipt_url // if available
         })
         .eq("paymongo_session_id", sessionId);
 
