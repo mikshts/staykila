@@ -36,6 +36,7 @@ import {
 
 export default function Dashboard() {
   const { user, hotel, logout } = useAuth();
+  const navigate = useNavigate(); // <-- ADD THIS LINE
   const {
     subscription,
     isLoading: subLoading,
@@ -1044,8 +1045,7 @@ export default function Dashboard() {
             <TrialBanner
               daysRemaining={trialDaysRemaining}
               onSubscribe={() => {
-                // You can either navigate to /billing or trigger handleSubscribe from there
-                navigate("/billing");
+                window.location.href = "/billing";
               }}
             />
           )}
