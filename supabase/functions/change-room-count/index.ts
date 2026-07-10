@@ -1,4 +1,3 @@
-// supabase/functions/change-room-count/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -20,22 +19,40 @@ serve(async (req) => {
   try {
     const { hotelId, newRoomCount } = await req.json();
 
-    if (!hotelId || !newRoomCount || newRoomCount < 1 || newRoomCount > 300) {
-      throw new Error("Invalid room count");
+    console.log("📥 Received change-room-count request:", {
+      hotelId,
+      newRoomCount,
+    });
+
+    // Validate inputs
+    if (!hotelId) {
+      throw new Error("hotelId is required");
+    }
+    if (!newRoomCount || newRoomCount < 1 || newRoomCount > 300) {
+      throw new Error("Invalid room count. Must be between 1 and 300.");
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Fetch current subscription
+    console.log("🔍 Fetching subscription for hotel:", hotelId);
     const { data: subscription, error: subError } = await supabase
       .from("subscriptions")
       .select("*")
       .eq("hotel_id", hotelId)
       .maybeSingle();
 
-    if (subError || !subscription) {
-      throw new Error("Subscription not found");
+    if (subError) {
+      console.error("❌ Subscription fetch error:", subError);
+      throw new Error("Database error while fetching subscription");
     }
+
+    if (!subscription) {
+      console.error("❌ No subscription found for hotel:", hotelId);
+      throw new Error("No active subscription found for this hotel");
+    }
+
+    console.log("✅ Current subscription:", subscription);
 
     const oldAmount = subscription.monthly_amount;
     const newAmount = newRoomCount * PRICE_PER_ROOM;
@@ -43,16 +60,24 @@ serve(async (req) => {
     // Determine effective date
     let effectiveDate;
     if (subscription.subscription_status === "trial") {
-      // Changes during trial take effect at the end of trial
       effectiveDate = new Date(subscription.trial_end);
+      console.log("📅 Effective date (trial):", effectiveDate);
     } else if (subscription.subscription_status === "active") {
-      // Changes take effect at next billing period
       effectiveDate = new Date(subscription.current_period_end);
+      console.log("📅 Effective date (active):", effectiveDate);
     } else {
-      throw new Error("Cannot change plan in current status");
+      throw new Error(
+        `Cannot change plan in status: ${subscription.subscription_status}`,
+      );
+    }
+
+    // Ensure effectiveDate is valid
+    if (!effectiveDate || isNaN(effectiveDate.getTime())) {
+      throw new Error("Invalid effective date from subscription");
     }
 
     // Insert subscription_change record
+    console.log("📝 Creating subscription_change record...");
     const { data: change, error: changeError } = await supabase
       .from("subscription_changes")
       .insert({
@@ -68,7 +93,12 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (changeError) throw changeError;
+    if (changeError) {
+      console.error("❌ Failed to insert subscription_change:", changeError);
+      throw new Error("Failed to schedule plan change: " + changeError.message);
+    }
+
+    console.log("✅ subscription_change inserted:", change);
 
     // Update subscription with pending info
     const { error: updateError } = await supabase
@@ -80,7 +110,15 @@ serve(async (req) => {
       })
       .eq("id", subscription.id);
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error(
+        "❌ Failed to update subscription pending fields:",
+        updateError,
+      );
+      throw new Error("Failed to update subscription: " + updateError.message);
+    }
+
+    console.log("✅ Subscription pending fields updated");
 
     return new Response(
       JSON.stringify({
@@ -95,6 +133,7 @@ serve(async (req) => {
       },
     );
   } catch (error) {
+    console.error("🔥 change-room-count error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
