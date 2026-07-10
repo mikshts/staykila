@@ -1,5 +1,6 @@
 // src/components/dashboard/Sidebar.jsx
 import React from "react";
+import { Link } from "react-router-dom"; // <-- Add this
 
 export default function Sidebar({
   isOpen,
@@ -221,14 +222,12 @@ export default function Sidebar({
 
           {/* ---------- ALWAYS VISIBLE: Billing ---------- */}
           {/* This link appears in both states */}
-          <div className="mt-auto pt-4 border-t border-white/10">
-            <a
-              href="/billing"
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition">
-              <i className="fas fa-credit-card w-5 text-center"></i>
-              Billing
-            </a>
-          </div>
+          <Link
+            to="/billing"
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition">
+            <i className="fas fa-credit-card w-5 text-center"></i>
+            Billing
+          </Link>
         </div>
 
         {/* Footer (always visible) */}

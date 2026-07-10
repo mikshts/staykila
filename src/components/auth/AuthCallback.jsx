@@ -1,4 +1,3 @@
-// src/components/auth/AuthCallback.jsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
@@ -23,29 +22,46 @@ export default function AuthCallback() {
         }
 
         if (session) {
-          // Check if user has a hotel
-          const { data, error: userError } = await supabase
+          // 1. Check if user has a hotel_id in users table
+          let { data: userData, error: userError } = await supabase
             .from("users")
             .select("hotel_id")
             .eq("id", session.user.id)
             .single();
 
-          if (userError && userError.code !== "PGRST116") {
-            // PGRST116 means no rows found, which is fine
-            console.error("User lookup error:", userError);
+          let hotelId = userData?.hotel_id;
+
+          // 2. If no hotel_id, try to find a hotel with this email
+          if (!hotelId) {
+            const { data: hotelData } = await supabase
+              .from("hotels")
+              .select("id")
+              .eq("email", session.user.email)
+              .maybeSingle();
+
+            if (hotelData) {
+              // Link user to existing hotel
+              const { error: linkError } = await supabase
+                .from("users")
+                .update({ hotel_id: hotelData.id })
+                .eq("id", session.user.id);
+              if (!linkError) {
+                hotelId = hotelData.id;
+              }
+            }
           }
 
-          // inside AuthCallback.jsx, where you check if user has no hotel
-          if (!data || !data.hotel_id) {
-            // Get the room count from sessionStorage (set by PricingPage or LandingPage)
-            const preferredRooms =
-              sessionStorage.getItem("preferredRooms") || 10;
-            sessionStorage.removeItem("preferredRooms"); // clean up
-            toast.success("Welcome! Please set up your hotel.");
-            navigate(`/setup?rooms=${preferredRooms}`);
-          } else {
+          // 3. If we have a hotel, go to dashboard
+          if (hotelId) {
             toast.success("Signed in successfully!");
             navigate("/");
+          } else {
+            // Otherwise, send to hotel setup
+            const preferredRooms =
+              sessionStorage.getItem("preferredRooms") || 10;
+            sessionStorage.removeItem("preferredRooms");
+            toast.success("Welcome! Please set up your hotel.");
+            navigate(`/setup?rooms=${preferredRooms}`);
           }
         } else {
           toast.error("No session found. Please try again.");

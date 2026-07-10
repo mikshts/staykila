@@ -1,11 +1,10 @@
-// src/components/auth/ProtectedRoute.jsx
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscription } from "../../hooks/useSubscription";
 
 export default function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
-  const { subscription, isLoading, isExpired } = useSubscription();
+  const { user, loading, hotel } = useAuth(); // ensure hotel is available
+  const { subscription, isLoading, isExpired, error } = useSubscription();
 
   if (loading || isLoading) {
     return (
@@ -19,15 +18,22 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/login" />;
   }
 
+  // If hotel exists but subscription fetch had an error, don't redirect to setup
+  if (error && hotel) {
+    console.warn("Subscription fetch error, but hotel exists:", error);
+    return children;
+  }
+
   // If subscription is expired, redirect to billing
   if (subscription && isExpired) {
     return <Navigate to="/billing" />;
   }
 
-  // If no subscription at all (should not happen after setup), redirect to setup
-  if (!subscription) {
+  // If no subscription and no hotel, redirect to setup
+  if (!subscription && !hotel) {
     return <Navigate to="/setup" />;
   }
 
+  // If hotel exists but subscription is still null (e.g., just created), render children
   return children;
 }
