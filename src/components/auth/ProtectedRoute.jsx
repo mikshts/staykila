@@ -5,9 +5,8 @@ import { useSubscription } from "../../hooks/useSubscription";
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-  const { subscription, isLoading } = useSubscription();
+  const { subscription, isLoading, isExpired } = useSubscription();
 
-  // Show loading spinner while auth or subscription is being fetched
   if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -20,20 +19,13 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/login" />;
   }
 
-  // Check subscription/trial validity
-  if (subscription) {
-    const now = new Date();
-    const trialEnd = new Date(subscription.trial_end);
-    const isActive =
-      subscription.subscription_status === "active" ||
-      (subscription.subscription_status === "trial" && trialEnd > now);
+  // If subscription is expired, redirect to billing
+  if (subscription && isExpired) {
+    return <Navigate to="/billing" />;
+  }
 
-    if (!isActive) {
-      // Redirect to pricing page with a renewal flag
-      return <Navigate to="/pricing?renew=true" />;
-    }
-  } else {
-    // No subscription? Possibly a new user without setup – redirect to setup
+  // If no subscription at all (should not happen after setup), redirect to setup
+  if (!subscription) {
     return <Navigate to="/setup" />;
   }
 

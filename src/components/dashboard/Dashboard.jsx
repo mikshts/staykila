@@ -14,8 +14,11 @@ import QRDownload from "./QRDownload";
 import { buildGuestUrl } from "../../lib/guestUrl";
 import CalendarManager from "../settings/CalendarManager";
 import AnalyticsPanel from "../analytics/AnalyticsPanel";
-import SubscriptionManager from "./SubscriptionManager";
+import BillingCard from "../billing/BillingCard";
 import { useSubscription } from "../../hooks/useSubscription";
+import TrialBanner from "../billing/TrialBanner";
+import { useNavigate } from "react-router-dom";
+
 import {
   CheckinModal,
   ExtendModal,
@@ -33,7 +36,13 @@ import {
 
 export default function Dashboard() {
   const { user, hotel, logout } = useAuth();
-  const { subscription, isLoading: subLoading } = useSubscription();
+  const {
+    subscription,
+    isLoading: subLoading,
+    isExpired,
+    isTrial,
+    trialDaysRemaining,
+  } = useSubscription();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -968,6 +977,7 @@ export default function Dashboard() {
         roomCount={rooms.length}
         occupancyRate={revenue.occupancyRate}
         filter={filter}
+        isExpired={isExpired}
         onFilterChange={(f) => {
           setFilter(f);
           setSidebarOpen(false);
@@ -1029,8 +1039,18 @@ export default function Dashboard() {
 
         <div className="p-4">
           <StatsCards stats={stats} revenue={revenue} />
+          {/* Inside the Dashboard component, after StatsCards */}
+          {isTrial && trialDaysRemaining <= 7 && trialDaysRemaining > 0 && (
+            <TrialBanner
+              daysRemaining={trialDaysRemaining}
+              onSubscribe={() => {
+                // You can either navigate to /billing or trigger handleSubscribe from there
+                navigate("/billing");
+              }}
+            />
+          )}
           {/* Subscription Banner */}
-          <SubscriptionManager />
+          <BillingCard />
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
             {/* All button - always shows total rooms */}
             <button
@@ -1152,7 +1172,6 @@ export default function Dashboard() {
               />
             </div>
           </div>
-
           {view === "grid" ? (
             <RoomGrid
               rooms={filteredRooms()}

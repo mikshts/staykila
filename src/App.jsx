@@ -12,6 +12,7 @@ import GuestPortal from "./components/guest/GuestPortal";
 import AuthCallback from "./components/auth/AuthCallback";
 import HotelSetup from "./components/auth/HotelSetup";
 import PricingPage from "./pages/PricingPage";
+import BillingPage from "./components/billing/BillingPage";
 
 function App() {
   return (
@@ -31,6 +32,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing"
+            element={
+              <ProtectedRoute>
+                <BillingPage />
               </ProtectedRoute>
             }
           />
