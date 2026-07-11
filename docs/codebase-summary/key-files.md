@@ -10,8 +10,7 @@ A map of the most important source files and what each is responsible for.
 | `src/App.jsx` | Router, route table, `AuthProvider` wrapper, toaster. |
 | `src/index.css` / `src/App.css` | Global + component styles. |
 
-## Auth & context
-
+## Auth & contex
 | File | Responsibility |
 | --- | --- |
 | `src/contexts/AuthContext.jsx` | Session, `user`, `hotel`; `login`/`register`/`logout`; `fetchHotel`. |
