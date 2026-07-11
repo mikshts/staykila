@@ -1,5 +1,5 @@
 // src/hooks/useSubscription.js
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -8,6 +8,20 @@ export function useSubscription() {
   const [subscription, setSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const pollRef = useRef(null);
+
+  const fetchSubscription = useCallback(async () => {
+    if (!hotel?.id) return null;
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("hotel_id", hotel.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    setSubscription(data || null);
+    return data;
+  }, [hotel]);
 
   useEffect(() => {
     if (!hotel?.id) {
@@ -15,25 +29,57 @@ export function useSubscription() {
       return;
     }
 
-    const fetchSubscription = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("hotel_id", hotel.id)
-          .maybeSingle();
+    let cancelled = false;
 
-        if (error) throw error;
-        setSubscription(data || null);
+    const run = async () => {
+      try {
+        const data = await fetchSubscription();
+
+        // If we just came back from a successful payment, the webhook may
+        // not have landed yet. Poll for a bit until status flips to active
+        // (or a pending change is applied), instead of trusting this
+        // first snapshot.
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("payment") === "success") {
+          const start = Date.now();
+          const maxWaitMs = 15000;
+          const intervalMs = 1500;
+
+          while (
+            !cancelled &&
+            data?.subscription_status !== "active" &&
+            Date.now() - start < maxWaitMs
+          ) {
+            await new Promise(
+              (r) => (pollRef.current = setTimeout(r, intervalMs)),
+            );
+            const fresh = await fetchSubscription();
+            if (fresh?.subscription_status === "active") break;
+          }
+
+          // Clean the query param so a refresh doesn't re-trigger polling
+          params.delete("payment");
+          const newSearch = params.toString();
+          window.history.replaceState(
+            {},
+            "",
+            window.location.pathname + (newSearch ? `?${newSearch}` : ""),
+          );
+        }
       } catch (err) {
-        setError(err.message);
+        if (!cancelled) setError(err.message);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    fetchSubscription();
-  }, [hotel]);
+    run();
+
+    return () => {
+      cancelled = true;
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  }, [hotel, fetchSubscription]);
 
   // Computed properties
   const isTrial = subscription?.subscription_status === "trial";
@@ -77,5 +123,6 @@ export function useSubscription() {
     trialDaysRemaining,
     daysUntilExpiration,
     isExpiringSoon,
+    refetchSubscription: fetchSubscription,
   };
 }
