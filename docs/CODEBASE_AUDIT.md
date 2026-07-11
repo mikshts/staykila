@@ -126,8 +126,8 @@ and the dependency array is wrong. There's already a correct
   `qrcode` is used). Remove it.
 - `src/utils/` is empty; `src/components/layout/` is empty.
 
-### 12. Duplicated magic number `30`
-`PRICE_PER_ROOM = 30` is hardcoded in three places: `lib/pricing.js`,
+### 12. Duplicated magic number `59`
+`PRICE_PER_ROOM = 59` is hardcoded in three places: `lib/pricing.js`,
 `create-checkout/index.ts`, and `change-room-count/index.ts`. A price change
 requires editing all three and redeploying functions. Centralize it (env var or
 shared config).

@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY"); // renamed
-const PRICE_PER_ROOM = 30; // ₱ per room / month. MUST stay in sync with PRICING_CONFIG.pricePerRoom in src/lib/pricing.js and create-checkout/index.ts.
+const PRICE_PER_ROOM = 59; // ₱ per room / month. MUST stay in sync with PRICING_CONFIG.pricePerRoom in src/lib/pricing.js and create-checkout/index.ts.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

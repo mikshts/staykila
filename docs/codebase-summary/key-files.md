@@ -72,7 +72,7 @@ A map of the most important source files and what each is responsible for.
 | `src/hooks/usePayments.js` | Payment history. |
 | `src/hooks/useBrandFonts.js` | Inject Google Fonts link. |
 | `src/lib/supabase.js` | Single anon Supabase client. |
-| `src/lib/pricing.js` | Price config + helpers (`PRICE_PER_ROOM = 30`). |
+| `src/lib/pricing.js` | Price config + helpers (`PRICE_PER_ROOM = 59`). |
 | `src/lib/guestUrl.js` | Build/parse guest room URLs. |
 | `src/services/roomService.js` | Room/booking data helpers. |
 | `src/services/messageService.js` | Messages, guest sessions, realtime subscription. |

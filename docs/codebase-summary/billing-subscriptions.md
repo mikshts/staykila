@@ -2,7 +2,7 @@
 
 ## Overview
 
-StayKila bills hotels a **monthly subscription priced per room** (₱30/room/mo
+StayKila bills hotels a **monthly subscription priced per room** (₱59/room/mo
 by default). Billing is powered by **PayMongo** and orchestrated by **Deno edge
 functions** that use the Supabase **service-role** key. The React client never
 holds the service-role key; it calls the edge functions over HTTPS using the
@@ -17,7 +17,7 @@ anon key in the `Authorization` header.
 - `src/components/billing/BillingCard.jsx`, `TrialBanner.jsx` — UI pieces.
 - `src/hooks/useSubscription.js` — subscription state + derived flags.
 - `src/hooks/usePayments.js` — payment history.
-- `src/lib/pricing.js` — `PRICE_PER_ROOM = 30` and price helpers.
+- `src/lib/pricing.js` — `PRICE_PER_ROOM = 59` and price helpers.
 - `supabase/functions/create-checkout/index.ts`
 - `supabase/functions/cancel-subscription/index.ts`
 - `supabase/functions/change-room-count/index.ts`
@@ -27,7 +27,7 @@ anon key in the `Authorization` header.
 
 Defined in `src/lib/pricing.js` (`PRICING_CONFIG`):
 
-- `pricePerRoom: 30` (₱/room/month)
+- `pricePerRoom: 59` (₱/room/month)
 - `currency: "₱"`, `currencyCode: "PHP"`
 - `trialDays: 30`
 - `minRooms: 1`, `maxRooms: 300`
