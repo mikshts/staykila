@@ -2,7 +2,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscription } from "../../hooks/useSubscription";
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, allowExpired = false }) {
   const { user, loading, hotel } = useAuth(); // ensure hotel is available
   const { subscription, isLoading, isExpired, error } = useSubscription();
 
@@ -25,7 +25,7 @@ export default function ProtectedRoute({ children }) {
   }
 
   // If subscription is expired, redirect to billing
-  if (subscription && isExpired) {
+  if (subscription && isExpired && !allowExpired) {
     return <Navigate to="/billing" />;
   }
 

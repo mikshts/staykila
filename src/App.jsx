@@ -38,7 +38,7 @@ function App() {
           <Route
             path="/billing"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowExpired>
                 <BillingPage />
               </ProtectedRoute>
             }
