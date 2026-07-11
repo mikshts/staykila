@@ -20,6 +20,16 @@ serve(async (req) => {
     }
 
     try {
+      // PayMongo sends the signature as: "t=<timestamp>,te=<hex>"
+      // where te = HMAC-SHA256( timestamp + "." + rawBody , webhookSecret ).
+      const sigTimestamp = (signature.match(/t=(\d+)/) || [])[1];
+      const sigHex = (signature.match(/te=([0-9a-f]+)/i) || [])[1];
+
+      if (!sigTimestamp || !sigHex) {
+        console.error("Malformed paymongo-signature header:", signature);
+        return new Response("Unauthorized: Malformed signature", { status: 401 });
+      }
+
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
         "raw",
@@ -28,22 +38,17 @@ serve(async (req) => {
         false,
         ["sign"],
       );
-      const rawBodyBuffer = encoder.encode(rawBody);
-      const signatureBuffer = await crypto.subtle.sign(
-        "HMAC",
-        key,
-        rawBodyBuffer,
-      );
+      const signedData = encoder.encode(`${sigTimestamp}.${rawBody}`);
+      const signatureBuffer = await crypto.subtle.sign("HMAC", key, signedData);
       const signatureArray = Array.from(new Uint8Array(signatureBuffer));
       const computedHex = signatureArray
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      if (computedHex !== signature) {
-        console.error("Signature verification failed", {
-          computedHex,
-          signature,
-        });
+      // Constant-time-ish compare to avoid timing leaks.
+      const normalize = (h) => h.replace(/^0x/, "").toLowerCase();
+      if (normalize(computedHex) !== normalize(sigHex)) {
+        console.error("Signature verification failed");
         return new Response("Unauthorized: Invalid signature", { status: 401 });
       }
     } catch (err) {
@@ -72,8 +77,9 @@ serve(async (req) => {
   try {
     if (eventType === "checkout_session.payment.paid") {
       const sessionId = event.attributes.data.id;
-      const paymentMethod =
-        event.attributes.data.attributes.payment_method_types[0];
+      const paymentMethodTypes =
+        event.attributes.data.attributes.payment_method_types || [];
+      const paymentMethod = paymentMethodTypes[0] || "unknown";
 
       // Get the subscription by provider_subscription_id
       const { data: subscription, error: subError } = await supabase

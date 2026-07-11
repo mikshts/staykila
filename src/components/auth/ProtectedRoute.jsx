@@ -4,10 +4,10 @@ import { useSubscription } from "../../hooks/useSubscription";
 
 export default function ProtectedRoute({ children }) {
   const { user, loading, hotel, setupComplete } = useAuth(); // ensure hotel is available
-  const { subscription, isLoading, isExpired, error } = useSubscription();
+  const { subscription, isLoading, isPolling, isExpired, error } = useSubscription();
   const location = useLocation();
 
-  if (loading || isLoading) {
+  if (loading || isLoading || isPolling) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#c9a84c]" />

@@ -7,6 +7,7 @@ export function useSubscription() {
   const { hotel } = useAuth();
   const [subscription, setSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState(null);
   const pollRef = useRef(null);
 
@@ -41,6 +42,7 @@ export function useSubscription() {
         // first snapshot.
         const params = new URLSearchParams(window.location.search);
         if (params.get("payment") === "success") {
+          setIsPolling(true);
           const start = Date.now();
           const maxWaitMs = 15000;
           const intervalMs = 1500;
@@ -56,6 +58,8 @@ export function useSubscription() {
             const fresh = await fetchSubscription();
             if (fresh?.subscription_status === "active") break;
           }
+
+          setIsPolling(false);
 
           // Clean the query param so a refresh doesn't re-trigger polling
           params.delete("payment");
@@ -115,6 +119,7 @@ export function useSubscription() {
   return {
     subscription,
     isLoading,
+    isPolling,
     error,
     isTrial,
     isActive,
