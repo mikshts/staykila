@@ -15,7 +15,7 @@ import { buildGuestUrl } from "../../lib/guestUrl";
 import CalendarManager from "../settings/CalendarManager";
 import AnalyticsPanel from "../analytics/AnalyticsPanel";
 import BillingCard from "../billing/BillingCard";
-import { useSubscription } from "../../hooks/useSubscription";
+import { useSubscription } from "../../contexts/SubscriptionContext";
 import TrialBanner from "../billing/TrialBanner";
 import { useNavigate } from "react-router-dom";
 

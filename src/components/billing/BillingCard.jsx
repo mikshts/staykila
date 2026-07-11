@@ -1,6 +1,6 @@
 // src/components/billing/BillingCard.jsx
 import { useNavigate } from "react-router-dom";
-import { useSubscription } from "../../hooks/useSubscription";
+import { useSubscription } from "../../contexts/SubscriptionContext";
 
 export default function BillingCard() {
   const navigate = useNavigate();

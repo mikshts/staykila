@@ -1,6 +1,6 @@
 // src/components/dashboard/SubscriptionManager.jsx
 import { useState } from "react";
-import { useSubscription } from "../../hooks/useSubscription";
+import { useSubscription } from "../../contexts/SubscriptionContext";
 import { useAuth } from "../../contexts/AuthContext"; // ← was useHotel from HotelContext
 import { supabase } from "../../lib/supabase";
 

@@ -1,7 +1,8 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
+import { AuthProvider } from "./contexts/AuthContext.jsx";
+import { SubscriptionProvider } from "./contexts/SubscriptionContext.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Login from "./components/auth/Login";
 import LandingPage from "./pages/LandingPage";
@@ -34,6 +35,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <SubscriptionProvider>
         <Toaster position="bottom-center" />
         <Routes>
           <Route path="/pricing" element={<PricingPage />} />
@@ -61,6 +63,7 @@ function App() {
           />
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
+        </SubscriptionProvider>
       </AuthProvider>
     </BrowserRouter>
   );

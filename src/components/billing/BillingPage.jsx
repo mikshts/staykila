@@ -1,7 +1,7 @@
 // src/components/billing/BillingPage.jsx
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { useSubscription } from "../../hooks/useSubscription";
+import { useSubscription } from "../../contexts/SubscriptionContext";
 import { usePayments } from "../../hooks/usePayments";
 import { supabase } from "../../lib/supabase";
 import { useState } from "react";
