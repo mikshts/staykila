@@ -51,17 +51,30 @@ export default function AuthCallback() {
             }
           }
 
-          // 3. If we have a hotel, go to dashboard
+          // 3. Determine if setup is complete: a hotel must exist AND it
+          //    must have at least one room (room count > 0).
+          let setupComplete = false;
           if (hotelId) {
+            const { count, error: roomError } = await supabase
+              .from("rooms")
+              .select("*", { count: "exact", head: true })
+              .eq("hotel_id", hotelId);
+
+            if (!roomError) {
+              setupComplete = (count || 0) > 0;
+            }
+          }
+
+          if (setupComplete) {
             toast.success("Signed in successfully!");
-            navigate("/");
+            navigate("/dashboard");
           } else {
             // Otherwise, send to hotel setup
             const preferredRooms =
               sessionStorage.getItem("preferredRooms") || 10;
             sessionStorage.removeItem("preferredRooms");
             toast.success("Welcome! Please set up your hotel.");
-            navigate(`/setup?rooms=${preferredRooms}`);
+            navigate(`/hotel-setup?rooms=${preferredRooms}`);
           }
         } else {
           toast.error("No session found. Please try again.");

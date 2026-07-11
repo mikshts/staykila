@@ -9,13 +9,14 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hotel, setHotel] = useState(null);
+  const [roomCount, setRoomCount] = useState(0);
 
   useEffect(() => {
     // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         setUser(session.user);
-        fetchHotel(session.user.id);
+        await fetchHotel(session.user.id);
       }
       setLoading(false);
     });
@@ -37,6 +38,9 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
   // src/contexts/AuthContext.jsx (updated fetchHotel)
+  // Returns { hotel, roomCount } and updates context state.
+  // A user's setup is considered complete only when they own a hotel
+  // AND that hotel has at least one room (room count > 0).
   const fetchHotel = async (userId) => {
     try {
       // 1. Get hotel_id from users
@@ -49,12 +53,14 @@ export function AuthProvider({ children }) {
       if (userError) {
         console.error("Error fetching user:", userError);
         setHotel(null);
-        return;
+        setRoomCount(0);
+        return null;
       }
 
       if (!userData || !userData.hotel_id) {
         setHotel(null);
-        return;
+        setRoomCount(0);
+        return null;
       }
 
       // 2. Fetch the hotel by its ID
@@ -66,10 +72,34 @@ export function AuthProvider({ children }) {
 
       if (hotelError) throw hotelError;
       setHotel(hotelData);
+
+      // 3. Fetch the room count to determine if setup is complete
+      const { count, error: roomError } = await supabase
+        .from("rooms")
+        .select("*", { count: "exact", head: true })
+        .eq("hotel_id", hotelData.id);
+
+      if (roomError) {
+        console.error("Error fetching room count:", roomError);
+        setRoomCount(0);
+      } else {
+        setRoomCount(count || 0);
+      }
+
+      return { hotel: hotelData, roomCount: count || 0 };
     } catch (error) {
       console.error("Error fetching hotel:", error);
       setHotel(null);
+      setRoomCount(0);
+      return null;
     }
+  };
+
+  // Re-fetch the current user's hotel/room state. Used after setup
+  // completes so ProtectedRoute sees the updated status immediately.
+  const refreshHotel = async () => {
+    if (!user) return null;
+    return await fetchHotel(user.id);
   };
   //wee
   const login = async (email, password) => {
@@ -230,10 +260,14 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     hotel,
+    roomCount,
+    // Setup is complete only when the user owns a hotel with rooms.
+    setupComplete: !!hotel && roomCount > 0,
     loading,
     login,
     register,
     logout,
+    refreshHotel,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

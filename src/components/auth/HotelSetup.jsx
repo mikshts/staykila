@@ -11,7 +11,7 @@ import { supabase } from "../../lib/supabase";
 import toast from "react-hot-toast";
 
 export default function HotelSetup() {
-  const { user } = useAuth();
+  const { user, refreshHotel } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
@@ -166,7 +166,10 @@ export default function HotelSetup() {
       }
 
       toast.success("Hotel setup complete!");
-      navigate("/");
+      // Refresh auth context so ProtectedRoute sees the completed setup
+      // (hotel + rooms) before we navigate to the dashboard.
+      await refreshHotel();
+      navigate("/dashboard");
     } catch (error) {
       console.error("Setup error:", error);
       toast.error(error.message || "Failed to setup hotel");

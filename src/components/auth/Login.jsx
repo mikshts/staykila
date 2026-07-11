@@ -74,7 +74,7 @@ export default function Register() {
 
       {/* Back button */}
       <button
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/login")}
         className="absolute top-6 left-6 z-10 text-gray-400 hover:text-white transition-colors flex items-center gap-2 text-sm">
         <i className="fas fa-arrow-left"></i>
         <span className="hidden sm:inline">Back to Home</span>

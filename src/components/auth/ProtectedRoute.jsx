@@ -3,7 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useSubscription } from "../../hooks/useSubscription";
 
 export default function ProtectedRoute({ children }) {
-  const { user, loading, hotel } = useAuth(); // ensure hotel is available
+  const { user, loading, hotel, setupComplete } = useAuth(); // ensure hotel is available
   const { subscription, isLoading, isExpired, error } = useSubscription();
   const location = useLocation();
 
@@ -33,11 +33,12 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/billing" replace />;
   }
 
-  // If no subscription and no hotel, redirect to setup
-  if (!subscription && !hotel) {
-    return <Navigate to="/setup" />;
+  // Setup is not complete (no hotel or no rooms) -> force hotel setup.
+  // The dashboard must NOT be accessible until setup is complete.
+  if (!setupComplete) {
+    return <Navigate to="/hotel-setup" replace />;
   }
 
-  // If hotel exists but subscription is still null (e.g., just created), render children
+  // Hotel exists and setup is complete -> render the dashboard.
   return children;
 }
