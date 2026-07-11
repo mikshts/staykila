@@ -38,7 +38,37 @@ serve(async (req) => {
       throw new Error("Missing required fields: hotelId, successUrl, cancelUrl.");
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY); // renamed
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Missing Authorization header" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("hotel_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (userError || !userData || userData.hotel_id !== hotelId) {
+      return new Response(JSON.stringify({ error: "Forbidden: Access denied to this hotel's resources" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403,
+      });
+    }
 
     // Fetch or create subscription for hotel
     let { data: subscription, error: subError } = await supabase

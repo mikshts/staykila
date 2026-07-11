@@ -10,13 +10,49 @@ const PAYMONGO_WEBHOOK_SECRET = Deno.env.get("PAYMONGO_WEBHOOK_SECRET");
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY); // renamed
 
 serve(async (req) => {
-  // Optional: verify webhook signature
-  // const signature = req.headers.get('paymongo-signature');
-  // if (!verifySignature(signature, PAYMONGO_WEBHOOK_SECRET)) {
-  //   return new Response('Unauthorized', { status: 401 });
-  // }
+  const signature = req.headers.get("paymongo-signature");
+  const rawBody = await req.text();
 
-  const payload = await req.json();
+  if (PAYMONGO_WEBHOOK_SECRET) {
+    if (!signature) {
+      console.error("Missing paymongo-signature header");
+      return new Response("Unauthorized: Missing signature", { status: 401 });
+    }
+
+    try {
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(PAYMONGO_WEBHOOK_SECRET),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+      const rawBodyBuffer = encoder.encode(rawBody);
+      const signatureBuffer = await crypto.subtle.sign("HMAC", key, rawBodyBuffer);
+      const signatureArray = Array.from(new Uint8Array(signatureBuffer));
+      const computedHex = signatureArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+      if (computedHex !== signature) {
+        console.error("Signature verification failed", { computedHex, signature });
+        return new Response("Unauthorized: Invalid signature", { status: 401 });
+      }
+    } catch (err) {
+      console.error("Error during signature verification:", err);
+      return new Response("Internal Server Error during verification", { status: 500 });
+    }
+  } else {
+    console.warn("PAYMONGO_WEBHOOK_SECRET is not set. Webhook signature verification bypassed.");
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch (err) {
+    console.error("Failed to parse request body as JSON:", err);
+    return new Response("Bad Request", { status: 400 });
+  }
+
   const event = payload.data;
   const eventType = event.attributes.type;
 
@@ -43,6 +79,9 @@ serve(async (req) => {
       const periodEnd = new Date(now);
       periodEnd.setDate(periodEnd.getDate() + 30);
 
+      const shouldApplyChange = subscription.pending_change_effective_date &&
+        new Date(subscription.pending_change_effective_date) <= now;
+
       const { error: updateError } = await supabase
         .from("subscriptions")
         .update({
@@ -52,8 +91,7 @@ serve(async (req) => {
           next_billing_date: periodEnd.toISOString(),
           payment_provider: "paymongo",
           // If there was a pending change, apply it
-          ...(subscription.pending_change_effective_date &&
-          new Date(subscription.pending_change_effective_date) <= now
+          ...(shouldApplyChange
             ? {
                 room_count: subscription.pending_room_count,
                 monthly_amount: subscription.pending_monthly_amount,
@@ -80,7 +118,7 @@ serve(async (req) => {
       if (paymentUpdateError) throw paymentUpdateError;
 
       // If there is a pending change that was applied, update subscription_change status
-      if (subscription.pending_room_count) {
+      if (shouldApplyChange) {
         await supabase
           .from("subscription_changes")
           .update({ status: "applied" })

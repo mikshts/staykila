@@ -1,6 +1,7 @@
 // src/components/billing/ManagePlan.jsx
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { supabase } from "../../lib/supabase";
 
 export default function ManagePlan({
   currentRooms,
@@ -30,12 +31,15 @@ export default function ManagePlan({
 
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/change-room-count`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ hotelId, newRoomCount: rooms }),

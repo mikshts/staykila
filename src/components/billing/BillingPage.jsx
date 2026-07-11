@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscription } from "../../hooks/useSubscription";
 import { usePayments } from "../../hooks/usePayments";
+import { supabase } from "../../lib/supabase";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import ManagePlan from "./ManagePlan";
@@ -31,12 +32,15 @@ export default function BillingPage() {
       return;
     }
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -72,12 +76,15 @@ export default function BillingPage() {
     )
       return;
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancel-subscription`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ hotelId: hotel.id }),

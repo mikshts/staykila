@@ -27,7 +27,7 @@ export default function AuthCallback() {
             .from("users")
             .select("hotel_id")
             .eq("id", session.user.id)
-            .single();
+            .maybeSingle();
 
           let hotelId = userData?.hotel_id;
 

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useSubscription } from "../../hooks/useSubscription";
 import { useAuth } from "../../contexts/AuthContext"; // ← was useHotel from HotelContext
+import { supabase } from "../../lib/supabase";
 
 export default function SubscriptionManager() {
   const { subscription, isLoading } = useSubscription();
@@ -17,12 +18,15 @@ export default function SubscriptionManager() {
     if (!hotel?.id) return;
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
