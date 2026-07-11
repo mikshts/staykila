@@ -179,9 +179,12 @@ export default function HotelSetup() {
     <div className="min-h-screen bg-[#0f1b2d] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-[#0f1b2d] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <i className="fas fa-hotel text-[#c9a84c] text-2xl"></i>
-          </div>
+          {/* Replaced Font Awesome icon with favicon1.png */}
+          <img
+            src="/favicon1.png"
+            alt="Logo"
+            className="w-14 h-14 rounded-2xl mx-auto mb-4 border border-[#c9a84c]/30 shadow-xl object-cover"
+          />
           <h1 className="text-2xl font-bold text-[#0f1b2d]">Welcome!</h1>
           <p className="text-gray-500 text-sm">Set up your hotel profile</p>
         </div>
