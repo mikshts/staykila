@@ -1,10 +1,10 @@
+// supabase/functions/paymongo-webhook/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
-  Deno.env.get("SERVICE_ROLE_KEY"); // renamed
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY"); // renamed
 const PAYMONGO_WEBHOOK_SECRET = Deno.env.get("PAYMONGO_WEBHOOK_SECRET");
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY); // renamed
@@ -26,23 +26,36 @@ serve(async (req) => {
         encoder.encode(PAYMONGO_WEBHOOK_SECRET),
         { name: "HMAC", hash: "SHA-256" },
         false,
-        ["sign"]
+        ["sign"],
       );
       const rawBodyBuffer = encoder.encode(rawBody);
-      const signatureBuffer = await crypto.subtle.sign("HMAC", key, rawBodyBuffer);
+      const signatureBuffer = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        rawBodyBuffer,
+      );
       const signatureArray = Array.from(new Uint8Array(signatureBuffer));
-      const computedHex = signatureArray.map(b => b.toString(16).padStart(2, "0")).join("");
+      const computedHex = signatureArray
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
 
       if (computedHex !== signature) {
-        console.error("Signature verification failed", { computedHex, signature });
+        console.error("Signature verification failed", {
+          computedHex,
+          signature,
+        });
         return new Response("Unauthorized: Invalid signature", { status: 401 });
       }
     } catch (err) {
       console.error("Error during signature verification:", err);
-      return new Response("Internal Server Error during verification", { status: 500 });
+      return new Response("Internal Server Error during verification", {
+        status: 500,
+      });
     }
   } else {
-    console.warn("PAYMONGO_WEBHOOK_SECRET is not set. Webhook signature verification bypassed.");
+    console.warn(
+      "PAYMONGO_WEBHOOK_SECRET is not set. Webhook signature verification bypassed.",
+    );
   }
 
   let payload;
@@ -79,7 +92,8 @@ serve(async (req) => {
       const periodEnd = new Date(now);
       periodEnd.setDate(periodEnd.getDate() + 30);
 
-      const shouldApplyChange = subscription.pending_change_effective_date &&
+      const shouldApplyChange =
+        subscription.pending_change_effective_date &&
         new Date(subscription.pending_change_effective_date) <= now;
 
       const { error: updateError } = await supabase

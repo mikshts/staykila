@@ -1,11 +1,11 @@
+// supabase/functions/change-room-count/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
-  Deno.env.get("SERVICE_ROLE_KEY"); // renamed
-const PRICE_PER_ROOM = 1499;
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY"); // renamed
+const PRICE_PER_ROOM = 30; // ₱ per room / month. MUST stay in sync with PRICING_CONFIG.pricePerRoom in src/lib/pricing.js and create-checkout/index.ts.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,23 +34,33 @@ serve(async (req) => {
       throw new Error("Invalid room count. Must be between 1 and 300.");
     }
 
-    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    const authHeader =
+      req.headers.get("Authorization") || req.headers.get("authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized: Missing Authorization header" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 401,
-      });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Missing Authorization header" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        },
+      );
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 401,
-      });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid token" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        },
+      );
     }
 
     const { data: userData, error: userError } = await supabase
@@ -60,10 +70,15 @@ serve(async (req) => {
       .maybeSingle();
 
     if (userError || !userData || userData.hotel_id !== hotelId) {
-      return new Response(JSON.stringify({ error: "Forbidden: Access denied to this hotel's resources" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 403,
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Forbidden: Access denied to this hotel's resources",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        },
+      );
     }
 
     // Fetch current subscription

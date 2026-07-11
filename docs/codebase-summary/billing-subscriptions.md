@@ -2,7 +2,7 @@
 
 ## Overview
 
-StayKila bills hotels a **monthly subscription priced per room** (₱1499/room/mo
+StayKila bills hotels a **monthly subscription priced per room** (₱30/room/mo
 by default). Billing is powered by **PayMongo** and orchestrated by **Deno edge
 functions** that use the Supabase **service-role** key. The React client never
 holds the service-role key; it calls the edge functions over HTTPS using the
@@ -17,7 +17,7 @@ anon key in the `Authorization` header.
 - `src/components/billing/BillingCard.jsx`, `TrialBanner.jsx` — UI pieces.
 - `src/hooks/useSubscription.js` — subscription state + derived flags.
 - `src/hooks/usePayments.js` — payment history.
-- `src/lib/pricing.js` — `PRICE_PER_ROOM = 1499` and price helpers.
+- `src/lib/pricing.js` — `PRICE_PER_ROOM = 30` and price helpers.
 - `supabase/functions/create-checkout/index.ts`
 - `supabase/functions/cancel-subscription/index.ts`
 - `supabase/functions/change-room-count/index.ts`
@@ -27,7 +27,7 @@ anon key in the `Authorization` header.
 
 Defined in `src/lib/pricing.js` (`PRICING_CONFIG`):
 
-- `pricePerRoom: 1499` (₱/room/month)
+- `pricePerRoom: 30` (₱/room/month)
 - `currency: "₱"`, `currencyCode: "PHP"`
 - `trialDays: 30`
 - `minRooms: 1`, `maxRooms: 300`
@@ -35,7 +35,7 @@ Defined in `src/lib/pricing.js` (`PRICING_CONFIG`):
 Helpers: `calculateMonthlyPrice`, `calculateYearlyPrice`, `formatPrice`,
 `getPricingBreakdown`.
 
-> ⚠️ The magic number `1499` is hardcoded in **three** places: `lib/pricing.js`,
+> ⚠️ The magic number `30` is hardcoded in **three** places: `lib/pricing.js`,
 > `create-checkout/index.ts`, and `change-room-count/index.ts`. A price change
 > requires editing all three and redeploying the functions. See
 > [known-issues.md](./known-issues.md) #12.
@@ -48,7 +48,7 @@ Browser (anon key)                  create-checkout (service role)        PayMon
 POST /functions/v1/create-checkout ─▶ fetch/upsert subscriptions row
   { hotelId, roomCount,              create PayMongo checkout_session
     successUrl, cancelUrl }    ───▶  (card/gcash/paymaya, line item =
-                                     roomCount * 1499)                ───▶ POST api.paymongo.com
+                                     roomCount * 30)                ───▶ POST api.paymongo.com
                                    ◀── checkout_url + sessionId
   store provider_subscription_id
   insert payments (status=pending)
@@ -60,7 +60,7 @@ window.location = checkoutUrl ────────────────�
 1. Client posts `{ hotelId, roomCount, successUrl, cancelUrl }` to
    `create-checkout` with the anon key.
 2. Edge function fetches/creates the hotel's `subscriptions` row, computes
-   `amount = roomCount * 1499`, and creates a PayMongo `checkout_sessions`.
+   `amount = roomCount * 30`, and creates a PayMongo `checkout_sessions`.
 3. It stores `provider_subscription_id` on the subscription and inserts a
    `payments` row (`status: "pending"`).
 4. Client redirects the browser to `checkout_url`. After payment, PayMongo
