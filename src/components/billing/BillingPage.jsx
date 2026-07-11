@@ -47,10 +47,20 @@ export default function BillingPage() {
           }),
         },
       );
-      const { checkoutUrl } = await response.json();
-      if (checkoutUrl) window.location.href = checkoutUrl;
+
+      const data = await response.json();
+      if (!response.ok) {
+        // Surface the actual error returned by the edge function instead of
+        // failing silently (the function returns { error: "..." } on failure).
+        throw new Error(data.error || `Request failed (${response.status})`);
+      }
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL was returned. Please try again.");
+      }
     } catch (err) {
-      toast.error("Failed to initiate payment. Please try again.");
+      toast.error(err.message || "Failed to initiate payment. Please try again.");
     }
   };
 
@@ -80,7 +90,8 @@ export default function BillingPage() {
         // Refetch subscription
         window.location.reload();
       } else {
-        throw new Error("Failed to cancel");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to cancel");
       }
     } catch (err) {
       toast.error("Failed to cancel subscription.");

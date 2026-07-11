@@ -18,10 +18,22 @@ serve(async (req) => {
   }
 
   try {
+    // Fail fast with a clear message if the function is misconfigured.
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+      throw new Error(
+        "Server configuration error: SUPABASE_URL / SERVICE_ROLE_KEY are not set.",
+      );
+    }
+    if (!PAYMONGO_SECRET) {
+      throw new Error(
+        "Server configuration error: PAYMONGO_SECRET_KEY is not set.",
+      );
+    }
+
     const { hotelId, roomCount, successUrl, cancelUrl } = await req.json();
 
     if (!hotelId || !successUrl || !cancelUrl) {
-      throw new Error("Missing required fields");
+      throw new Error("Missing required fields: hotelId, successUrl, cancelUrl.");
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY); // renamed

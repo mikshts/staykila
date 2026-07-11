@@ -18,7 +18,7 @@ export default function SubscriptionManager() {
     setLoading(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paymongo-create-checkout`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
         {
           method: "POST",
           headers: {
@@ -33,8 +33,11 @@ export default function SubscriptionManager() {
           }),
         },
       );
-      const { checkoutUrl } = await response.json();
-      if (checkoutUrl) window.location.href = checkoutUrl;
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed (${response.status})`);
+      }
+      if (data.checkoutUrl) window.location.href = data.checkoutUrl;
     } catch (err) {
       console.error(err);
       alert("Payment initiation failed. Please try again.");
