@@ -20,18 +20,16 @@ serve(async (req) => {
   }
 
   try {
-    // Fail fast with a clear, diagnostic message if the function is misconfigured.
-    // Report exactly which key is missing so we don't guess.
-    const missing = [];
-    if (!SUPABASE_URL) missing.push("SUPABASE_URL");
-    if (!SERVICE_ROLE_KEY) {
-      missing.push(
-        `SERVICE_ROLE_KEY (looked for SUPABASE_SERVICE_ROLE_KEY and SERVICE_ROLE_KEY; got '${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "null"}' / '${Deno.env.get("SERVICE_ROLE_KEY") ?? "null"}')\`,
+    // Fail fast with a clear message if the function is misconfigured.
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+      throw new Error(
+        "Server configuration error: SUPABASE_URL / SERVICE_ROLE_KEY are not set.",
       );
     }
-    if (!PAYMONGO_SECRET) missing.push("PAYMONGO_SECRET_KEY");
-    if (missing.length) {
-      throw new Error("Server configuration error: " + missing.join("; "));
+    if (!PAYMONGO_SECRET) {
+      throw new Error(
+        "Server configuration error: PAYMONGO_SECRET_KEY is not set.",
+      );
     }
 
     const { hotelId, roomCount, successUrl, cancelUrl } = await req.json();
