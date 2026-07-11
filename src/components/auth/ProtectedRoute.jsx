@@ -1,10 +1,11 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscription } from "../../hooks/useSubscription";
 
 export default function ProtectedRoute({ children }) {
   const { user, loading, hotel } = useAuth(); // ensure hotel is available
   const { subscription, isLoading, isExpired, error } = useSubscription();
+  const location = useLocation();
 
   if (loading || isLoading) {
     return (
@@ -24,9 +25,12 @@ export default function ProtectedRoute({ children }) {
     return children;
   }
 
-  // If subscription is expired, redirect to billing
-  if (subscription && isExpired) {
-    return <Navigate to="/billing" />;
+  // If subscription is expired, redirect to billing — unless already on the
+  // billing page (the one place expired users are allowed to land). Without
+  // this guard, /billing (also wrapped in ProtectedRoute) would redirect back
+  // to itself, causing an infinite loop and a blank page.
+  if (subscription && isExpired && location.pathname !== "/billing") {
+    return <Navigate to="/billing" replace />;
   }
 
   // If no subscription and no hotel, redirect to setup
