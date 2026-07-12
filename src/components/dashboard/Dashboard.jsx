@@ -43,6 +43,7 @@ export default function Dashboard() {
     isExpired,
     isTrial,
     trialDaysRemaining,
+    refetchSubscription,
   } = useSubscription();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -168,6 +169,20 @@ export default function Dashboard() {
       window.removeEventListener("refreshRooms", handleRefreshRooms);
     };
   }, [hotel]);
+
+  // When the subscription flips to "active" (e.g. right after a successful
+  // payment), refresh the dashboard data so room availability, metrics, and
+  // billing state reflect the now-paid plan without a manual reload.
+  const prevStatusRef = useRef(subscription?.subscription_status);
+  useEffect(() => {
+    const status = subscription?.subscription_status;
+    if (status === "active" && prevStatusRef.current !== "active") {
+      fetchRooms();
+      fetchHotelSettings();
+      fetchDashboardMetrics();
+    }
+    prevStatusRef.current = status;
+  }, [subscription?.subscription_status]);
 
   // Fetch functions
   const fetchHotelSettings = async () => {

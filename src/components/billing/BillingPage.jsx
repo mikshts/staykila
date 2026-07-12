@@ -25,6 +25,12 @@ export default function BillingPage() {
   const { payments, isLoading: paymentsLoading } = usePayments();
   const [showManagePlan, setShowManagePlan] = useState(false);
 
+  // Derive the current monthly cost from room_count * price_per_room so the
+  // displayed figure is always internally consistent with the per-room price
+  // and with the scheduled-change preview (which uses the same basis).
+  const currentMonthly =
+    (subscription?.room_count || 0) * (subscription?.price_per_room || 0);
+
   const handleSubscribe = async () => {
     // Create checkout session
     if (!hotel?.id) {
@@ -168,7 +174,7 @@ export default function BillingPage() {
               <div className="text-right">
                 <p className="text-sm text-gray-500">Monthly Cost</p>
                 <p className="text-2xl font-bold text-[#0f1b2d]">
-                  ₱{subscription?.monthly_amount?.toLocaleString()}
+                  ₱{currentMonthly.toLocaleString()}
                 </p>
               </div>
             </div>

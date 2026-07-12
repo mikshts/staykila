@@ -54,6 +54,11 @@ export default function ManagePlan({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to update plan");
 
+      // Trust the server-computed amount (it reads price_per_room from the DB),
+      // so the preview always matches what actually gets stored.
+      if (typeof data.newAmount === "number") {
+        setNewAmount(data.newAmount);
+      }
       setEffectiveDate(data.effectiveDate);
       toast.success("Future plan scheduled successfully!");
       if (onPlanChanged) onPlanChanged();
