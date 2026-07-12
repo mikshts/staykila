@@ -1,35 +1,28 @@
-// src/components/auth/Login.jsx
-// Real sign-IN screen: email/password via AuthContext.login(), plus a
-// "Sign in with Google" OAuth button (OAuth signs in an existing account or
-// creates one on first use). New users should use /register instead.
+// src/components/auth/Register.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
-import { useBrandFonts } from "../../hooks/useBrandFonts";
 import toast from "react-hot-toast";
 
-export default function Login() {
+function useBrandFonts() {
+  useState(() => {
+    if (document.getElementById("staykila-fonts")) return;
+    const link = document.createElement("link");
+    link.id = "staykila-fonts";
+    link.rel = "stylesheet";
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap";
+    document.head.appendChild(link);
+  }, []);
+}
+
+export default function Register() {
   useBrandFonts();
 
-  const { login } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({ email: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await login(formData.email, formData.password);
-    setLoading(false);
-    if (!error) {
-      navigate("/dashboard");
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
     try {
       const redirectUrl = `${window.location.origin}/auth/callback`;
@@ -37,18 +30,21 @@ export default function Login() {
         provider: "google",
         options: {
           redirectTo: redirectUrl,
-          queryParams: { access_type: "offline", prompt: "consent" },
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
+
       if (error) {
-        console.error("Google sign-in error:", error);
-        toast.error(error.message || "Failed to sign in with Google");
+        console.error("Google sign-up error:", error);
+        toast.error(error.message || "Failed to sign up with Google");
         setGoogleLoading(false);
       }
-      // On success Supabase redirects; no need to flip loading back.
     } catch (error) {
-      console.error("Google sign-in error:", error);
-      toast.error("Failed to sign in with Google. Please try again.");
+      console.error("Google sign-up error:", error);
+      toast.error("Failed to sign up with Google. Please try again.");
       setGoogleLoading(false);
     }
   };
@@ -57,7 +53,7 @@ export default function Login() {
     <div
       style={{ fontFamily: "'Inter', sans-serif" }}
       className="min-h-screen bg-[#0f1b2d] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background image and overlays */}
+      {/* Background image and overlays (same as Login) */}
       <div
         className="absolute inset-0 bg-cover bg-center opacity-10"
         style={{
@@ -84,7 +80,7 @@ export default function Login() {
         <span className="hidden sm:inline">Back to Home</span>
       </button>
 
-      {/* Login Card */}
+      {/* Register Card */}
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 shadow-2xl shadow-black/40">
           {/* Branding */}
@@ -100,66 +96,20 @@ export default function Login() {
             <h1
               style={{ fontFamily: "'Cormorant Garamond', serif" }}
               className="text-2xl font-semibold text-white">
-              Welcome back
+              StayKila
             </h1>
             <p className="text-gray-400 text-sm">
-              Sign in to your StayKila account
+              Create your property account
             </p>
           </div>
 
-          {/* Email / password form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-200 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                className="w-full px-4 py-2.5 bg-white/10 border border-white/15 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#c9a84c]"
-                placeholder="you@resort.com"
-                required
-              />
-            </div>
+          {/* Google-only sign-up */}
+          <p className="text-center text-sm text-gray-300 mb-6">
+            Sign up with your Google account to get started
+          </p>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-200 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                className="w-full px-4 py-2.5 bg-white/10 border border-white/15 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#c9a84c]"
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] py-3 rounded-xl font-semibold hover:shadow-[0_8px_24px_-8px_rgba(201,168,76,0.6)] hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:hover:-translate-y-0">
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-xs text-gray-500">or</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
-          {/* Google sign-in */}
           <button
-            onClick={handleGoogleSignIn}
+            onClick={handleGoogleSignUp}
             disabled={googleLoading}
             className="w-full bg-white text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-50 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:-translate-y-0">
             <svg className="w-5 h-5" viewBox="0 0 48 48">
@@ -180,15 +130,15 @@ export default function Login() {
                 d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"
               />
             </svg>
-            {googleLoading ? "Signing in..." : "Sign in with Google"}
+            {googleLoading ? "Signing up..." : "Sign up with Google"}
           </button>
 
           <p className="text-center text-sm text-gray-400 mt-6">
-            New to StayKila?{" "}
+            Already have an account?{" "}
             <Link
-              to="/register"
+              to="/login"
               className="text-[#c9a84c] font-semibold hover:underline transition-colors">
-              Create an account →
+              Sign in →
             </Link>
           </p>
         </div>
