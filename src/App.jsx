@@ -1,7 +1,7 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { AuthProvider } from "./contexts/AuthContext.jsx";
+import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import { SubscriptionProvider } from "./contexts/SubscriptionContext.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Login from "./components/auth/Login";
