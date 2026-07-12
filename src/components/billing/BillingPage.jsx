@@ -4,12 +4,16 @@ import { useSubscription } from "../../contexts/SubscriptionContext";
 import { usePayments } from "../../hooks/usePayments";
 import { supabase } from "../../lib/supabase";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import TrialBanner from "./TrialBanner";
 import ErrorBoundary from "../ErrorBoundary";
 
+const CANCEL_CONFIRM_PHRASE = "CANCEL MY SUBSCRIPTION";
+
 export default function BillingPage() {
   const { hotel } = useAuth();
+  const navigate = useNavigate();
   const {
     subscription,
     isLoading: subLoading,
@@ -21,6 +25,9 @@ export default function BillingPage() {
   } = useSubscription();
   const { payments, isLoading: paymentsLoading } = usePayments();
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelText, setCancelText] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   // If PayMongo redirected back with ?session_id (it appends this on success),
   // stash it so the post-payment verifier can confirm the EXACT session that
@@ -98,12 +105,7 @@ export default function BillingPage() {
   };
 
   const handleCancel = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to cancel your subscription at the end of the current period?",
-      )
-    )
-      return;
+    setCancelling(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -123,6 +125,8 @@ export default function BillingPage() {
         toast.success(
           "Subscription will be cancelled at the end of the period.",
         );
+        setShowCancelModal(false);
+        setCancelText("");
         // Refetch subscription
         window.location.reload();
       } else {
@@ -131,6 +135,8 @@ export default function BillingPage() {
       }
     } catch (err) {
       toast.error("Failed to cancel subscription.");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -142,8 +148,15 @@ export default function BillingPage() {
       <div className="min-h-screen bg-[#f7f3ee] p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-[#0f1b2d] mb-6">
-            Billing & Subscription
+            Billing &amp; Subscription
           </h1>
+
+          {/* Back to Dashboard */}
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="mb-6 inline-flex items-center gap-2 text-sm text-[#0f1b2d] hover:text-[#c9a84c] transition">
+            <span aria-hidden="true">&larr;</span> Back to Dashboard
+          </button>
 
           {/* Trial Banner if expiring soon */}
           {isTrial && trialDaysRemaining <= 7 && trialDaysRemaining > 0 && (
@@ -243,13 +256,57 @@ export default function BillingPage() {
               )}
               {isActive && !subscription?.cancel_at_period_end && (
                 <button
-                  onClick={handleCancel}
+                  onClick={() => setShowCancelModal(true)}
                   className="border border-red-300 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition">
                   Cancel Subscription
                 </button>
               )}
             </div>
           </div>
+
+          {/* Cancel confirmation modal — requires typing the exact phrase so a
+              subscription can't be cancelled by accident. */}
+          {showCancelModal && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+                <h2 className="text-xl font-bold text-[#0f1b2d] mb-2">
+                  Cancel subscription?
+                </h2>
+                <p className="text-sm text-gray-600 mb-1">
+                  This will cancel your subscription at the end of the current
+                  billing period. To confirm, type the following phrase exactly:
+                </p>
+                <p className="font-mono text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4 select-all">
+                  {CANCEL_CONFIRM_PHRASE}
+                </p>
+                <input
+                  type="text"
+                  value={cancelText}
+                  onChange={(e) => setCancelText(e.target.value)}
+                  placeholder={CANCEL_CONFIRM_PHRASE}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#c9a84c] focus:border-[#c9a84c] mb-4"
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCancelModal(false);
+                      setCancelText("");
+                    }}
+                    disabled={cancelling}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50">
+                    Keep Subscription
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    disabled={cancelling || cancelText !== CANCEL_CONFIRM_PHRASE}
+                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50">
+                    {cancelling ? "Cancelling..." : "Cancel Subscription"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Payment History */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
