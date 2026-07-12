@@ -278,6 +278,9 @@ export default function BillingPage() {
               currentRooms={subscription.room_count}
               currentAmount={subscription.monthly_amount}
               pricePerRoom={subscription.price_per_room}
+              pendingRooms={subscription.pending_room_count}
+              pendingAmount={subscription.pending_monthly_amount}
+              pendingEffectiveDate={subscription.pending_change_effective_date}
               onClose={() => setShowManagePlan(false)}
               hotelId={hotel.id}
               onPlanChanged={() => {

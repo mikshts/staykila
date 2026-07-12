@@ -19,7 +19,7 @@ serve(async (req) => {
   }
 
   try {
-    const { hotelId, newRoomCount } = await req.json();
+    const { hotelId, newRoomCount, action } = await req.json();
 
     console.log("📥 Received change-room-count request:", {
       hotelId,
@@ -30,8 +30,10 @@ serve(async (req) => {
     if (!hotelId) {
       throw new Error("hotelId is required");
     }
-    if (!newRoomCount || newRoomCount < 1 || newRoomCount > 300) {
-      throw new Error("Invalid room count. Must be between 1 and 300.");
+    if (action !== "cancel") {
+      if (!newRoomCount || newRoomCount < 1 || newRoomCount > 300) {
+        throw new Error("Invalid room count. Must be between 1 and 300.");
+      }
     }
 
     const authHeader =
@@ -101,8 +103,49 @@ serve(async (req) => {
 
     console.log("✅ Current subscription:", subscription);
 
+    // Handle cancellation of a pending (future) plan change.
+    if (action === "cancel") {
+      const { error: clearError } = await supabase
+        .from("subscriptions")
+        .update({
+          pending_room_count: null,
+          pending_monthly_amount: null,
+          pending_change_effective_date: null,
+        })
+        .eq("id", subscription.id);
+
+      if (clearError) {
+        console.error("❌ Failed to clear pending fields:", clearError);
+        throw new Error(
+          "Failed to cancel pending change: " + clearError.message,
+        );
+      }
+
+      // Mark any pending subscription_change records as cancelled so the
+      // audit trail stays consistent.
+      await supabase
+        .from("subscription_changes")
+        .update({ status: "cancelled" })
+        .eq("subscription_id", subscription.id)
+        .eq("status", "pending");
+
+      console.log("✅ Pending plan change cancelled");
+
+      return new Response(
+        JSON.stringify({ success: true, cancelled: true }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
+    }
+
     const oldAmount = subscription.monthly_amount;
-    const newAmount = newRoomCount * PRICE_PER_ROOM;
+    // Use the hotel's actual price-per-room from the subscription record
+    // (not the hardcoded constant) so the scheduled amount always matches
+    // what the admin saw in the UI.
+    const pricePerRoom = subscription.price_per_room || PRICE_PER_ROOM;
+    const newAmount = newRoomCount * pricePerRoom;
 
     // Determine effective date
     let effectiveDate;
