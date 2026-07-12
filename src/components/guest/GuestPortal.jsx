@@ -12,7 +12,7 @@ import {
 } from "../ui";
 import QRCode from "qrcode";
 import ImageViewer from "./ImageViewer";
-//constants
+//constant
 export default function GuestPortal() {
   const [searchParams] = useSearchParams();
   const [room, setRoom] = useState(null);
