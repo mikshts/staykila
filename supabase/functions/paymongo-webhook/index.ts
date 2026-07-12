@@ -103,14 +103,30 @@ serve(async (req) => {
         return new Response("Subscription not found", { status: 404 });
       }
 
-      // Update subscription to active
-      const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setDate(periodEnd.getDate() + 30);
+      // Idempotency guard: if this checkout session's payment is already paid,
+      // we've already added its month — do NOT extend again. This keeps the
+      // webhook and the verify-payment function from double-counting.
+      const { data: existingPayment, error: payLookupErr } = await supabase
+        .from("payments")
+        .select("status")
+        .eq("paymongo_session_id", sessionId)
+        .maybeSingle();
 
-      const shouldApplyChange =
-        subscription.pending_change_effective_date &&
-        new Date(subscription.pending_change_effective_date) <= now;
+      if (payLookupErr) throw payLookupErr;
+
+      if (existingPayment?.status === "paid") {
+        console.log(`ℹ️ Payment already applied for session: ${sessionId}`);
+        return new Response("OK", { status: 200 });
+      }
+
+      // Add one month to the subscription. Stack from the later of "now" and
+      // the current period end so an early renewal doesn't lose remaining days.
+      const now = new Date();
+      const baseEnd = subscription.current_period_end
+        ? new Date(subscription.current_period_end)
+        : now;
+      const periodEnd = new Date(Math.max(now.getTime(), baseEnd.getTime()));
+      periodEnd.setDate(periodEnd.getDate() + 30);
 
       const { error: updateError } = await supabase
         .from("subscriptions")
@@ -120,16 +136,6 @@ serve(async (req) => {
           current_period_end: periodEnd.toISOString(),
           next_billing_date: periodEnd.toISOString(),
           payment_provider: "paymongo",
-          // If there was a pending change, apply it
-          ...(shouldApplyChange
-            ? {
-                room_count: subscription.pending_room_count,
-                monthly_amount: subscription.pending_monthly_amount,
-                pending_room_count: null,
-                pending_monthly_amount: null,
-                pending_change_effective_date: null,
-              }
-            : {}),
         })
         .eq("id", subscription.id);
 
@@ -147,16 +153,7 @@ serve(async (req) => {
 
       if (paymentUpdateError) throw paymentUpdateError;
 
-      // If there is a pending change that was applied, update subscription_change status
-      if (shouldApplyChange) {
-        await supabase
-          .from("subscription_changes")
-          .update({ status: "applied" })
-          .eq("subscription_id", subscription.id)
-          .eq("status", "pending");
-      }
-
-      console.log(`✅ Subscription activated for session: ${sessionId}`);
+      console.log(`✅ Subscription extended for session: ${sessionId}`);
     } else if (eventType === "payment.failed") {
       // Similar logic to mark payment as failed, set subscription to past_due
       // ...
