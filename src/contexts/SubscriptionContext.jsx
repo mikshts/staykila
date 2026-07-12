@@ -128,13 +128,26 @@ export function SubscriptionProvider({ children }) {
 
         if (cameFromPayment) {
           // Capture the checkout session id so we can self-heal via the
-          // verify-payment edge function. Prefer the DB column; fall back to
-          // the value we stashed in sessionStorage at checkout time.
+          // verify-payment edge function.
+          //
+          // PREFERENCE ORDER (this is what fixes the "second payment doesn't
+          // work" bug):
+          //   1. ?session_id on the redirect URL — PayMongo appends the exact
+          //      session that just completed, so this is always correct even
+          //      on repeat payments.
+          //   2. sessionStorage stashed at checkout time (fallback).
+          //   3. subscription.provider_subscription_id — ONLY the first ever
+          //      checkout session, so it is the weakest signal and must be
+          //      last. Relying on it alone is why repeat payments failed.
+          const urlParams = new URLSearchParams(window.location.search);
+          const sessionFromUrl = urlParams.get("session_id");
+          const sessionFromStorage = sessionStorage.getItem(
+            "staykila_checkout_session",
+          );
           const storedSession =
-            latest?.provider_subscription_id ||
-            sessionStorage.getItem("staykila_checkout_session");
+            sessionFromUrl || sessionFromStorage || latest?.provider_subscription_id;
           if (storedSession) sessionIdRef.current = storedSession;
-          // Clear it now that we've captured it.
+          // Clear the stash now that we've captured it.
           sessionStorage.removeItem("staykila_checkout_session");
 
           setIsPolling(true);

@@ -1,18 +1,15 @@
 // src/components/billing/BillingPage.jsx
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscription } from "../../contexts/SubscriptionContext";
 import { usePayments } from "../../hooks/usePayments";
 import { supabase } from "../../lib/supabase";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import ManagePlan from "./ManagePlan";
 import TrialBanner from "./TrialBanner";
 import ErrorBoundary from "../ErrorBoundary";
 
 export default function BillingPage() {
   const { hotel } = useAuth();
-  const navigate = useNavigate();
   const {
     subscription,
     isLoading: subLoading,
@@ -23,11 +20,32 @@ export default function BillingPage() {
     daysUntilExpiration,
   } = useSubscription();
   const { payments, isLoading: paymentsLoading } = usePayments();
-  const [showManagePlan, setShowManagePlan] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  // If PayMongo redirected back with ?session_id (it appends this on success),
+  // stash it so the post-payment verifier can confirm the EXACT session that
+  // just completed. This is what fixes the "second payment doesn't work" bug:
+  // previously we relied on the subscription's provider_subscription_id column,
+  // which only holds the FIRST checkout session ever created, so repeat
+  // payments could never be verified.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    if (sessionId) {
+      sessionStorage.setItem("staykila_checkout_session", sessionId);
+      // Clean the param out of the visible URL.
+      params.delete("session_id");
+      const newSearch = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (newSearch ? `?${newSearch}` : ""),
+      );
+    }
+  }, []);
 
   // Derive the current monthly cost from room_count * price_per_room so the
-  // displayed figure is always internally consistent with the per-room price
-  // and with the scheduled-change preview (which uses the same basis).
+  // displayed figure is always internally consistent with the per-room price.
   const currentMonthly =
     (subscription?.room_count || 0) * (subscription?.price_per_room || 0);
 
@@ -181,6 +199,10 @@ export default function BillingPage() {
                 <p className="text-2xl font-bold text-[#0f1b2d]">
                   ₱{currentMonthly.toLocaleString()}
                 </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {subscription?.room_count} rooms × ₱
+                  {subscription?.price_per_room?.toLocaleString()}/room
+                </p>
               </div>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
@@ -188,6 +210,9 @@ export default function BillingPage() {
                 <p className="text-sm text-gray-500">Rooms</p>
                 <p className="text-lg font-semibold">
                   {subscription?.room_count}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Set during hotel setup
                 </p>
               </div>
               <div>
@@ -209,11 +234,11 @@ export default function BillingPage() {
               </div>
             )}
             <div className="mt-6 flex flex-wrap gap-3">
-              {!isExpired && (
+              {isExpired && (
                 <button
-                  onClick={() => setShowManagePlan(true)}
-                  className="bg-[#0f1b2d] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1a2d4a] transition">
-                  Manage Plan
+                  onClick={handleSubscribe}
+                  className="bg-[#c9a84c] text-[#0f1b2d] px-6 py-2 rounded-lg font-semibold hover:bg-[#b8973a] transition">
+                  Renew Now
                 </button>
               )}
               {isActive && !subscription?.cancel_at_period_end && (
@@ -221,13 +246,6 @@ export default function BillingPage() {
                   onClick={handleCancel}
                   className="border border-red-300 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition">
                   Cancel Subscription
-                </button>
-              )}
-              {isExpired && (
-                <button
-                  onClick={handleSubscribe}
-                  className="bg-[#c9a84c] text-[#0f1b2d] px-6 py-2 rounded-lg font-semibold hover:bg-[#b8973a] transition">
-                  Renew Now
                 </button>
               )}
             </div>
@@ -282,24 +300,6 @@ export default function BillingPage() {
               </div>
             )}
           </div>
-
-          {/* Manage Plan Modal */}
-          {showManagePlan && subscription && (
-            <ManagePlan
-              currentRooms={subscription.room_count}
-              currentAmount={subscription.monthly_amount}
-              pricePerRoom={subscription.price_per_room}
-              pendingRooms={subscription.pending_room_count}
-              pendingAmount={subscription.pending_monthly_amount}
-              pendingEffectiveDate={subscription.pending_change_effective_date}
-              onClose={() => setShowManagePlan(false)}
-              hotelId={hotel.id}
-              onPlanChanged={() => {
-                setShowManagePlan(false);
-                window.location.reload();
-              }}
-            />
-          )}
         </div>
       </div>{" "}
     </ErrorBoundary>

@@ -6,7 +6,7 @@ const PAYMONGO_SECRET = Deno.env.get("PAYMONGO_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY"); // renamed
-const PRICE_PER_ROOM = 59; // ₱ per room / month. MUST stay in sync with PRICING_CONFIG.pricePerRoom in src/lib/pricing.js and change-room-count/index.ts.
+const PRICE_PER_ROOM = 59; // ₱ per room / month. MUST stay in sync with PRICING_CONFIG.pricePerRoom in src/lib/pricing.js.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

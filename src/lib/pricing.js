@@ -2,8 +2,7 @@
 
 export const PRICING_CONFIG = {
   // ₱ per room per month. SINGLE SOURCE OF TRUTH for the frontend.
-  // MUST stay in sync with PRICE_PER_ROOM in supabase/functions/create-checkout/index.ts
-  // and supabase/functions/change-room-count/index.ts (edge functions cannot import this file).
+  // MUST stay in sync with PRICE_PER_ROOM in supabase/functions/create-checkout/index.ts.
   pricePerRoom: 59, // ₱ per room per month
   currency: "₱",
   currencyCode: "PHP",
