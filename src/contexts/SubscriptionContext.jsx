@@ -10,6 +10,12 @@
 //
 // This context runs exactly ONE fetch + ONE poll per page load. Every consumer
 // reads the same state. The `payment` query param is stripped exactly once.
+//
+// Self-healing: after a successful PayMongo redirect (?payment=success) we
+// poll the DB for activation, but we ALSO call the `verify-payment` edge
+// function which asks PayMongo directly and activates the subscription/payment
+// idempotently. This means a delayed/misconfigured webhook no longer leaves the
+// subscription stuck on "pending" forever.
 import {
   createContext,
   useContext,
@@ -24,13 +30,13 @@ import { useAuth } from "./AuthContext";
 const SubscriptionContext = createContext(null);
 
 const POLL_INTERVAL_MS = 1500;
-const POLL_TIMEOUT_MS = 15000;
+const POLL_TIMEOUT_MS = 20000;
 
 export function SubscriptionProvider({ children }) {
-  const { hotel } = useAuth();
+  const { hotel, user } = useAuth();
   const [subscription, setSubscription] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  // True while we are actively waiting for the webhook to flip status -> active.
+  // True while we are actively waiting for activation to be confirmed.
   const [isPolling, setIsPolling] = useState(false);
   // True once polling timed out without activation: show a clear message
   // instead of an endless spinner.
@@ -39,6 +45,9 @@ export function SubscriptionProvider({ children }) {
 
   const pollRef = useRef(null);
   const paramStrippedRef = useRef(false);
+  // The PayMongo checkout session id captured from the success redirect, used
+  // by the self-healing verifier.
+  const sessionIdRef = useRef(null);
 
   const fetchSubscription = useCallback(async () => {
     if (!hotel?.id) return null;
@@ -51,6 +60,34 @@ export function SubscriptionProvider({ children }) {
     if (error) throw error;
     setSubscription(data || null);
     return data;
+  }, [hotel]);
+
+  // Ask the edge function to confirm the payment with PayMongo directly and
+  // activate the subscription/payment record. Returns true if it succeeded.
+  const verifyPayment = useCallback(async () => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || !hotel?.id) return false;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ hotelId: hotel.id, sessionId }),
+        },
+      );
+      if (!res.ok) return false;
+      const data = await res.json();
+      return data?.paid === true || data?.status === "active";
+    } catch (err) {
+      console.warn("verify-payment call failed:", err);
+      return false;
+    }
   }, [hotel]);
 
   useEffect(() => {
@@ -90,6 +127,16 @@ export function SubscriptionProvider({ children }) {
           params.get("payment") === "cancelled";
 
         if (cameFromPayment) {
+          // Capture the checkout session id so we can self-heal via the
+          // verify-payment edge function. Prefer the DB column; fall back to
+          // the value we stashed in sessionStorage at checkout time.
+          const storedSession =
+            latest?.provider_subscription_id ||
+            sessionStorage.getItem("staykila_checkout_session");
+          if (storedSession) sessionIdRef.current = storedSession;
+          // Clear it now that we've captured it.
+          sessionStorage.removeItem("staykila_checkout_session");
+
           setIsPolling(true);
           setPaymentStuck(false);
           const start = Date.now();
@@ -99,6 +146,11 @@ export function SubscriptionProvider({ children }) {
             latest?.subscription_status !== "active" &&
             Date.now() - start < POLL_TIMEOUT_MS
           ) {
+            // Self-heal: try to confirm + activate via PayMongo directly.
+            // If it succeeds, the next DB read will show `active` and the
+            // loop exits cleanly.
+            await verifyPayment();
+
             await new Promise(
               (r) => (pollRef.current = setTimeout(r, POLL_INTERVAL_MS)),
             );
@@ -130,7 +182,7 @@ export function SubscriptionProvider({ children }) {
       cancelled = true;
       if (pollRef.current) clearTimeout(pollRef.current);
     };
-  }, [hotel, fetchSubscription]);
+  }, [hotel, fetchSubscription, verifyPayment]);
 
   // Computed properties
   const isTrial = subscription?.subscription_status === "trial";

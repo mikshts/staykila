@@ -65,6 +65,11 @@ export default function BillingPage() {
         throw new Error(data.error || `Request failed (${response.status})`);
       }
       if (data.checkoutUrl) {
+        // Persist the checkout session id so the post-payment verifier can
+        // confirm the payment directly with PayMongo if the webhook is slow.
+        if (data.sessionId) {
+          sessionStorage.setItem("staykila_checkout_session", data.sessionId);
+        }
         window.location.href = data.checkoutUrl;
       } else {
         throw new Error("No checkout URL was returned. Please try again.");
