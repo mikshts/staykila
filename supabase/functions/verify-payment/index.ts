@@ -4,10 +4,14 @@
 // the client calls this function so the subscription/payment can be activated
 // EVEN IF the PayMongo webhook is delayed, misconfigured, or fails signature
 // verification. It is fully idempotent: calling it repeatedly for an already
-// active subscription is a no-op.
+// paid session is a no-op.
 //
-// This is the same activation logic the webhook performs, kept in sync with
-// supabase/functions/paymongo-webhook/index.ts.
+// IMPORTANT: we locate the record to activate via the payments row keyed by
+// `paymongo_session_id` (which create-checkout inserts for EVERY checkout),
+// NOT via subscriptions.provider_subscription_id. The latter is a single column
+// that gets overwritten on each new checkout, so relying on it is what caused
+// renewals (and post-manual-expiry payments) to silently stay "pending" and the
+// dashboard to stay locked.
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -92,7 +96,41 @@ serve(async (req) => {
       );
     }
 
-    // 1. Ask PayMongo directly whether this checkout session was paid.
+    // 1. Find the payment row for this checkout session. This is the reliable
+    //    link — create-checkout inserts one per session, so it always exists
+    //    for a payment we initiated.
+    const { data: paymentRow, error: payLookupErr } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("paymongo_session_id", sessionId)
+      .maybeSingle();
+
+    if (payLookupErr) throw payLookupErr;
+    if (!paymentRow) {
+      return new Response(
+        JSON.stringify({ error: "Payment not found for session." }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 404,
+        },
+      );
+    }
+
+    // Idempotency guard: if this session's payment is already paid, we've
+    // already added its month — do NOT extend again. This keeps the webhook and
+    // the client verifier from double-counting.
+    if (paymentRow.status === "paid") {
+      return new Response(
+        JSON.stringify({
+          status: "active",
+          paid: true,
+          alreadyApplied: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // 2. Ask PayMongo directly whether this checkout session was paid.
     const pmRes = await fetch(
       `https://api.paymongo.com/v1/checkout_sessions/${sessionId}`,
       {
@@ -132,17 +170,17 @@ serve(async (req) => {
       session?.attributes?.payment_method_types || [];
     const paymentMethod = paymentMethodTypes[0] || "unknown";
 
-    // 2. Load the subscription tied to this session.
+    // 3. Load the subscription this payment belongs to.
     const { data: subscription, error: subError } = await supabase
       .from("subscriptions")
       .select("*")
-      .eq("provider_subscription_id", sessionId)
+      .eq("id", paymentRow.subscription_id)
       .maybeSingle();
 
     if (subError) throw subError;
     if (!subscription) {
       return new Response(
-        JSON.stringify({ error: "Subscription not found for session." }),
+        JSON.stringify({ error: "Subscription not found for payment." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 404,
@@ -150,30 +188,7 @@ serve(async (req) => {
       );
     }
 
-    // Idempotency guard: if this checkout session's payment has already been
-    // marked paid, we've already added its month — do NOT extend again. This
-    // is what makes repeat verifications (and the webhook) safe, and it's why
-    // a renewal payment correctly adds exactly one month per successful charge.
-    const { data: existingPayment, error: payLookupErr } = await supabase
-      .from("payments")
-      .select("status")
-      .eq("paymongo_session_id", sessionId)
-      .maybeSingle();
-
-    if (payLookupErr) throw payLookupErr;
-
-    if (existingPayment?.status === "paid") {
-      return new Response(
-        JSON.stringify({
-          status: subscription.subscription_status,
-          paid: true,
-          alreadyApplied: true,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // 3. Add one month to the subscription. Stack from the later of "now" and
+    // 4. Add one month to the subscription. Stack from the later of "now" and
     //    the current period end so an early renewal doesn't lose remaining days.
     const now = new Date();
     const baseEnd = subscription.current_period_end
@@ -195,7 +210,7 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // 4. Mark the payment record as paid.
+    // 5. Mark the payment record as paid.
     const { error: paymentUpdateError } = await supabase
       .from("payments")
       .update({

@@ -91,32 +91,40 @@ serve(async (req) => {
         event.attributes.data.attributes.payment_method_types || [];
       const paymentMethod = paymentMethodTypes[0] || "unknown";
 
-      // Get the subscription by provider_subscription_id
-      const { data: subscription, error: subError } = await supabase
-        .from("subscriptions")
+      // Locate the payment row for this checkout session. create-checkout
+      // inserts one per session, so this is the reliable link (unlike
+      // subscriptions.provider_subscription_id, which is overwritten on each
+      // new checkout and breaks renewals / post-expiry payments).
+      const { data: paymentRow, error: payLookupErr } = await supabase
+        .from("payments")
         .select("*")
-        .eq("provider_subscription_id", sessionId)
-        .single();
+        .eq("paymongo_session_id", sessionId)
+        .maybeSingle();
 
-      if (subError || !subscription) {
-        console.error("Subscription not found for session:", sessionId);
-        return new Response("Subscription not found", { status: 404 });
+      if (payLookupErr) throw payLookupErr;
+      if (!paymentRow) {
+        console.error("Payment not found for session:", sessionId);
+        return new Response("Payment not found", { status: 404 });
       }
 
       // Idempotency guard: if this checkout session's payment is already paid,
       // we've already added its month — do NOT extend again. This keeps the
       // webhook and the verify-payment function from double-counting.
-      const { data: existingPayment, error: payLookupErr } = await supabase
-        .from("payments")
-        .select("status")
-        .eq("paymongo_session_id", sessionId)
-        .maybeSingle();
-
-      if (payLookupErr) throw payLookupErr;
-
-      if (existingPayment?.status === "paid") {
+      if (paymentRow.status === "paid") {
         console.log(`ℹ️ Payment already applied for session: ${sessionId}`);
         return new Response("OK", { status: 200 });
+      }
+
+      // Load the subscription this payment belongs to.
+      const { data: subscription, error: subError } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("id", paymentRow.subscription_id)
+        .maybeSingle();
+
+      if (subError || !subscription) {
+        console.error("Subscription not found for payment:", paymentRow.id);
+        return new Response("Subscription not found", { status: 404 });
       }
 
       // Add one month to the subscription. Stack from the later of "now" and

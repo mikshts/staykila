@@ -104,6 +104,42 @@ export default function BillingPage() {
     }
   };
 
+  // Manually re-confirm a specific payment with PayMongo. This is the recovery
+  // path: if a renewal's webhook/auto-verify didn't flip it to paid (e.g. the
+  // redirect session_id was lost, or the DB was edited), the user can press
+  // "Verify" on the pending row and we'll activate it directly.
+  const verifyPaymentRecord = async (sessionId) => {
+    if (!sessionId) {
+      toast.error("No checkout session linked to this payment.");
+      return;
+    }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ hotelId: hotel.id, sessionId }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Verification failed.");
+      if (data.paid || data.status === "active") {
+        toast.success("Payment confirmed — subscription activated!");
+        window.location.reload();
+      } else {
+        toast.error("PayMongo shows this payment is not paid yet.");
+      }
+    } catch (err) {
+      toast.error(err.message || "Could not verify payment.");
+    }
+  };
+
   const handleCancel = async () => {
     setCancelling(true);
     try {
@@ -349,6 +385,13 @@ export default function BillingPage() {
                             }`}>
                             {p.status}
                           </span>
+                          {p.status !== "paid" && p.paymongo_session_id && (
+                            <button
+                              onClick={() => verifyPaymentRecord(p.paymongo_session_id)}
+                              className="block mt-1 text-xs text-[#c9a84c] hover:underline">
+                              Verify
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

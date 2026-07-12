@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSubscription } from "../../contexts/SubscriptionContext";
 
@@ -13,6 +13,7 @@ export default function ProtectedRoute({ children }) {
     error,
   } = useSubscription();
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (loading || isLoading || isPolling) {
     return (
@@ -36,11 +37,18 @@ export default function ProtectedRoute({ children }) {
             This can take a moment. If this doesn't update within a minute,
             please refresh or contact support.
           </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-[#0f1b2d] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#1a2d4a] transition">
-            Check again
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-[#0f1b2d] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#1a2d4a] transition">
+              Check again
+            </button>
+            <button
+              onClick={() => navigate("/billing")}
+              className="text-sm text-[#c9a84c] hover:underline">
+              Go to Billing to verify manually
+            </button>
+          </div>
         </div>
       </div>
     );
