@@ -20,13 +20,23 @@ serve(async (req) => {
     }
 
     try {
-      // PayMongo sends the signature as: "t=<timestamp>,te=<hex>"
-      // where te = HMAC-SHA256( timestamp + "." + rawBody , webhookSecret ).
+      // PayMongo sends the signature as a COMPOSITE header:
+      //   "t=<timestamp>,te=<test_hex>,li=<live_hex>"
+      // In TEST mode the HMAC is under `te=`, in LIVE mode under `li=`.
+      // We must read whichever segment PayMongo actually sent for the
+      // configured secret — otherwise sigHex is undefined and we 401 every
+      // webhook, so the subscription_status never flips to 'active'.
       const sigTimestamp = (signature.match(/t=(\d+)/) || [])[1];
-      const sigHex = (signature.match(/te=([0-9a-f]+)/i) || [])[1];
+      const teMatch = (signature.match(/te=([0-9a-f]+)/i) || [])[1];
+      const liMatch = (signature.match(/li=([0-9a-f]+)/i) || [])[1];
+      const sigHex = teMatch || liMatch; // prefer test segment, fall back to live
 
       if (!sigTimestamp || !sigHex) {
-        console.error("Malformed paymongo-signature header:", signature);
+        console.error(
+          "Malformed paymongo-signature header:",
+          signature,
+          "(extracted t=", sigTimestamp, "te=", teMatch, "li=", liMatch, ")",
+        );
         return new Response("Unauthorized: Malformed signature", { status: 401 });
       }
 

@@ -79,7 +79,10 @@ export function SubscriptionProvider({ children }) {
 
     const run = async () => {
       try {
-        const data = await fetchSubscription();
+        // `latest` always holds the most recently fetched subscription so the
+        // poll's break condition and the final paymentStuck decision use fresh
+        // data, never a stale closure snapshot.
+        let latest = await fetchSubscription();
 
         const params = new URLSearchParams(window.location.search);
         const cameFromPayment =
@@ -93,19 +96,18 @@ export function SubscriptionProvider({ children }) {
 
           while (
             !cancelled &&
-            data?.subscription_status !== "active" &&
+            latest?.subscription_status !== "active" &&
             Date.now() - start < POLL_TIMEOUT_MS
           ) {
             await new Promise(
               (r) => (pollRef.current = setTimeout(r, POLL_INTERVAL_MS)),
             );
-            const fresh = await fetchSubscription();
-            if (fresh?.subscription_status === "active") break;
+            latest = await fetchSubscription();
           }
 
           setIsPolling(false);
 
-          if (!cancelled && data?.subscription_status !== "active") {
+          if (!cancelled && latest?.subscription_status !== "active") {
             // Polling timed out without activation. Don't spin forever —
             // surface a clear "still confirming" state instead.
             setPaymentStuck(true);
