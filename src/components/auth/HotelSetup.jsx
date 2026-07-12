@@ -15,9 +15,14 @@ export default function HotelSetup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // Read the room count from the URL query param (passed from AuthCallback)
+  // Read the room count from the URL query param (passed from the pricing page).
   const [searchParams] = useSearchParams();
-  const initialRooms = parseInt(searchParams.get("rooms"), 10) || 10;
+  const roomsFromUrl = parseInt(searchParams.get("rooms"), 10);
+  // Only treat it as a preset when it's a real, in-range number. Otherwise
+  // fall back to a default and let the user pick on this page.
+  const hasPresetRooms =
+    !isNaN(roomsFromUrl) && roomsFromUrl >= 1 && roomsFromUrl <= 300;
+  const initialRooms = hasPresetRooms ? roomsFromUrl : 10;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -25,7 +30,8 @@ export default function HotelSetup() {
     rooms: initialRooms,
   });
 
-  // Safe handler for the room number input (prevents NaN)
+  // Only used when no room count was pre-selected on the pricing page
+  // (e.g. someone navigates directly to /hotel-setup without ?rooms=).
   const handleRoomChange = (e) => {
     const val = parseInt(e.target.value, 10);
     setFormData({
@@ -226,19 +232,27 @@ export default function HotelSetup() {
 
           <div className="mb-6">
             <label className="block text-sm font-semibold text-[#0f1b2d] mb-1">
-              Number of Rooms (1-300)
+              Number of Rooms
             </label>
             <input
               type="number"
               value={formData.rooms}
               onChange={handleRoomChange}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#c9a84c]"
+              disabled={hasPresetRooms}
+              className={
+                "w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#c9a84c] " +
+                (hasPresetRooms
+                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                  : "")
+              }
               min={1}
               max={300}
               required
             />
             <p className="text-xs text-gray-400 mt-1">
-              Pre‑filled from your pricing selection. You can adjust it now.
+              {hasPresetRooms
+                ? "Locked to the room count you selected on the pricing page."
+                : "Pre‑filled from your pricing selection. You can adjust it now."}
             </p>
           </div>
 
