@@ -374,7 +374,7 @@ function Hero() {
               variants={fadeUp}
               className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 sm:gap-4">
               <button
-                onClick={() => navigate("/signin")}
+                onClick={() => navigate("/register")}
                 className="w-full sm:w-auto text-[#0f1b2d] font-semibold bg-gradient-to-r from-[#c9a84c] to-[#e8d189] px-7 py-3.5 rounded-xl hover:shadow-[0_12px_32px_-8px_rgba(201,168,76,0.55)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">
                 Start Free Trial
               </button>
@@ -1328,7 +1328,7 @@ function Pricing() {
 
   const handleStartTrial = () => {
     sessionStorage.setItem("preferredRooms", selectedRooms.toString());
-    navigate("/signin");
+    navigate("/register");
   };
 
   return (
@@ -1662,7 +1662,7 @@ function FinalCTA() {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
           <button
-            onClick={() => navigate("/signin")}
+            onClick={() => navigate("/register")}
             className="w-full sm:w-auto text-[#0f1b2d] font-semibold bg-gradient-to-r from-[#c9a84c] to-[#e8d189] px-8 py-3.5 sm:py-4 rounded-xl hover:shadow-[0_16px_40px_-10px_rgba(201,168,76,0.6)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">
             Start Free Trial
           </button>
