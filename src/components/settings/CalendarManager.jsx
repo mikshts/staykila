@@ -4,14 +4,33 @@ import toast from "react-hot-toast";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
+const SOURCE_OPTIONS = [
+  { value: "agoda", label: "🏨 Agoda" },
+  { value: "booking", label: "🛏️ Booking.com" },
+  { value: "walk-in", label: "🚶 Walk-in" },
+  { value: "maintenance", label: "🔧 Maintenance" },
+  { value: "other", label: "📋 Other" },
+];
+
+const SOURCE_LABELS = {
+  agoda: "Agoda Booking",
+  booking: "Booking.com Booking",
+  "walk-in": "Walk-in Guest",
+  maintenance: "Maintenance",
+  other: "Other",
+};
+
 export default function CalendarManager({ hotel, rooms, onClose }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedRoomId, setSelectedRoomId] = useState(null);
   const [bookingSource, setBookingSource] = useState("agoda");
+  const [guestName, setGuestName] = useState("");
+  const [price, setPrice] = useState("");
+  const [notes, setNotes] = useState("");
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
   const [roomBookings, setRoomBookings] = useState({});
   const [loading, setLoading] = useState(true);
-  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     fetchAllBookings();
@@ -32,7 +51,8 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
           status,
           guest_name,
           notes,
-          booking_source
+          booking_source,
+          price
         `,
         )
         .eq("hotel_id", hotel.id)
@@ -59,6 +79,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
               end: end,
               source: booking.booking_source || "walk-in",
               guest: booking.guest_name,
+              price: booking.price,
               id: booking.id,
               notes: booking.notes,
               isMultiDay: true,
@@ -71,6 +92,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
             end: end,
             source: booking.booking_source || "walk-in",
             guest: booking.guest_name,
+            price: booking.price,
             id: booking.id,
             notes: booking.notes,
             isMultiDay: false,
@@ -87,6 +109,9 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
     }
   };
 
+  // Clicking a date is the single entry point:
+  // - free date  -> open the booking modal
+  // - booked date -> open the booking detail (view / remove)
   const handleDateClick = (date) => {
     setSelectedDate(date);
     if (!selectedRoomId) {
@@ -94,17 +119,19 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       return;
     }
 
-    const isBooked = isDateBooked(date, selectedRoomId);
-    if (isBooked) {
-      const booking = getBookingForDate(date, selectedRoomId);
-      if (booking) {
-        toast.error(
-          `This date is already booked: ${booking.guest || "Unknown guest"}`,
-        );
-        return;
-      }
+    const booking = getBookingForDate(date, selectedRoomId);
+    if (booking) {
+      setSelectedBooking(booking);
+    } else {
+      openBookingModal();
     }
+  };
 
+  const openBookingModal = () => {
+    setGuestName("");
+    setPrice("");
+    setNotes("");
+    setBookingSource("agoda");
     setShowBookingModal(true);
   };
 
@@ -133,35 +160,24 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
         return;
       }
 
-      const sourceLabels = {
-        agoda: "Agoda Booking",
-        booking: "Booking.com Booking",
-        "walk-in": "Walk-in Guest",
-        maintenance: "Maintenance",
-        other: "Other",
-      };
-
-      const guestName = sourceLabels[bookingSource] || "Booked";
-
       const bookingData = {
         room_id: selectedRoomId,
         hotel_id: hotel.id,
-        guest_name: guestName,
+        guest_name: guestName.trim() || SOURCE_LABELS[bookingSource] || "Booked",
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
         hours: 24,
-        price: 0,
+        price: Number(price) || 0,
         status: "booked",
         booking_source: bookingSource,
         booking_type:
           bookingSource === "agoda" || bookingSource === "booking"
             ? "ota"
             : "walk-in",
-        notes:
-          notes || `Blocked via calendar on ${new Date().toLocaleDateString()}`,
+        notes: notes.trim() || null,
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("bookings")
         .insert([bookingData])
         .select();
@@ -178,12 +194,10 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
       await fetchAllBookings();
 
-      // 🔥 FIX: Trigger refresh for dashboard para mag-update agad ang RoomGrid
+      // Trigger refresh for dashboard so the RoomGrid updates immediately
       window.dispatchEvent(new Event("refreshRooms"));
 
       setShowBookingModal(false);
-      setNotes("");
-      setBookingSource("agoda");
     } catch (error) {
       console.error("Error booking date:", error);
       toast.error("Failed to book date");
@@ -225,10 +239,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
 
       // Trigger refresh for dashboard
       window.dispatchEvent(new Event("refreshRooms"));
-
-      setTimeout(() => {
-        onClose();
-      }, 500);
     } catch (error) {
       console.error("Error clearing bookings:", error);
       toast.error("Failed to clear bookings");
@@ -247,7 +257,9 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
       if (error) throw error;
 
       toast.success("Booking removed from calendar");
+      setSelectedBooking(null);
       await fetchAllBookings();
+      window.dispatchEvent(new Event("refreshRooms"));
     } catch (error) {
       console.error("Error removing booking:", error);
       toast.error("Failed to remove booking");
@@ -308,6 +320,19 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
     return "border-red-300 bg-red-50";
   };
 
+  // Unique bookings (collapse multi-day spans into one row) for the list view
+  const getUniqueBookings = (roomId) => {
+    const bookings = roomBookings[roomId] || [];
+    const seen = new Set();
+    const unique = [];
+    bookings.forEach((b) => {
+      if (seen.has(b.id)) return;
+      seen.add(b.id);
+      unique.push(b);
+    });
+    return unique.sort((a, b) => a.start - b.start);
+  };
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
@@ -340,8 +365,8 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
               Calendar Manager
             </h2>
             <p className="text-sm text-[#8a8278] mt-1">
-              Select a room, then click any date to book it for OTA bookings or
-              maintenance
+              Pick a room, then click a date to book it — or click a booked date
+              to view &amp; remove it
             </p>
           </div>
           <button
@@ -374,7 +399,10 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                         ? "border-[#0f1b2d] bg-[#f7f3ee] shadow-sm"
                         : "border-[#e5e2db] hover:border-[#0f1b2d] hover:bg-[#fafafa]"
                     } ${getRoomStatusColor(room.id)}`}
-                    onClick={() => setSelectedRoomId(room.id)}>
+                    onClick={() => {
+                      setSelectedRoomId(room.id);
+                      setSelectedBooking(null);
+                    }}>
                     <div className="flex justify-between items-center">
                       <div>
                         <h4 className="font-medium text-[#0f1b2d]">
@@ -451,7 +479,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
             </div>
           </div>
 
-          {/* Right: Calendar */}
+          {/* Right: Calendar + Bookings */}
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-[#0f1b2d]">
@@ -473,7 +501,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                 <div className="bg-white border border-[#e5e2db] rounded-lg p-4">
                   <Calendar
                     value={selectedDate}
-                    onChange={setSelectedDate}
+                    onChange={handleDateClick}
                     tileClassName={({ date, view }) => {
                       if (view === "month" && selectedRoomId) {
                         const booked = isDateBooked(date, selectedRoomId);
@@ -501,7 +529,6 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                       }
                       return null;
                     }}
-                    onClickDay={(date) => handleDateClick(date)}
                   />
                 </div>
 
@@ -518,33 +545,79 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                       </span>
                     )}
                   </div>
-                  <button
-                    onClick={() => {
-                      if (isDateBooked(selectedDate, selectedRoomId)) {
-                        toast.error("This date is already booked");
-                        return;
-                      }
-                      setShowBookingModal(true);
-                    }}
-                    disabled={isDateBooked(selectedDate, selectedRoomId)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      isDateBooked(selectedDate, selectedRoomId)
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-[#0f1b2d] text-white hover:bg-[#1a2d44]"
-                    }`}>
-                    <i className="fas fa-plus mr-2"></i>
-                    Book This Date
-                  </button>
+                  {!isDateBooked(selectedDate, selectedRoomId) && (
+                    <button
+                      onClick={openBookingModal}
+                      className="px-4 py-2 rounded-lg text-sm font-medium bg-[#0f1b2d] text-white hover:bg-[#1a2d44] transition">
+                      <i className="fas fa-plus mr-2"></i>
+                      Book This Date
+                    </button>
+                  )}
                 </div>
 
-                {/* Show count of bookings for this room */}
-                {selectedRoomId && (
-                  <div className="mt-3 text-xs text-[#8a8278]">
-                    {getBookedDatesCount(selectedRoomId)} booking
-                    {getBookedDatesCount(selectedRoomId) !== 1 ? "s" : ""} for
-                    this room
-                  </div>
-                )}
+                {/* Bookings list for this room */}
+                <div className="mt-5">
+                  <h4 className="font-semibold text-[#0f1b2d] mb-2">
+                    Bookings for this room
+                    <span className="ml-2 text-xs font-normal text-[#8a8278]">
+                      {getUniqueBookings(selectedRoomId).length} total
+                    </span>
+                  </h4>
+
+                  {getUniqueBookings(selectedRoomId).length === 0 ? (
+                    <div className="text-sm text-[#8a8278] bg-gray-50 border border-dashed border-[#e5e2db] rounded-lg p-4 text-center">
+                      No bookings yet. Click a date above to add one.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                      {getUniqueBookings(selectedRoomId).map((booking) => (
+                        <div
+                          key={booking.id}
+                          className="flex items-center justify-between border border-[#e5e2db] rounded-lg p-3 hover:bg-[#fafafa] transition">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${getSourceColor(
+                                  booking.source,
+                                )}`}>
+                                {getSourceIcon(booking.source)}{" "}
+                                {SOURCE_LABELS[booking.source] || "Other"}
+                              </span>
+                              {booking.isMultiDay && (
+                                <span className="text-[10px] text-[#8a8278]">
+                                  multi-day
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm font-medium text-[#0f1b2d] mt-1 truncate">
+                              {booking.guest || "Unnamed"}
+                            </div>
+                            <div className="text-xs text-[#8a8278]">
+                              {formatDate(booking.start)}
+                              {booking.isMultiDay &&
+                                ` → ${formatDate(booking.end)}`}
+                              {booking.price
+                                ? ` • ₱${Number(booking.price).toLocaleString()}`
+                                : ""}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => setSelectedBooking(booking)}
+                              className="text-xs text-[#0f1b2d] hover:underline font-medium">
+                              View
+                            </button>
+                            <button
+                              onClick={() => handleRemoveBooking(booking.id)}
+                              className="text-xs text-red-600 hover:text-red-800 font-medium">
+                              <i className="fas fa-trash mr-1"></i>Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="bg-gray-50 border-2 border-dashed border-[#e5e2db] rounded-lg p-12 text-center">
@@ -587,13 +660,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                     Booking Source
                   </label>
                   <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: "agoda", label: "🏨 Agoda" },
-                      { value: "booking", label: "🛏️ Booking.com" },
-                      { value: "walk-in", label: "🚶 Walk-in" },
-                      { value: "maintenance", label: "🔧 Maintenance" },
-                      { value: "other", label: "📋 Other" },
-                    ].map((option) => (
+                    {SOURCE_OPTIONS.map((option) => (
                       <button
                         key={option.value}
                         className={`px-3 py-2 border rounded-lg text-sm transition ${
@@ -606,6 +673,32 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#8a8278] mb-1">
+                    Guest Name
+                  </label>
+                  <input
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0f1b2d]"
+                    placeholder="e.g. Juan Dela Cruz"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#8a8278] mb-1">
+                    Price (₱) <span className="text-[#8a8278]">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0f1b2d]"
+                    placeholder="0"
+                  />
                 </div>
 
                 <div>
@@ -632,6 +725,89 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
                     Book Date
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Booking Detail Modal (view / remove) */}
+        {selectedBooking && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[#0f1b2d]">
+                    Booking Details
+                  </h3>
+                  <p className="text-sm text-[#8a8278]">
+                    {rooms.find((r) => r.id === selectedRoomId)?.name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedBooking(null)}
+                  className="text-[#8a8278] hover:text-[#0f1b2d]">
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${getSourceColor(
+                      selectedBooking.source,
+                    )}`}>
+                    {getSourceIcon(selectedBooking.source)}{" "}
+                    {SOURCE_LABELS[selectedBooking.source] || "Other"}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[#8a8278]">Guest:</span>{" "}
+                  <span className="font-medium text-[#0f1b2d]">
+                    {selectedBooking.guest || "Unnamed"}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[#8a8278]">Date:</span>{" "}
+                  <span className="font-medium text-[#0f1b2d]">
+                    {formatDate(selectedBooking.start)}
+                    {selectedBooking.isMultiDay &&
+                      ` → ${formatDate(selectedBooking.end)}`}
+                  </span>
+                </div>
+
+                {selectedBooking.price ? (
+                  <div>
+                    <span className="text-[#8a8278]">Price:</span>{" "}
+                    <span className="font-medium text-[#0f1b2d]">
+                      ₱{Number(selectedBooking.price).toLocaleString()}
+                    </span>
+                  </div>
+                ) : null}
+
+                {selectedBooking.notes ? (
+                  <div>
+                    <span className="text-[#8a8278]">Notes:</span>{" "}
+                    <span className="text-[#0f1b2d]">
+                      {selectedBooking.notes}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="flex gap-3 pt-5">
+                <button
+                  onClick={() => setSelectedBooking(null)}
+                  className="flex-1 px-4 py-2 border border-[#e5e2db] rounded-lg text-sm font-medium hover:bg-[#f7f3ee] transition">
+                  Close
+                </button>
+                <button
+                  onClick={() => handleRemoveBooking(selectedBooking.id)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
+                  <i className="fas fa-trash mr-2"></i>
+                  Remove Booking
+                </button>
               </div>
             </div>
           </div>
@@ -666,6 +842,7 @@ export default function CalendarManager({ hotel, rooms, onClose }) {
             justify-content: center;
             border-radius: 8px;
             transition: all 0.2s;
+            cursor: pointer;
           }
           .react-calendar__tile:enabled:hover {
             background-color: #f7f3ee;
