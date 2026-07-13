@@ -6,7 +6,7 @@ const PAYMONGO_SECRET = Deno.env.get("PAYMONGO_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY"); // renamed
-const PRICE_PER_ROOM = 59; // ₱ per room / month. MUST stay in sync with PRICING_CONFIG.pricePerRoom in src/lib/pricing.js.
+const PRICE_PER_ROOM = 59; // ₱ per room / month. FALLBACK only — create-checkout now charges the hotel's actual price_per_room from the DB (kept in sync with PRICING_CONFIG.pricePerRoom in src/lib/pricing.js).
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,7 +122,11 @@ serve(async (req) => {
     }
 
     const currentRooms = roomCount || subscription.room_count;
-    const monthlyAmount = currentRooms * PRICE_PER_ROOM;
+    // Charge the hotel's actual per-room price from the DB (set during hotel
+    // setup / billing), so the amount always matches what's shown in the UI.
+    // Fall back to the constant only if the record is somehow missing it.
+    const pricePerRoom = subscription.price_per_room || PRICE_PER_ROOM;
+    const monthlyAmount = currentRooms * pricePerRoom;
     const amountInCents = monthlyAmount * 100;
 
     // Create PayMongo checkout session
