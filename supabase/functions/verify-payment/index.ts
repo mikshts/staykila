@@ -1,13 +1,13 @@
 // supabase/functions/verify-payment/index.ts
 //
-// SIMPLE, RELIABLE payment activation.
+// SECURE payment confirmation.
 //
-// This function is ONLY ever called from a ?payment=success redirect (or via
-// the manual "Verify" button). PayMongo only sends the user to the success_url
-// AFTER a payment actually succeeds, so we can trust that the user paid and
-// activate the subscription directly — NO PayMongo API lookup required. This
-// removes the fragile external call that was causing payments to get stuck on
-// "pending".
+// This function is called from the ?payment=success redirect (SubscriptionContext
+// auto-verify) and from the manual "Verify" button on the billing page. It does
+// NOT trust the redirect or the button click as proof of payment. Instead it
+// asks PayMongo directly for the checkout session status and only activates the
+// subscription / creates a payment record when PayMongo reports the payment as
+// actually PAID.
 //
 // Idempotent: a payment already "paid" is a no-op, so the webhook and this
 // function can both safely run without double-adding a month.
@@ -17,12 +17,44 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY"); // renamed
+const PAYMONGO_SECRET = Deno.env.get("PAYMONGO_SECRET_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// Query PayMongo for the live status of a checkout session. Returns the raw
+// status string (e.g. "paid", "pending", "failed", "expired", "cancelled")
+// or null if it can't be determined.
+async function getPayMongoSessionStatus(sessionId) {
+  if (!PAYMONGO_SECRET) {
+    console.error("PAYMONGO_SECRET_KEY is not set; cannot verify with PayMongo.");
+    return null;
+  }
+  try {
+    const res = await fetch(
+      `https://api.paymongo.com/v1/checkout_sessions/${sessionId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${btoa(PAYMONGO_SECRET + ":")}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    if (!res.ok) {
+      console.error("PayMongo session lookup failed:", res.status);
+      return null;
+    }
+    const json = await res.json();
+    return json?.data?.attributes?.status ?? null;
+  } catch (err) {
+    console.error("Error querying PayMongo session:", err);
+    return null;
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -104,28 +136,54 @@ serve(async (req) => {
       );
     }
 
-    // Already active and no pending payments? Nothing to do.
-    const { data: pendingPayments, error: pendErr } = await supabase
-      .from("payments")
-      .select("*")
-      .eq("subscription_id", subscription.id)
-      .eq("status", "pending");
+    // Already active? Report the current status without doing anything.
+    if (subscription.subscription_status === "active") {
+      return new Response(
+        JSON.stringify({ status: "active", paid: true, nothingToVerify: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
-    if (pendErr) throw pendErr;
-
-    if (!pendingPayments || pendingPayments.length === 0) {
+    // We have no pending payment row to inspect (create-checkout no longer
+    // inserts one). The only trustworthy signal is PayMongo itself. If there
+    // is no checkout session id recorded, there is nothing to verify.
+    const sessionId = subscription.provider_subscription_id;
+    if (!sessionId) {
       return new Response(
         JSON.stringify({
           status: subscription.subscription_status,
-          paid: subscription.subscription_status === "active",
-          nothingToVerify: true,
+          paid: false,
+          message: "No payment in progress.",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Activate: +1 month stacked from the later of now / current period end.
-    // (PayMongo already confirmed the payment by sending us to success_url.)
+    // Ask PayMongo for the real status. Never trust the redirect/button.
+    const paymongoStatus = await getPayMongoSessionStatus(sessionId);
+
+    // Only a confirmed "paid" status activates the subscription. Anything else
+    // (pending, failed, expired, cancelled, or unknown) is reported back and
+    // the subscription is left untouched.
+    if (paymongoStatus !== "paid") {
+      console.log(
+        `ℹ️ PayMongo session ${sessionId} status: ${paymongoStatus} — not activating.`,
+      );
+      return new Response(
+        JSON.stringify({
+          status: paymongoStatus || "unknown",
+          paid: false,
+          message:
+            paymongoStatus === "paid"
+              ? ""
+              : "Payment has not been confirmed by PayMongo yet.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Confirmed paid by PayMongo. Activate: +1 month stacked from the later of
+    // now / current period end.
     const now = new Date();
     const baseEnd = subscription.current_period_end
       ? new Date(subscription.current_period_end)
@@ -146,18 +204,22 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // Mark all pending payments for this subscription as paid.
-    const { error: paymentUpdateError } = await supabase
+    // Create the payment history record ONLY now that PayMongo has confirmed
+    // the charge. This is the single source of truth.
+    const { error: paymentInsertError } = await supabase
       .from("payments")
-      .update({
+      .insert({
+        hotel_id: hotelId,
+        subscription_id: subscription.id,
+        paymongo_session_id: sessionId,
+        amount: subscription.monthly_amount,
+        currency: "PHP",
         status: "paid",
         paid_at: now.toISOString(),
         payment_method: "paymongo",
-      })
-      .eq("subscription_id", subscription.id)
-      .eq("status", "pending");
+      });
 
-    if (paymentUpdateError) throw paymentUpdateError;
+    if (paymentInsertError) throw paymentInsertError;
 
     console.log(
       `✅ Subscription activated via verify-payment for hotel: ${hotelId}`,

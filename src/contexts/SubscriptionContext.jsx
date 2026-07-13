@@ -59,12 +59,12 @@ export function SubscriptionProvider({ children }) {
     return data;
   }, [hotel]);
 
-  // Ask the edge function to confirm + activate any pending payment for this
-  // hotel directly with PayMongo. Returns true if a payment was activated.
-  // No session id needed — the function resolves the hotel's pending payments
-  // itself, so this works even if the redirect lost the session id.
+  // Ask the edge function to confirm the payment with PayMongo directly.
+  // Returns the parsed response (with `paid`, `status`, `nothingToVerify`)
+  // or `{ paid: false }` on any error. The backend is the only authority —
+  // it queries PayMongo and only activates when PayMongo reports `paid`.
   const verifyPayment = useCallback(async () => {
-    if (!hotel?.id) return false;
+    if (!hotel?.id) return { paid: false };
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -79,12 +79,16 @@ export function SubscriptionProvider({ children }) {
           body: JSON.stringify({ hotelId: hotel.id }),
         },
       );
-      if (!res.ok) return false;
+      if (!res.ok) return { paid: false };
       const data = await res.json();
-      return data?.paid === true || data?.status === "active";
+      return {
+        paid: data?.paid === true || data?.status === "active",
+        status: data?.status,
+        nothingToVerify: data?.nothingToVerify === true,
+      };
     } catch (err) {
       console.warn("verify-payment call failed:", err);
-      return false;
+      return { paid: false };
     }
   }, [hotel]);
 
@@ -125,12 +129,15 @@ export function SubscriptionProvider({ children }) {
           params.get("payment") === "cancelled";
 
         if (cameFromPayment) {
-          // Auto-verify: confirm + activate any pending payment for this hotel
-          // directly with PayMongo. The edge function resolves the pending
-          // payments itself, so no session id is required from the client.
+          // Auto-verify: confirm the payment with PayMongo via the backend.
+          // The backend resolves the hotel's checkout session itself, so no
+          // session id is required from the client. We only trust PayMongo's
+          // own status — a redirect or button click is never proof of payment.
           setIsPolling(true);
           setPaymentStuck(false);
           const start = Date.now();
+
+          const TERMINAL_NON_PAID = new Set(["failed", "expired", "cancelled"]);
 
           while (
             !cancelled &&
@@ -140,7 +147,18 @@ export function SubscriptionProvider({ children }) {
             // Self-heal: try to confirm + activate via PayMongo directly.
             // If it succeeds, the next DB read will show `active` and the
             // loop exits cleanly.
-            await verifyPayment();
+            const result = await verifyPayment();
+
+            // If PayMongo reports a terminal non-paid status (the user closed
+            // the checkout, hit back, or the session expired), stop polling
+            // immediately — there is nothing left to confirm.
+            if (
+              !result.paid &&
+              result.status &&
+              TERMINAL_NON_PAID.has(result.status)
+            ) {
+              break;
+            }
 
             await new Promise(
               (r) => (pollRef.current = setTimeout(r, POLL_INTERVAL_MS)),

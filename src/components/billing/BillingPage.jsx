@@ -46,11 +46,13 @@ export default function BillingPage() {
     }
   }, []);
 
-  // Manual fallback: if a payment shows as pending (e.g. the auto-verify didn't
-  // fire), the user can press "Verify" and we activate it directly. PayMongo
-  // only reaches the success redirect after a real payment, so this is safe.
-  const verifyPaymentRecord = async (paymentId, sessionId) => {
-    setVerifyingId(paymentId);
+  // Manual verification: ask the backend to check the LIVE PayMongo status
+  // for this hotel's checkout session. The backend is the only authority — it
+  // queries PayMongo directly and only extends the subscription / creates a
+  // payment record when PayMongo reports the payment as actually PAID. This
+  // button can NEVER grant a renewal on its own; it only refreshes status.
+  const verifyPaymentRecord = async () => {
+    setVerifyingId("subscription");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -71,7 +73,13 @@ export default function BillingPage() {
         toast.success("Payment confirmed — subscription activated!");
         window.location.reload();
       } else {
-        toast.error("Could not confirm this payment.");
+        // PayMongo did not confirm a payment (pending / failed / expired /
+        // cancelled / unknown). Do NOT renew. Tell the user the real status.
+        const statusLabel = (data.status || "unknown").toUpperCase();
+        toast.error(
+          data.message ||
+            `Payment not confirmed by PayMongo (status: ${statusLabel}).`,
+        );
       }
     } catch (err) {
       toast.error(err.message || "Could not verify payment.");
@@ -289,6 +297,18 @@ export default function BillingPage() {
                   Cancel Subscription
                 </button>
               )}
+              {/* If a checkout was started but PayMongo hasn't confirmed payment
+                  yet (e.g. the user came back, or the webhook is delayed),
+                  offer a manual "Verify" that re-checks PayMongo. This can
+                  NEVER grant a renewal by itself — it only refreshes status. */}
+              {!isActive && subscription?.provider_subscription_id && (
+                <button
+                  onClick={verifyPaymentRecord}
+                  disabled={verifyingId === "subscription"}
+                  className="border border-[#c9a84c] text-[#c9a84c] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#c9a84c]/10 transition disabled:opacity-50">
+                  {verifyingId === "subscription" ? "Verifying..." : "Verify Payment"}
+                </button>
+              )}
             </div>
           </div>
 
@@ -336,9 +356,10 @@ export default function BillingPage() {
             </div>
           )}
 
-          {/* Payment History — shows all payments. Paid rows are green;
-              pending rows get a "Verify" button (manual fallback) in case the
-              automatic post-payment activation didn't fire. */}
+          {/* Payment History — shows only payments PayMongo has confirmed.
+              Because a payment row is only ever created after PayMongo reports
+              a successful charge, there are no "pending" rows to verify, and
+              the Verify button can never grant a free renewal. */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-[#0f1b2d] mb-4">
               Payment History
@@ -379,14 +400,6 @@ export default function BillingPage() {
                             }`}>
                             {p.status}
                           </span>
-                          {p.status !== "paid" && (
-                            <button
-                              onClick={() => verifyPaymentRecord(p.id, p.paymongo_session_id)}
-                              disabled={verifyingId === p.id}
-                              className="block mt-1 text-xs text-[#c9a84c] hover:underline disabled:opacity-50">
-                              {verifyingId === p.id ? "Verifying..." : "Verify"}
-                            </button>
-                          )}
                         </td>
                       </tr>
                     ))}

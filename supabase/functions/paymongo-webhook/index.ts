@@ -91,40 +91,37 @@ serve(async (req) => {
         event.attributes.data.attributes.payment_method_types || [];
       const paymentMethod = paymentMethodTypes[0] || "unknown";
 
-      // Locate the payment row for this checkout session. create-checkout
-      // inserts one per session, so this is the reliable link (unlike
-      // subscriptions.provider_subscription_id, which is overwritten on each
-      // new checkout and breaks renewals / post-expiry payments).
-      const { data: paymentRow, error: payLookupErr } = await supabase
-        .from("payments")
-        .select("*")
-        .eq("paymongo_session_id", sessionId)
-        .maybeSingle();
-
-      if (payLookupErr) throw payLookupErr;
-      if (!paymentRow) {
-        console.error("Payment not found for session:", sessionId);
-        return new Response("Payment not found", { status: 404 });
-      }
-
-      // Idempotency guard: if this checkout session's payment is already paid,
-      // we've already added its month — do NOT extend again. This keeps the
-      // webhook and the verify-payment function from double-counting.
-      if (paymentRow.status === "paid") {
-        console.log(`ℹ️ Payment already applied for session: ${sessionId}`);
-        return new Response("OK", { status: 200 });
-      }
-
-      // Load the subscription this payment belongs to.
+      // Locate the subscription for this checkout session via
+      // provider_subscription_id (set by create-checkout). This is the
+      // reliable link — unlike payments rows, which are no longer created
+      // up-front, the subscription always carries the latest session id.
       const { data: subscription, error: subError } = await supabase
         .from("subscriptions")
         .select("*")
-        .eq("id", paymentRow.subscription_id)
+        .eq("provider_subscription_id", sessionId)
         .maybeSingle();
 
-      if (subError || !subscription) {
-        console.error("Subscription not found for payment:", paymentRow.id);
+      if (subError) throw subError;
+      if (!subscription) {
+        console.error("Subscription not found for session:", sessionId);
         return new Response("Subscription not found", { status: 404 });
+      }
+
+      // Idempotency guard: if this checkout session already has a paid
+      // payment row, we've already added its month — do NOT extend again.
+      // This keeps the webhook and the verify-payment function from
+      // double-counting.
+      const { data: existingPaid, error: paidLookupErr } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("paymongo_session_id", sessionId)
+        .eq("status", "paid")
+        .maybeSingle();
+
+      if (paidLookupErr) throw paidLookupErr;
+      if (existingPaid) {
+        console.log(`ℹ️ Payment already applied for session: ${sessionId}`);
+        return new Response("OK", { status: 200 });
       }
 
       // Add one month to the subscription. Stack from the later of "now" and
@@ -149,22 +146,40 @@ serve(async (req) => {
 
       if (updateError) throw updateError;
 
-      // Update the payment record status
-      const { error: paymentUpdateError } = await supabase
+      // Create the payment history record ONLY now that PayMongo has
+      // confirmed the charge. This is the single source of truth.
+      const { error: paymentInsertError } = await supabase
         .from("payments")
-        .update({
+        .insert({
+          hotel_id: subscription.hotel_id,
+          subscription_id: subscription.id,
+          paymongo_session_id: sessionId,
+          amount: subscription.monthly_amount,
+          currency: "PHP",
           status: "paid",
           paid_at: now.toISOString(),
           payment_method: paymentMethod,
-        })
-        .eq("paymongo_session_id", sessionId);
+        });
 
-      if (paymentUpdateError) throw paymentUpdateError;
+      if (paymentInsertError) throw paymentInsertError;
 
       console.log(`✅ Subscription extended for session: ${sessionId}`);
-    } else if (eventType === "payment.failed") {
-      // Similar logic to mark payment as failed, set subscription to past_due
-      // ...
+    } else if (eventType === "checkout_session.payment.failed") {
+      // Mark the checkout session as failed so the UI can show a clear
+      // failure state. No subscription change is made.
+      const sessionId = event.attributes.data.id;
+      await supabase
+        .from("subscriptions")
+        .update({ provider_subscription_id: null })
+        .eq("provider_subscription_id", sessionId);
+      console.log(`ℹ️ Checkout session failed: ${sessionId}`);
+    } else if (eventType === "checkout_session.expired") {
+      const sessionId = event.attributes.data.id;
+      await supabase
+        .from("subscriptions")
+        .update({ provider_subscription_id: null })
+        .eq("provider_subscription_id", sessionId);
+      console.log(`ℹ️ Checkout session expired: ${sessionId}`);
     } else {
       console.log(`Unhandled event type: ${eventType}`);
     }

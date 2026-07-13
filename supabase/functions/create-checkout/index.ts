@@ -176,7 +176,12 @@ serve(async (req) => {
     const checkoutUrl = result.data.attributes.checkout_url;
     const sessionId = result.data.id;
 
-    // Update subscription with provider_subscription_id
+    // Record the checkout session id on the subscription so the PayMongo
+    // webhook (and the verify-payment fallback) can locate this subscription
+    // when confirming the payment. We intentionally do NOT create a payment
+    // history row here: opening the checkout page is NOT proof of payment.
+    // A `payments` row is only ever inserted after PayMongo confirms the
+    // charge (via webhook or a verified API lookup).
     const { error: updateError } = await supabase
       .from("subscriptions")
       .update({ provider_subscription_id: sessionId })
@@ -184,33 +189,6 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Error updating provider_subscription_id:", updateError);
-    }
-
-    // Clean up any stale pending payments for this subscription before
-    // creating a fresh one. Abandoned checkouts leave pending rows behind;
-    // removing them keeps the payment history clean (only paid rows remain).
-    const { error: cleanupError } = await supabase
-      .from("payments")
-      .delete()
-      .eq("subscription_id", subscription.id)
-      .eq("status", "pending");
-
-    if (cleanupError) {
-      console.error("Error cleaning up pending payments:", cleanupError);
-    }
-
-    // Insert pending payment record
-    const { error: paymentError } = await supabase.from("payments").insert({
-      hotel_id: hotelId,
-      subscription_id: subscription.id,
-      paymongo_session_id: sessionId,
-      amount: monthlyAmount,
-      currency: "PHP",
-      status: "pending",
-    });
-
-    if (paymentError) {
-      console.error("Error inserting payment record:", paymentError);
     }
 
     return new Response(JSON.stringify({ checkoutUrl, sessionId }), {
