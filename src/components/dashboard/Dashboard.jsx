@@ -18,6 +18,7 @@ import BillingCard from "../billing/BillingCard";
 import { useSubscription } from "../../contexts/SubscriptionContext";
 import TrialBanner from "../billing/TrialBanner";
 import { useNavigate } from "react-router-dom";
+import { messageService } from "../../services/messageService";
 
 import {
   CheckinModal,
@@ -167,6 +168,72 @@ export default function Dashboard() {
         clearInterval(timerIntervalRef.current);
       }
       window.removeEventListener("refreshRooms", handleRefreshRooms);
+    };
+  }, [hotel]);
+
+  // Realtime: keep the dashboard's message list live. A single hotel-wide
+  // channel receives INSERT/UPDATE/DELETE for every room, so a guest message
+  // (or an admin reply) appears instantly without a page refresh. This is the
+  // core fix for "dashboard only updates after manual refresh".
+  const messagesChannelRef = useRef(null);
+  useEffect(() => {
+    if (!hotel?.id) return;
+
+    // Remove any stale channel before (re)subscribing.
+    if (messagesChannelRef.current) {
+      supabase.removeChannel(messagesChannelRef.current);
+      messagesChannelRef.current = null;
+    }
+
+    messagesChannelRef.current = messageService.subscribeToHotel(
+      hotel.id,
+      {
+        onChange: (row, eventType) => {
+          if (!row?.room_id) return;
+          setMessages((prev) => {
+            const roomMessages = prev[row.room_id] || [];
+            if (eventType === "UPDATE") {
+              // Replace the existing row in place.
+              const updated = roomMessages.map((m) =>
+                m.id === row.id ? row : m,
+              );
+              return { ...prev, [row.room_id]: updated };
+            }
+            // INSERT (or unknown): append if not already present.
+            if (roomMessages.some((m) => m.id === row.id)) return prev;
+            return { ...prev, [row.room_id]: [...roomMessages, row] };
+          });
+          // Keep the unread badge accurate as messages arrive / get read.
+          setUnreadCount((prev) => {
+            // Recompute from current messages would require reading state;
+            // instead derive from the event: a fresh guest message bumps it.
+            if (eventType === "INSERT" && row.sender === "guest" && !row.is_read) {
+              return prev + 1;
+            }
+            if (eventType === "UPDATE" && row.sender === "guest" && row.is_read) {
+              return Math.max(0, prev - 1);
+            }
+            return prev;
+          });
+        },
+        onDelete: (oldRow) => {
+          if (!oldRow?.room_id) return;
+          setMessages((prev) => {
+            const roomMessages = prev[oldRow.room_id] || [];
+            return {
+              ...prev,
+              [oldRow.room_id]: roomMessages.filter((m) => m.id !== oldRow.id),
+            };
+          });
+        },
+      },
+    );
+
+    return () => {
+      if (messagesChannelRef.current) {
+        supabase.removeChannel(messagesChannelRef.current);
+        messagesChannelRef.current = null;
+      }
     };
   }, [hotel]);
 
@@ -1369,6 +1436,7 @@ export default function Dashboard() {
       {showMessagesPanel && (
         <MessagesPanel
           rooms={rooms}
+          hotelId={hotel?.id}
           onClose={() => setShowMessagesPanel(false)}
           onOpenChat={(room) => {
             setShowMessagesPanel(false);

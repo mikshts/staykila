@@ -222,20 +222,10 @@ export default function GuestPortal() {
         }
         setGuestToken(token);
 
-        // Real-time subscription
-        if (subscriptionRef.current) {
-          subscriptionRef.current.unsubscribe();
-        }
-        subscriptionRef.current = messageService.subscribeToRoom(
-          roomId,
-          (newMsg) => {
-            if (!messageIdsRef.current.has(newMsg.id)) {
-              messageIdsRef.current.add(newMsg.id);
-              setMessages((prev) => [...prev, newMsg]);
-              chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            }
-          },
-        );
+        // NOTE: the realtime subscription is established in a dedicated
+        // useEffect (see below) keyed on roomId, NOT here. Creating it inside
+        // an async load function risks duplicate/stale channels and races with
+        // React's cleanup. We only seed messageIdsRef here.
       }
 
       // Save to cache after successful fetch
@@ -375,11 +365,56 @@ export default function GuestPortal() {
       loadRoomData();
     }
     return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-      }
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [roomParam]);
+
+  // Real-time subscription for this room. Established in its own effect so
+  // it is created exactly once per roomId and cleaned up on change/unmount.
+  // Handles INSERT (new messages from either side), UPDATE (e.g. read state)
+  // and DELETE. This is what makes admin replies appear live for the guest.
+  useEffect(() => {
+    const parsed = parseRoomParam(roomParam);
+    const roomId = parsed?.roomId;
+    if (!roomId) return;
+
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+      subscriptionRef.current = null;
+    }
+
+    subscriptionRef.current = messageService.subscribeToRoom(
+      roomId,
+      {
+        onChange: (newMsg, eventType) => {
+          if (!newMsg?.id) return;
+          if (eventType === "UPDATE") {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === newMsg.id ? newMsg : m)),
+            );
+            return;
+          }
+          // INSERT (or unknown): append only if not already present.
+          if (!messageIdsRef.current.has(newMsg.id)) {
+            messageIdsRef.current.add(newMsg.id);
+            setMessages((prev) => [...prev, newMsg]);
+            chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          }
+        },
+        onDelete: (oldMsg) => {
+          if (!oldMsg?.id) return;
+          messageIdsRef.current.delete(oldMsg.id);
+          setMessages((prev) => prev.filter((m) => m.id !== oldMsg.id));
+        },
+      },
+    );
+
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
       }
     };
   }, [roomParam]);

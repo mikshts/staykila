@@ -1,11 +1,13 @@
 // src/components/settings/MessagesPanel.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../../lib/supabase";
+import { messageService } from "../../services/messageService";
 
-export default function MessagesPanel({ rooms, onClose, onOpenChat }) {
+export default function MessagesPanel({ rooms, hotelId, onClose, onOpenChat }) {
   const [allMessages, setAllMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const panelRef = useRef(null);
+  const channelRef = useRef(null);
 
   useEffect(() => {
     const fetchAllMessages = async () => {
@@ -37,6 +39,38 @@ export default function MessagesPanel({ rooms, onClose, onOpenChat }) {
     };
     fetchAllMessages();
   }, [rooms]);
+
+  // Live updates: subscribe to the hotel's messages so the panel reflects new
+  // guest/admin messages and read-state changes without a manual refresh.
+  useEffect(() => {
+    if (!hotelId) return;
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+    channelRef.current = messageService.subscribeToHotel(hotelId, {
+      onChange: (row, eventType) => {
+        if (!row?.id) return;
+        setAllMessages((prev) => {
+          if (eventType === "UPDATE") {
+            return prev.map((m) => (m.id === row.id ? row : m));
+          }
+          if (prev.some((m) => m.id === row.id)) return prev;
+          return [row, ...prev];
+        });
+      },
+      onDelete: (oldRow) => {
+        if (!oldRow?.id) return;
+        setAllMessages((prev) => prev.filter((m) => m.id !== oldRow.id));
+      },
+    });
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [hotelId]);
 
   // Handle click outside to close
   useEffect(() => {

@@ -65,26 +65,72 @@ export const messageService = {
     return { success: true };
   },
 
-  // Subscribe to new messages (Realtime)
-  subscribeToRoom(roomId, callback) {
+  // Subscribe to new messages for a single room (Guest Portal).
+  // Listens for INSERT, UPDATE and DELETE so edits/deletes/reads propagate.
+  subscribeToRoom(roomId, callbacks) {
+    const cb = normalizeCallbacks(callbacks);
     const channel = supabase
       .channel(`room-${roomId}`)
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
           filter: `room_id=eq.${roomId}`,
         },
         (payload) => {
-          callback(payload.new);
+          if (payload.eventType === "DELETE") {
+            cb.onDelete?.(payload.old);
+          } else {
+            cb.onChange?.(payload.new, payload.eventType);
+          }
         },
       )
       .subscribe();
 
     return channel;
   },
+
+  // Subscribe to ALL messages for a hotel (Dashboard).
+  // A single channel covers every room in the hotel, so the dashboard updates
+  // live when any guest (or admin) sends a message — no per-room channels,
+  // no duplicate subscriptions.
+  subscribeToHotel(hotelId, callbacks) {
+    const cb = normalizeCallbacks(callbacks);
+    const channel = supabase
+      .channel(`hotel-messages-${hotelId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `hotel_id=eq.${hotelId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            cb.onDelete?.(payload.old);
+          } else {
+            cb.onChange?.(payload.new, payload.eventType);
+          }
+        },
+      )
+      .subscribe();
+
+    return channel;
+  },
+};
+
+// Allow callers to pass either a single (newMsg) => void function (legacy) or
+// an object of named callbacks. Keeps the existing GuestPortal call site
+// working while letting the Dashboard use richer events.
+function normalizeCallbacks(callbacks) {
+  if (typeof callbacks === "function") {
+    return { onChange: (row) => callbacks(row) };
+  }
+  return callbacks || {};
+}
 
   // Create guest session
   async createGuestSession(roomId) {
