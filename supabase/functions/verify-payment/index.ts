@@ -25,13 +25,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Query PayMongo for the live status of a checkout session. Returns the raw
-// status string (e.g. "paid", "pending", "failed", "expired", "cancelled")
-// or null if it can't be determined.
+// Query PayMongo for the live status of a checkout session. Returns
+// { status, paymentMethod } where status is a normalized string:
+// "paid" | "pending" | "expired" | "unknown" | null (lookup failed).
 async function getPayMongoSessionStatus(sessionId) {
   if (!PAYMONGO_SECRET) {
-    console.error("PAYMONGO_SECRET_KEY is not set; cannot verify with PayMongo.");
-    return null;
+    console.error(
+      "PAYMONGO_SECRET_KEY is not set; cannot verify with PayMongo.",
+    );
+    return { status: null, paymentMethod: null };
   }
   try {
     const res = await fetch(
@@ -46,13 +48,48 @@ async function getPayMongoSessionStatus(sessionId) {
     );
     if (!res.ok) {
       console.error("PayMongo session lookup failed:", res.status);
-      return null;
+      return { status: null, paymentMethod: null };
     }
     const json = await res.json();
-    return json?.data?.attributes?.status ?? null;
+    const attrs = json?.data?.attributes;
+    if (!attrs) return { status: null, paymentMethod: null };
+
+    // IMPORTANT: the Checkout Session's own top-level `status` field only
+    // ever reflects whether the session itself is open or expired
+    // ("active" / "expired") — it is NOT the payment result and NEVER
+    // becomes "paid". Comparing this field to "paid" (the old bug) could
+    // never succeed, so a real payment was never detected and the user got
+    // stuck on the billing page forever after paying.
+    //
+    // The real outcome lives on the embedded Payment Intent
+    // (`payment_intent.attributes.status`, one of:
+    // awaiting_payment_method / awaiting_next_action / processing / succeeded)
+    // and/or the `payments` array (each with its own `status: "paid"`).
+    const paymentIntentStatus = attrs.payment_intent?.attributes?.status;
+    const payments = attrs.payments || [];
+    const paidPayment = payments.find((p) => p?.attributes?.status === "paid");
+
+    if (paymentIntentStatus === "succeeded" || paidPayment) {
+      const paymentMethod =
+        paidPayment?.attributes?.source?.type ||
+        attrs.payment_method_used ||
+        "paymongo";
+      return { status: "paid", paymentMethod };
+    }
+
+    if (
+      paymentIntentStatus === "processing" ||
+      paymentIntentStatus === "awaiting_payment_method" ||
+      paymentIntentStatus === "awaiting_next_action"
+    ) {
+      return { status: "pending", paymentMethod: null };
+    }
+
+    // Session itself expired/cancelled with no successful payment intent.
+    return { status: attrs.status ?? "unknown", paymentMethod: null };
   } catch (err) {
     console.error("Error querying PayMongo session:", err);
-    return null;
+    return { status: null, paymentMethod: null };
   }
 }
 
@@ -160,10 +197,11 @@ serve(async (req) => {
     }
 
     // Ask PayMongo for the real status. Never trust the redirect/button.
-    const paymongoStatus = await getPayMongoSessionStatus(sessionId);
+    const { status: paymongoStatus, paymentMethod } =
+      await getPayMongoSessionStatus(sessionId);
 
     // Only a confirmed "paid" status activates the subscription. Anything else
-    // (pending, failed, expired, cancelled, or unknown) is reported back and
+    // (pending, expired, unknown, or a failed lookup) is reported back and
     // the subscription is left untouched.
     if (paymongoStatus !== "paid") {
       console.log(
@@ -173,10 +211,7 @@ serve(async (req) => {
         JSON.stringify({
           status: paymongoStatus || "unknown",
           paid: false,
-          message:
-            paymongoStatus === "paid"
-              ? ""
-              : "Payment has not been confirmed by PayMongo yet.",
+          message: "Payment has not been confirmed by PayMongo yet.",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -216,7 +251,7 @@ serve(async (req) => {
         currency: "PHP",
         status: "paid",
         paid_at: now.toISOString(),
-        payment_method: "paymongo",
+        payment_method: paymentMethod || "paymongo",
       });
 
     if (paymentInsertError) throw paymentInsertError;
@@ -225,10 +260,9 @@ serve(async (req) => {
       `✅ Subscription activated via verify-payment for hotel: ${hotelId}`,
     );
 
-    return new Response(
-      JSON.stringify({ status: "active", paid: true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ status: "active", paid: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
