@@ -48,22 +48,28 @@ export default function MessagesPanel({ rooms, hotelId, onClose, onOpenChat }) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
-    channelRef.current = messageService.subscribeToHotel(hotelId, {
-      onChange: (row, eventType) => {
-        if (!row?.id) return;
-        setAllMessages((prev) => {
-          if (eventType === "UPDATE") {
-            return prev.map((m) => (m.id === row.id ? row : m));
-          }
-          if (prev.some((m) => m.id === row.id)) return prev;
-          return [row, ...prev];
-        });
+    channelRef.current = messageService.subscribeToHotel(
+      hotelId,
+      {
+        onChange: (row, eventType) => {
+          if (!row?.id) return;
+          setAllMessages((prev) => {
+            if (eventType === "UPDATE") {
+              return prev.map((m) => (m.id === row.id ? row : m));
+            }
+            if (prev.some((m) => m.id === row.id)) return prev;
+            return [row, ...prev];
+          });
+        },
+        onDelete: (oldRow) => {
+          if (!oldRow?.id) return;
+          setAllMessages((prev) => prev.filter((m) => m.id !== oldRow.id));
+        },
       },
-      onDelete: (oldRow) => {
-        if (!oldRow?.id) return;
-        setAllMessages((prev) => prev.filter((m) => m.id !== oldRow.id));
-      },
-    });
+      // Distinct channel name so it never collides with the Dashboard's
+      // hotel-wide channel (which would throw "after subscribe()").
+      `hotel-messages-panel-${hotelId}`,
+    );
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);

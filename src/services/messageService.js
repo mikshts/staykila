@@ -128,10 +128,17 @@ export const messageService = {
   // A single channel covers every room in the hotel, so the dashboard updates
   // live when any guest (or admin) sends a message — no per-room channels,
   // no duplicate subscriptions.
-  subscribeToHotel(hotelId, callbacks) {
+  //
+  // `channelName` is optional: callers that open more than one hotel-wide
+  // subscription (e.g. the Dashboard AND the MessagesPanel) MUST pass a
+  // distinct name, otherwise Supabase returns the already-subscribed channel
+  // and a second `.on(...)` throws "cannot add postgres_changes callbacks ...
+  // after subscribe()".
+  subscribeToHotel(hotelId, callbacks, channelName) {
     const cb = normalizeCallbacks(callbacks);
+    const name = channelName || `hotel-messages-${hotelId}`;
     const channel = supabase
-      .channel(`hotel-messages-${hotelId}`)
+      .channel(name)
       .on(
         "postgres_changes",
         {
