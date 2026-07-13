@@ -65,6 +65,38 @@ export const messageService = {
     return { success: true };
   },
 
+  // Create guest session
+  async createGuestSession(roomId) {
+    const token = crypto.randomUUID();
+
+    const { data, error } = await supabase
+      .from("guest_sessions")
+      .insert({
+        room_id: roomId,
+        token: token,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { token, session: data };
+  },
+
+  // Validate guest session
+  async validateGuestSession(token) {
+    const { data, error } = await supabase
+      .from("guest_sessions")
+      .select("*")
+      .eq("token", token)
+      .eq("is_active", true)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (error) return null;
+    return data;
+  },
+
   // Subscribe to new messages for a single room (Guest Portal).
   // Listens for INSERT, UPDATE and DELETE so edits/deletes/reads propagate.
   subscribeToRoom(roomId, callbacks) {
@@ -131,36 +163,3 @@ function normalizeCallbacks(callbacks) {
   }
   return callbacks || {};
 }
-
-  // Create guest session
-  async createGuestSession(roomId) {
-    const token = crypto.randomUUID();
-
-    const { data, error } = await supabase
-      .from("guest_sessions")
-      .insert({
-        room_id: roomId,
-        token: token,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return { token, session: data };
-  },
-
-  // Validate guest session
-  async validateGuestSession(token) {
-    const { data, error } = await supabase
-      .from("guest_sessions")
-      .select("*")
-      .eq("token", token)
-      .eq("is_active", true)
-      .gt("expires_at", new Date().toISOString())
-      .single();
-
-    if (error) return null;
-    return data;
-  },
-};

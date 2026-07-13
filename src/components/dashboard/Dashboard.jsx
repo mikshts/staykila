@@ -175,6 +175,10 @@ export default function Dashboard() {
   // channel receives INSERT/UPDATE/DELETE for every room, so a guest message
   // (or an admin reply) appears instantly without a page refresh. This is the
   // core fix for "dashboard only updates after manual refresh".
+  //
+  // The unread badge is RECOMPUTED from the full message map on every change
+  // (never incremented/decremented), so the Sidebar count and the per-room
+  // "N new" in MessagesPanel can never drift out of sync.
   const messagesChannelRef = useRef(null);
   useEffect(() => {
     if (!hotel?.id) return;
@@ -192,38 +196,33 @@ export default function Dashboard() {
           if (!row?.room_id) return;
           setMessages((prev) => {
             const roomMessages = prev[row.room_id] || [];
+            let nextRoomMessages;
             if (eventType === "UPDATE") {
               // Replace the existing row in place.
-              const updated = roomMessages.map((m) =>
+              nextRoomMessages = roomMessages.map((m) =>
                 m.id === row.id ? row : m,
               );
-              return { ...prev, [row.room_id]: updated };
+            } else {
+              // INSERT (or unknown): append if not already present.
+              if (roomMessages.some((m) => m.id === row.id)) return prev;
+              nextRoomMessages = [...roomMessages, row];
             }
-            // INSERT (or unknown): append if not already present.
-            if (roomMessages.some((m) => m.id === row.id)) return prev;
-            return { ...prev, [row.room_id]: [...roomMessages, row] };
-          });
-          // Keep the unread badge accurate as messages arrive / get read.
-          setUnreadCount((prev) => {
-            // Recompute from current messages would require reading state;
-            // instead derive from the event: a fresh guest message bumps it.
-            if (eventType === "INSERT" && row.sender === "guest" && !row.is_read) {
-              return prev + 1;
-            }
-            if (eventType === "UPDATE" && row.sender === "guest" && row.is_read) {
-              return Math.max(0, prev - 1);
-            }
-            return prev;
+            const next = { ...prev, [row.room_id]: nextRoomMessages };
+            // Recompute unread from the authoritative message map.
+            setUnreadCount(computeUnread(next));
+            return next;
           });
         },
         onDelete: (oldRow) => {
           if (!oldRow?.room_id) return;
           setMessages((prev) => {
             const roomMessages = prev[oldRow.room_id] || [];
-            return {
+            const next = {
               ...prev,
               [oldRow.room_id]: roomMessages.filter((m) => m.id !== oldRow.id),
             };
+            setUnreadCount(computeUnread(next));
+            return next;
           });
         },
       },
@@ -236,6 +235,19 @@ export default function Dashboard() {
       }
     };
   }, [hotel]);
+
+  // Total unread = messages from a guest that the admin has not read yet.
+  // Used for the Sidebar red badge; recomputed (never incremented) so it stays
+  // correct as messages stream in / get marked read via realtime.
+  function computeUnread(messageMap) {
+    let count = 0;
+    Object.values(messageMap).forEach((roomMsgs) => {
+      roomMsgs.forEach((m) => {
+        if (m.sender === "guest" && !m.is_read) count++;
+      });
+    });
+    return count;
+  }
 
   // When the subscription flips to "active" (e.g. right after a successful
   // payment), refresh the dashboard data so room availability, metrics, and
@@ -311,9 +323,7 @@ export default function Dashboard() {
         });
         setMessages(messageMap);
 
-        const unread = data.filter(
-          (msg) => !msg.is_read && msg.sender === "guest",
-        ).length;
+        const unread = computeUnread(messageMap);
         setUnreadCount(unread);
       }
     } catch (error) {
