@@ -41,12 +41,7 @@ export default function SubscriptionManager() {
       if (!response.ok) {
         throw new Error(data.error || `Request failed (${response.status})`);
       }
-      if (data.checkoutUrl) {
-        if (data.sessionId) {
-          sessionStorage.setItem("staykila_checkout_session", data.sessionId);
-        }
-        window.location.href = data.checkoutUrl;
-      }
+      if (data.checkoutUrl) window.location.href = data.checkoutUrl;
     } catch (err) {
       console.error(err);
       alert("Payment initiation failed. Please try again.");

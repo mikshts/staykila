@@ -45,9 +45,6 @@ export function SubscriptionProvider({ children }) {
 
   const pollRef = useRef(null);
   const paramStrippedRef = useRef(false);
-  // The PayMongo checkout session id captured from the success redirect, used
-  // by the self-healing verifier.
-  const sessionIdRef = useRef(null);
 
   const fetchSubscription = useCallback(async () => {
     if (!hotel?.id) return null;
@@ -62,11 +59,12 @@ export function SubscriptionProvider({ children }) {
     return data;
   }, [hotel]);
 
-  // Ask the edge function to confirm the payment with PayMongo directly and
-  // activate the subscription/payment record. Returns true if it succeeded.
+  // Ask the edge function to confirm + activate any pending payment for this
+  // hotel directly with PayMongo. Returns true if a payment was activated.
+  // No session id needed — the function resolves the hotel's pending payments
+  // itself, so this works even if the redirect lost the session id.
   const verifyPayment = useCallback(async () => {
-    const sessionId = sessionIdRef.current;
-    if (!sessionId || !hotel?.id) return false;
+    if (!hotel?.id) return false;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -78,7 +76,7 @@ export function SubscriptionProvider({ children }) {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ hotelId: hotel.id, sessionId }),
+          body: JSON.stringify({ hotelId: hotel.id }),
         },
       );
       if (!res.ok) return false;
@@ -127,29 +125,9 @@ export function SubscriptionProvider({ children }) {
           params.get("payment") === "cancelled";
 
         if (cameFromPayment) {
-          // Capture the checkout session id so we can self-heal via the
-          // verify-payment edge function.
-          //
-          // PREFERENCE ORDER (this is what fixes the "second payment doesn't
-          // work" bug):
-          //   1. ?session_id on the redirect URL — PayMongo appends the exact
-          //      session that just completed, so this is always correct even
-          //      on repeat payments.
-          //   2. sessionStorage stashed at checkout time (fallback).
-          //   3. subscription.provider_subscription_id — ONLY the first ever
-          //      checkout session, so it is the weakest signal and must be
-          //      last. Relying on it alone is why repeat payments failed.
-          const urlParams = new URLSearchParams(window.location.search);
-          const sessionFromUrl = urlParams.get("session_id");
-          const sessionFromStorage = sessionStorage.getItem(
-            "staykila_checkout_session",
-          );
-          const storedSession =
-            sessionFromUrl || sessionFromStorage || latest?.provider_subscription_id;
-          if (storedSession) sessionIdRef.current = storedSession;
-          // Clear the stash now that we've captured it.
-          sessionStorage.removeItem("staykila_checkout_session");
-
+          // Auto-verify: confirm + activate any pending payment for this hotel
+          // directly with PayMongo. The edge function resolves the pending
+          // payments itself, so no session id is required from the client.
           setIsPolling(true);
           setPaymentStuck(false);
           const start = Date.now();

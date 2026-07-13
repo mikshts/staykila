@@ -3,15 +3,17 @@
 // Self-healing payment verifier. After a successful PayMongo checkout redirect,
 // the client calls this function so the subscription/payment can be activated
 // EVEN IF the PayMongo webhook is delayed, misconfigured, or fails signature
-// verification. It is fully idempotent: calling it repeatedly for an already
-// paid session is a no-op.
+// verification.
 //
-// IMPORTANT: we locate the record to activate via the payments row keyed by
-// `paymongo_session_id` (which create-checkout inserts for EVERY checkout),
-// NOT via subscriptions.provider_subscription_id. The latter is a single column
-// that gets overwritten on each new checkout, so relying on it is what caused
-// renewals (and post-manual-expiry payments) to silently stay "pending" and the
-// dashboard to stay locked.
+// KEY DESIGN: we do NOT rely on the client passing the correct checkout
+// session id (that value is easily lost — PayMongo doesn't always append it to
+// the redirect, and sessionStorage can be cleared). Instead we look up the
+// hotel's subscription and verify EVERY pending payment row against PayMongo.
+// Whichever session the user actually paid gets activated. This makes the
+// post-payment flow fully automatic — no manual "Verify" click required.
+//
+// Idempotent: a session whose payment is already "paid" is a no-op, so the
+// webhook and this function can both safely run.
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -43,10 +45,10 @@ serve(async (req) => {
       );
     }
 
-    const { hotelId, sessionId } = await req.json();
+    const { hotelId } = await req.json();
 
-    if (!hotelId || !sessionId) {
-      throw new Error("Missing required fields: hotelId, sessionId.");
+    if (!hotelId) {
+      throw new Error("Missing required field: hotelId.");
     }
 
     const authHeader =
@@ -96,91 +98,17 @@ serve(async (req) => {
       );
     }
 
-    // 1. Find the payment row for this checkout session. This is the reliable
-    //    link — create-checkout inserts one per session, so it always exists
-    //    for a payment we initiated.
-    const { data: paymentRow, error: payLookupErr } = await supabase
-      .from("payments")
-      .select("*")
-      .eq("paymongo_session_id", sessionId)
-      .maybeSingle();
-
-    if (payLookupErr) throw payLookupErr;
-    if (!paymentRow) {
-      return new Response(
-        JSON.stringify({ error: "Payment not found for session." }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 404,
-        },
-      );
-    }
-
-    // Idempotency guard: if this session's payment is already paid, we've
-    // already added its month — do NOT extend again. This keeps the webhook and
-    // the client verifier from double-counting.
-    if (paymentRow.status === "paid") {
-      return new Response(
-        JSON.stringify({
-          status: "active",
-          paid: true,
-          alreadyApplied: true,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // 2. Ask PayMongo directly whether this checkout session was paid.
-    const pmRes = await fetch(
-      `https://api.paymongo.com/v1/checkout_sessions/${sessionId}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Basic ${btoa(PAYMONGO_SECRET + ":")}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
-
-    if (!pmRes.ok) {
-      const errBody = await pmRes.json().catch(() => ({}));
-      console.error("PayMongo lookup failed:", errBody);
-      throw new Error(
-        errBody?.errors?.[0]?.detail || "Failed to verify payment with PayMongo.",
-      );
-    }
-
-    const pmJson = await pmRes.json();
-    const session = pmJson?.data;
-    const paymentStatus = session?.attributes?.payment_intent?.attributes?.status;
-    const isPaid =
-      session?.attributes?.status === "paid" ||
-      paymentStatus === "succeeded" ||
-      paymentStatus === "paid";
-
-    if (!isPaid) {
-      // Not paid yet — let the client keep polling. Don't mutate anything.
-      return new Response(
-        JSON.stringify({ status: "pending", paid: false }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const paymentMethodTypes =
-      session?.attributes?.payment_method_types || [];
-    const paymentMethod = paymentMethodTypes[0] || "unknown";
-
-    // 3. Load the subscription this payment belongs to.
+    // Load the hotel's subscription.
     const { data: subscription, error: subError } = await supabase
       .from("subscriptions")
       .select("*")
-      .eq("id", paymentRow.subscription_id)
+      .eq("hotel_id", hotelId)
       .maybeSingle();
 
     if (subError) throw subError;
     if (!subscription) {
       return new Response(
-        JSON.stringify({ error: "Subscription not found for payment." }),
+        JSON.stringify({ error: "Subscription not found for hotel." }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 404,
@@ -188,44 +116,109 @@ serve(async (req) => {
       );
     }
 
-    // 4. Add one month to the subscription. Stack from the later of "now" and
-    //    the current period end so an early renewal doesn't lose remaining days.
-    const now = new Date();
-    const baseEnd = subscription.current_period_end
-      ? new Date(subscription.current_period_end)
-      : now;
-    const periodEnd = new Date(Math.max(now.getTime(), baseEnd.getTime()));
-    periodEnd.setDate(periodEnd.getDate() + 30);
-
-    const { error: updateError } = await supabase
-      .from("subscriptions")
-      .update({
-        subscription_status: "active",
-        current_period_start: now.toISOString(),
-        current_period_end: periodEnd.toISOString(),
-        next_billing_date: periodEnd.toISOString(),
-        payment_provider: "paymongo",
-      })
-      .eq("id", subscription.id);
-
-    if (updateError) throw updateError;
-
-    // 5. Mark the payment record as paid.
-    const { error: paymentUpdateError } = await supabase
+    // Already active and no pending payments? Nothing to do.
+    const { data: pendingPayments, error: pendErr } = await supabase
       .from("payments")
-      .update({
-        status: "paid",
-        paid_at: now.toISOString(),
-        payment_method: paymentMethod,
-      })
-      .eq("paymongo_session_id", sessionId);
+      .select("*")
+      .eq("subscription_id", subscription.id)
+      .eq("status", "pending");
 
-    if (paymentUpdateError) throw paymentUpdateError;
+    if (pendErr) throw pendErr;
 
-    console.log(`✅ Subscription extended via verify-payment for session: ${sessionId}`);
+    if (!pendingPayments || pendingPayments.length === 0) {
+      return new Response(
+        JSON.stringify({
+          status: subscription.subscription_status,
+          paid: subscription.subscription_status === "active",
+          nothingToVerify: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
+    // Verify each pending payment directly with PayMongo. Activate the first
+    // one that has actually been paid.
+    for (const paymentRow of pendingPayments) {
+      const sessionId = paymentRow.paymongo_session_id;
+      if (!sessionId) continue;
+
+      let isPaid = false;
+      let paymentMethod = "unknown";
+      try {
+        const pmRes = await fetch(
+          `https://api.paymongo.com/v1/checkout_sessions/${sessionId}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Basic ${btoa(PAYMONGO_SECRET + ":")}`,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+        if (!pmRes.ok) continue; // skip sessions we can't inspect
+        const pmJson = await pmRes.json();
+        const session = pmJson?.data;
+        const paymentStatus =
+          session?.attributes?.payment_intent?.attributes?.status;
+        isPaid =
+          session?.attributes?.status === "paid" ||
+          paymentStatus === "succeeded" ||
+          paymentStatus === "paid";
+        const paymentMethodTypes =
+          session?.attributes?.payment_method_types || [];
+        paymentMethod = paymentMethodTypes[0] || "unknown";
+      } catch {
+        continue; // network blip — try the next pending session
+      }
+
+      if (!isPaid) continue;
+
+      // This session was paid — activate the subscription (+1 month, stacked)
+      // and mark this payment paid.
+      const now = new Date();
+      const baseEnd = subscription.current_period_end
+        ? new Date(subscription.current_period_end)
+        : now;
+      const periodEnd = new Date(Math.max(now.getTime(), baseEnd.getTime()));
+      periodEnd.setDate(periodEnd.getDate() + 30);
+
+      const { error: updateError } = await supabase
+        .from("subscriptions")
+        .update({
+          subscription_status: "active",
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+          next_billing_date: periodEnd.toISOString(),
+          payment_provider: "paymongo",
+        })
+        .eq("id", subscription.id);
+
+      if (updateError) throw updateError;
+
+      const { error: paymentUpdateError } = await supabase
+        .from("payments")
+        .update({
+          status: "paid",
+          paid_at: now.toISOString(),
+          payment_method: paymentMethod,
+        })
+        .eq("id", paymentRow.id);
+
+      if (paymentUpdateError) throw paymentUpdateError;
+
+      console.log(
+        `✅ Subscription extended via verify-payment for session: ${sessionId}`,
+      );
+
+      return new Response(
+        JSON.stringify({ status: "active", paid: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // None of the pending sessions have been paid (yet). Leave them pending.
     return new Response(
-      JSON.stringify({ status: "active", paid: true }),
+      JSON.stringify({ status: "pending", paid: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {

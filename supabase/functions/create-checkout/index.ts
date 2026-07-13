@@ -182,6 +182,19 @@ serve(async (req) => {
       console.error("Error updating provider_subscription_id:", updateError);
     }
 
+    // Clean up any stale pending payments for this subscription before
+    // creating a fresh one. Abandoned checkouts leave pending rows behind;
+    // removing them keeps the payment history clean (only paid rows remain).
+    const { error: cleanupError } = await supabase
+      .from("payments")
+      .delete()
+      .eq("subscription_id", subscription.id)
+      .eq("status", "pending");
+
+    if (cleanupError) {
+      console.error("Error cleaning up pending payments:", cleanupError);
+    }
+
     // Insert pending payment record
     const { error: paymentError } = await supabase.from("payments").insert({
       hotel_id: hotelId,

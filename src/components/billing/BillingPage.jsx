@@ -24,24 +24,22 @@ export default function BillingPage() {
     daysUntilExpiration,
   } = useSubscription();
   const { payments, isLoading: paymentsLoading } = usePayments();
+  // Only show payments that actually went through. Pending rows are transient
+  // (created when a checkout begins) and are auto-resolved by the verifier, so
+  // they never appear in this history.
+  const paidPayments = payments.filter((p) => p.status === "paid");
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelText, setCancelText] = useState("");
   const [cancelling, setCancelling] = useState(false);
 
-  // If PayMongo redirected back with ?session_id (it appends this on success),
-  // stash it so the post-payment verifier can confirm the EXACT session that
-  // just completed. This is what fixes the "second payment doesn't work" bug:
-  // previously we relied on the subscription's provider_subscription_id column,
-  // which only holds the FIRST checkout session ever created, so repeat
-  // payments could never be verified.
+  // When PayMongo redirects back (?payment=success), the SubscriptionContext
+  // at the app root automatically verifies + activates the payment and then
+  // redirects to the dashboard. Nothing to do here but strip the param.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("session_id");
-    if (sessionId) {
-      sessionStorage.setItem("staykila_checkout_session", sessionId);
-      // Clean the param out of the visible URL.
-      params.delete("session_id");
+    if (params.has("payment")) {
+      params.delete("payment");
       const newSearch = params.toString();
       window.history.replaceState(
         {},
@@ -94,53 +92,12 @@ export default function BillingPage() {
         throw new Error(data.error || `Request failed (${response.status})`);
       }
       if (data.checkoutUrl) {
-        // Persist the checkout session id so the post-payment verifier can
-        // confirm the payment directly with PayMongo if the webhook is slow.
-        if (data.sessionId) {
-          sessionStorage.setItem("staykila_checkout_session", data.sessionId);
-        }
         window.location.href = data.checkoutUrl;
       } else {
         throw new Error("No checkout URL was returned. Please try again.");
       }
     } catch (err) {
       toast.error(err.message || "Failed to initiate payment. Please try again.");
-    }
-  };
-
-  // Manually re-confirm a specific payment with PayMongo. This is the recovery
-  // path: if a renewal's webhook/auto-verify didn't flip it to paid (e.g. the
-  // redirect session_id was lost, or the DB was edited), the user can press
-  // "Verify" on the pending row and we'll activate it directly.
-  const verifyPaymentRecord = async (sessionId) => {
-    if (!sessionId) {
-      toast.error("No checkout session linked to this payment.");
-      return;
-    }
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ hotelId: hotel.id, sessionId }),
-        },
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Verification failed.");
-      if (data.paid || data.status === "active") {
-        toast.success("Payment confirmed — subscription activated!");
-        window.location.reload();
-      } else {
-        toast.error("PayMongo shows this payment is not paid yet.");
-      }
-    } catch (err) {
-      toast.error(err.message || "Could not verify payment.");
     }
   };
 
@@ -348,14 +305,16 @@ export default function BillingPage() {
             </div>
           )}
 
-          {/* Payment History */}
+          {/* Payment History — shows only successfully paid payments. Pending
+              rows are transient (created when a checkout starts) and are
+              auto-resolved by the verifier, so they are not shown here. */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-[#0f1b2d] mb-4">
               Payment History
             </h3>
             {paymentsLoading ? (
               <p className="text-gray-500">Loading...</p>
-            ) : payments.length === 0 ? (
+            ) : paidPayments.length === 0 ? (
               <p className="text-gray-500">No payments yet.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -369,7 +328,7 @@ export default function BillingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {payments.map((p) => (
+                    {paidPayments.map((p) => (
                       <tr key={p.id} className="border-b last:border-b-0">
                         <td className="py-2">
                           {new Date(p.created_at).toLocaleDateString()}
@@ -379,23 +338,9 @@ export default function BillingPage() {
                           {p.payment_method || "—"}
                         </td>
                         <td className="py-2">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                              p.status === "paid"
-                                ? "bg-green-100 text-green-700"
-                                : p.status === "failed"
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                            }`}>
+                          <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                             {p.status}
                           </span>
-                          {p.status !== "paid" && p.paymongo_session_id && (
-                            <button
-                              onClick={() => verifyPaymentRecord(p.paymongo_session_id)}
-                              className="block mt-1 text-xs text-[#c9a84c] hover:underline">
-                              Verify
-                            </button>
-                          )}
                         </td>
                       </tr>
                     ))}
