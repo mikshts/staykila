@@ -172,9 +172,17 @@ export function SubscriptionProvider({ children }) {
 
           setIsPolling(false);
 
+          if (!cancelled && latest?.subscription_status === "active") {
+            // Payment confirmed and subscription is now active — send the user
+            // straight to the dashboard. No manual "Verify" click needed.
+            window.location.href = `${window.location.origin}/dashboard`;
+            return;
+          }
+
           if (!cancelled && latest?.subscription_status !== "active") {
             // Polling timed out without activation. Don't spin forever —
-            // surface a clear "still confirming" state instead.
+            // surface a clear "still confirming" state instead (the billing
+            // page offers a manual Verify button as a fallback).
             setPaymentStuck(true);
           }
         }

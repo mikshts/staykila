@@ -77,7 +77,11 @@ export default function BillingPage() {
           body: JSON.stringify({
             hotelId: hotel.id,
             roomCount: subscription?.room_count,
-            successUrl: `${window.location.origin}/dashboard?payment=success`,
+            // Land on /billing?payment=success after PayMongo. Billing is always
+            // reachable for expired users, so the auto-verify can run there and
+            // then automatically redirect to the dashboard once active — no
+            // manual "Verify" click required.
+            successUrl: `${window.location.origin}/billing?payment=success`,
             cancelUrl: `${window.location.origin}/billing?payment=cancelled`,
           }),
         },

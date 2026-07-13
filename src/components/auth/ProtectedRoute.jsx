@@ -23,9 +23,11 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  // Post-payment: webhook hasn't confirmed activation within the timeout.
-  // Show a clear message instead of an endless spinner or a silent redirect.
-  if (paymentStuck) {
+  // Post-payment: webhook/auto-verify hasn't confirmed activation yet.
+  // On the billing page we render the page itself (so the user can see their
+  // payment history and use the manual "Verify" button as a fallback). Elsewhere
+  // we show a clear "confirming" screen with an escape hatch to billing.
+  if (paymentStuck && location.pathname !== "/billing") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">

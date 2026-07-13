@@ -32,8 +32,8 @@ export default function SubscriptionManager() {
           body: JSON.stringify({
             roomCount: subscription?.room_count || 10,
             hotelId: hotel.id,
-            successUrl: `${window.location.origin}/dashboard?payment=success`,
-            cancelUrl: `${window.location.origin}/dashboard?payment=cancelled`,
+            successUrl: `${window.location.origin}/billing?payment=success`,
+            cancelUrl: `${window.location.origin}/billing?payment=cancelled`,
           }),
         },
       );
