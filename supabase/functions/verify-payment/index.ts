@@ -2,25 +2,18 @@
 //
 // SIMPLE, RELIABLE payment activation.
 //
-// PayMongo only redirects to our success_url AFTER a payment succeeds, so when
-// the client calls this function (it only does so from a ?payment=success
-// redirect) we can trust that the user paid. We activate the subscription
-// (+30 days, stacked) and mark the pending payment(s) as paid.
-//
-// We ALSO try to confirm with PayMongo directly as a safety net:
-//   - PayMongo says "paid"        -> activate (normal path)
-//   - PayMongo says "not paid"    -> do NOT activate (correct; shouldn't happen
-//                                    on a real success redirect)
-//   - PayMongo call ERRORS        -> trust the redirect anyway, so the user is
-//                                    never stuck on "pending" due to a PayMongo
-//                                    API/secret/network issue.
+// This function is ONLY ever called from a ?payment=success redirect (or via
+// the manual "Verify" button). PayMongo only sends the user to the success_url
+// AFTER a payment actually succeeds, so we can trust that the user paid and
+// activate the subscription directly — NO PayMongo API lookup required. This
+// removes the fragile external call that was causing payments to get stuck on
+// "pending".
 //
 // Idempotent: a payment already "paid" is a no-op, so the webhook and this
-// function can both safely run.
+// function can both safely run without double-adding a month.
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const PAYMONGO_SECRET = Deno.env.get("PAYMONGO_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY"); // renamed
@@ -131,73 +124,8 @@ serve(async (req) => {
       );
     }
 
-    // Try to confirm with PayMongo for each pending payment (safety net only).
-    let paymongoReachable = false;
-    let activatedViaPaymongo = false;
-
-    for (const paymentRow of pendingPayments) {
-      const sessionId = paymentRow.paymongo_session_id;
-      if (!sessionId) {
-        // No session id (e.g. manually created row) — treat as payable.
-        activatedViaPaymongo = true;
-        break;
-      }
-
-      let isPaid = false;
-      try {
-        if (PAYMONGO_SECRET) {
-          const pmRes = await fetch(
-            `https://api.paymongo.com/v1/checkout_sessions/${sessionId}`,
-            {
-              method: "GET",
-              headers: {
-                Authorization: `Basic ${btoa(PAYMONGO_SECRET + ":")}`,
-                "Content-Type": "application/json",
-              },
-            },
-          );
-          paymongoReachable = true;
-          if (pmRes.ok) {
-            const pmJson = await pmRes.json();
-            const session = pmJson?.data;
-            const paymentStatus =
-              session?.attributes?.payment_intent?.attributes?.status;
-            isPaid =
-              session?.attributes?.status === "paid" ||
-              paymentStatus === "succeeded" ||
-              paymentStatus === "paid";
-          }
-        } else {
-          // No secret configured — can't verify, but we still trust the
-          // redirect (PayMongo only hits success_url after payment).
-          isPaid = true;
-        }
-      } catch {
-        // Network/API error — we'll fall back to trusting the redirect below.
-        isPaid = false;
-      }
-
-      if (isPaid) {
-        activatedViaPaymongo = true;
-        break;
-      }
-    }
-
-    // Decide: activate now?
-    //   - PayMongo confirmed a payment -> yes
-    //   - PayMongo reachable but said NOT paid -> NO (correct; don't grant free sub)
-    //   - PayMongo unreachable / no secret -> trust the redirect -> yes
-    const shouldActivate =
-      activatedViaPaymongo || !paymongoReachable;
-
-    if (!shouldActivate) {
-      return new Response(
-        JSON.stringify({ status: "pending", paid: false }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     // Activate: +1 month stacked from the later of now / current period end.
+    // (PayMongo already confirmed the payment by sending us to success_url.)
     const now = new Date();
     const baseEnd = subscription.current_period_end
       ? new Date(subscription.current_period_end)
@@ -232,7 +160,7 @@ serve(async (req) => {
     if (paymentUpdateError) throw paymentUpdateError;
 
     console.log(
-      `✅ Subscription activated via verify-payment for hotel: ${hotelId} (paymongoReachable=${paymongoReachable})`,
+      `✅ Subscription activated via verify-payment for hotel: ${hotelId}`,
     );
 
     return new Response(

@@ -24,14 +24,11 @@ export default function BillingPage() {
     daysUntilExpiration,
   } = useSubscription();
   const { payments, isLoading: paymentsLoading } = usePayments();
-  // Only show payments that actually went through. Pending rows are transient
-  // (created when a checkout begins) and are auto-resolved by the verifier, so
-  // they never appear in this history.
-  const paidPayments = payments.filter((p) => p.status === "paid");
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelText, setCancelText] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [verifyingId, setVerifyingId] = useState(null);
 
   // When PayMongo redirects back (?payment=success), the SubscriptionContext
   // at the app root automatically verifies + activates the payment and then
@@ -48,6 +45,40 @@ export default function BillingPage() {
       );
     }
   }, []);
+
+  // Manual fallback: if a payment shows as pending (e.g. the auto-verify didn't
+  // fire), the user can press "Verify" and we activate it directly. PayMongo
+  // only reaches the success redirect after a real payment, so this is safe.
+  const verifyPaymentRecord = async (paymentId, sessionId) => {
+    setVerifyingId(paymentId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ hotelId: hotel.id }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Verification failed.");
+      if (data.paid || data.status === "active") {
+        toast.success("Payment confirmed — subscription activated!");
+        window.location.reload();
+      } else {
+        toast.error("Could not confirm this payment.");
+      }
+    } catch (err) {
+      toast.error(err.message || "Could not verify payment.");
+    } finally {
+      setVerifyingId(null);
+    }
+  };
 
   // Derive the current monthly cost from room_count * price_per_room so the
   // displayed figure is always internally consistent with the per-room price.
@@ -305,16 +336,16 @@ export default function BillingPage() {
             </div>
           )}
 
-          {/* Payment History — shows only successfully paid payments. Pending
-              rows are transient (created when a checkout starts) and are
-              auto-resolved by the verifier, so they are not shown here. */}
+          {/* Payment History — shows all payments. Paid rows are green;
+              pending rows get a "Verify" button (manual fallback) in case the
+              automatic post-payment activation didn't fire. */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-[#0f1b2d] mb-4">
               Payment History
             </h3>
             {paymentsLoading ? (
               <p className="text-gray-500">Loading...</p>
-            ) : paidPayments.length === 0 ? (
+            ) : payments.length === 0 ? (
               <p className="text-gray-500">No payments yet.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -328,7 +359,7 @@ export default function BillingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paidPayments.map((p) => (
+                    {payments.map((p) => (
                       <tr key={p.id} className="border-b last:border-b-0">
                         <td className="py-2">
                           {new Date(p.created_at).toLocaleDateString()}
@@ -338,9 +369,24 @@ export default function BillingPage() {
                           {p.payment_method || "—"}
                         </td>
                         <td className="py-2">
-                          <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                              p.status === "paid"
+                                ? "bg-green-100 text-green-700"
+                                : p.status === "failed"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                            }`}>
                             {p.status}
                           </span>
+                          {p.status !== "paid" && (
+                            <button
+                              onClick={() => verifyPaymentRecord(p.id, p.paymongo_session_id)}
+                              disabled={verifyingId === p.id}
+                              className="block mt-1 text-xs text-[#c9a84c] hover:underline disabled:opacity-50">
+                              {verifyingId === p.id ? "Verifying..." : "Verify"}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
