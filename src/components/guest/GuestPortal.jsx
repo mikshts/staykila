@@ -994,18 +994,9 @@ export default function GuestPortal() {
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="p-2 mt-2 border-t border-white/5 bg-black/10">
-                      <button
-                        onClick={() => setShowQuickActions(true)}
-                        className="w-full py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center justify-center gap-2">
-                        <i className="fas fa-plus-circle text-[#c9a84c]"></i>
-                        Show Quick Requests
-                      </button>
-                    </div>
-                  )}
+                  ) : null}
 
-                  <div className="p-3 border-t border-white/10 bg-black/20">
+                  <div className="px-4 py-3 border-t border-white/10 bg-black/20">
                     <div className="flex items-center gap-2">
                       <input
                         type="text"
@@ -1020,9 +1011,16 @@ export default function GuestPortal() {
                         onClick={sendMessage}
                         disabled={!newMessage.trim()}
                         aria-label="Send message"
-                        className="shrink-0 px-4 py-3 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                        className="shrink-0 px-5 py-3 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
                         <i className="fas fa-paper-plane text-sm"></i>
                         <span className="hidden sm:inline">Send</span>
+                      </button>
+                      <button
+                        onClick={() => setShowQuickActions(!showQuickActions)}
+                        aria-label={showQuickActions ? "Hide quick requests" : "Show quick requests"}
+                        aria-expanded={showQuickActions}
+                        className="shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
+                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus-circle"} text-lg`}></i>
                       </button>
                     </div>
                   </div>
