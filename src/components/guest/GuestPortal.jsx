@@ -37,7 +37,7 @@ export default function GuestPortal() {
   const qrContainerRef = useRef(null);
   const messageIdsRef = useRef(new Set());
   const timerIntervalRef = useRef(null);
-  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
 
   const roomParam = searchParams.get("room");
   const roomName = searchParams.get("name") || "Room";
@@ -953,6 +953,11 @@ export default function GuestPortal() {
                         <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">
                           Quick Requests
                         </p>
+                        <button
+                          onClick={() => setShowQuickActions(false)}
+                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors">
+                          <i className="fas fa-times"></i>
+                        </button>
                       </div>
                       <div className="overflow-x-auto pb-2 -mx-1 px-1">
                         <div className="flex flex-col gap-2 min-w-max">
