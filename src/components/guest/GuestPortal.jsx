@@ -949,12 +949,12 @@ export default function GuestPortal() {
                               : "justify-end"
                           }`}>
                           <div
-                            className={`max-w-[85%] px-4 py-2.5 rounded-2xl ${
+                            className={`max-w-[85%] max-h-60 overflow-y-auto px-4 py-2.5 rounded-2xl ${
                               msg.sender === "admin"
                                 ? "bg-white/10 text-gray-200 rounded-tl-none border border-white/5"
                                 : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-tr-none shadow-lg shadow-[#c9a84c]/20"
                             }`}>
-                            <p className="text-sm leading-relaxed">
+                            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                               {msg.message}
                             </p>
                             <p
