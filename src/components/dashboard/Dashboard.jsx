@@ -593,7 +593,16 @@ export default function Dashboard() {
       const status = room.booking
         ? getRoomStatus(room.booking.end_time)
         : room.status || "available";
-      if (filter !== "all" && status !== filter) return false;
+      // The "alerts" filter (used by the sidebar Alerts button) must show
+      // BOTH expiring AND expired rooms. Previously it used the "expiring"
+      // filter, which excluded already-expired rooms — so clicking an alert
+      // with only expired rooms showed an empty list. "alerts" covers the
+      // full set the badge is counting.
+      if (filter === "alerts") {
+        if (status !== "expiring" && status !== "expired") return false;
+      } else if (filter !== "all" && status !== filter) {
+        return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         if (

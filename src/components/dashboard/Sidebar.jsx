@@ -111,8 +111,12 @@ export default function Sidebar({
               {/* Alerts */}
               {stats.expiring + stats.expired > 0 && (
                 <button
-                  onClick={() => onFilterChange("expiring")}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+                  onClick={() => onFilterChange("alerts")}
+                  className={`w-full flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition ${
+                    filter === "alerts"
+                      ? "text-[#c9a84c] bg-[#c9a84c]/10 border-l-2 border-[#c9a84c]"
+                      : "text-white/55 hover:text-white hover:bg-white/5"
+                  }`}>
                   <i className="fas fa-triangle-exclamation w-5 text-center"></i>
                   Alerts
                   <span className="ml-auto bg-orange-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
