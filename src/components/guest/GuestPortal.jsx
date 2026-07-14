@@ -998,6 +998,13 @@ export default function GuestPortal() {
 
                   <div className="px-4 py-3 border-t border-white/10 bg-black/20">
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowQuickActions(!showQuickActions)}
+                        aria-label={showQuickActions ? "Hide quick requests" : "Show quick requests"}
+                        aria-expanded={showQuickActions}
+                        className="shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
+                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus-circle"} text-lg`}></i>
+                      </button>
                       <input
                         type="text"
                         value={newMessage}
@@ -1014,13 +1021,6 @@ export default function GuestPortal() {
                         className="shrink-0 px-5 py-3 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
                         <i className="fas fa-paper-plane text-sm"></i>
                         <span className="hidden sm:inline">Send</span>
-                      </button>
-                      <button
-                        onClick={() => setShowQuickActions(!showQuickActions)}
-                        aria-label={showQuickActions ? "Hide quick requests" : "Show quick requests"}
-                        aria-expanded={showQuickActions}
-                        className="shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
-                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus-circle"} text-lg`}></i>
                       </button>
                     </div>
                   </div>
