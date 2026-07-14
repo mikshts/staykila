@@ -15,7 +15,7 @@ export default function HotelSetup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // Read the room count from the URL query param (passed from the pricing page).
+  // Read the rooms count from the URL query param (passed from the pricing page).
   const [searchParams] = useSearchParams();
   const roomsFromUrl = parseInt(searchParams.get("rooms"), 10);
   // Only treat it as a preset when it's a real, in-range number. Otherwise
