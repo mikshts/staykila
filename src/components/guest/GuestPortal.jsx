@@ -1006,19 +1006,23 @@ export default function GuestPortal() {
                   )}
 
                   <div className="p-3 border-t border-white/10 bg-black/20">
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                         placeholder="Type a message..."
-                        className="flex-1 px-4 py-2.5 bg-black/30 rounded-xl border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all"
+                        aria-label="Type a message"
+                        className="flex-1 min-w-0 px-4 py-3 bg-black/30 rounded-xl border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all"
                       />
                       <button
                         onClick={sendMessage}
-                        className="px-4 py-2.5 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center gap-2 font-medium">
+                        disabled={!newMessage.trim()}
+                        aria-label="Send message"
+                        className="shrink-0 px-4 py-3 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
                         <i className="fas fa-paper-plane text-sm"></i>
+                        <span className="hidden sm:inline">Send</span>
                       </button>
                     </div>
                   </div>
