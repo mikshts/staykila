@@ -899,9 +899,9 @@ export default function GuestPortal() {
               {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
-                  {/* Fixed height container - always the same height */}
-                  <div className="h-[320px] flex flex-col">
-                    {/* Messages area - scrollable, takes remaining space */}
+                  {/* Fixed height container */}
+                  <div className="h-[360px] flex flex-col">
+                    {/* Messages area - takes remaining space, scrollable */}
                     <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-3 custom-scrollbar">
                       {messages.length === 0 ? (
                         <div className="text-center py-8">
@@ -913,10 +913,6 @@ export default function GuestPortal() {
                           </p>
                           <p className="text-gray-500 text-sm mt-1">
                             Start a conversation with the front desk
-                          </p>
-                          <p className="text-[10px] text-gray-500 mt-3">
-                            <i className="fas fa-arrow-left text-[#c9a84c] mr-1"></i>
-                            Swipe to see more quick requests
                           </p>
                         </div>
                       ) : (
@@ -961,78 +957,85 @@ export default function GuestPortal() {
                       <div ref={chatEndRef} />
                     </div>
 
-                    {/* Quick Actions - always visible, fixed height, with scroll */}
-                    <div className="flex-shrink-0">
-                      <div className="p-3 border-t border-white/5 bg-black/10">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">
-                            Quick Requests
-                          </p>
-                          <button
-                            onClick={() =>
-                              setShowQuickActions(!showQuickActions)
-                            }
-                            className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors">
-                            <i
-                              className={`fas ${showQuickActions ? "fa-chevron-up" : "fa-chevron-down"}`}></i>
-                          </button>
-                        </div>
+                    {/* Quick Actions - fixed at bottom, above input */}
+                    <div className="flex-shrink-0 border-t border-white/5 bg-black/10">
+                      {/* Toggle button with counter */}
+                      <div className="flex items-center justify-between px-3 py-1.5">
+                        <button
+                          onClick={() => setShowQuickActions(!showQuickActions)}
+                          className="flex items-center gap-2 text-[10px] text-gray-400 hover:text-gray-300 transition-colors group">
+                          <i
+                            className={`fas ${showQuickActions ? "fa-chevron-down" : "fa-chevron-right"} text-[#c9a84c] text-[8px] group-hover:translate-x-0.5 transition-transform`}></i>
+                          <span className="font-medium tracking-wider uppercase">
+                            {showQuickActions ? "Hide" : "Show"} Quick Requests
+                          </span>
+                          <span className="text-[8px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">
+                            {quickActions.length}
+                          </span>
+                        </button>
+                        {messages.length > 0 && (
+                          <span className="text-[8px] text-gray-500">
+                            {messages.filter(
+                              (m) => m.sender === "admin" && !m.is_read,
+                            ).length > 0 && (
+                              <span className="text-[#c9a84c]">● New</span>
+                            )}
+                          </span>
+                        )}
+                      </div>
 
-                        {/* Quick actions with fixed height container and scroll */}
-                        <div
-                          className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                            showQuickActions
-                              ? "max-h-[140px] opacity-100"
-                              : "max-h-0 opacity-0"
-                          }`}>
-                          <div className="overflow-x-auto pb-2 -mx-1 px-1">
-                            <div className="flex flex-col gap-2 min-w-max">
-                              <div className="flex gap-2 flex-wrap">
-                                {quickActions
-                                  .slice(0, 5)
-                                  .map((action, index) => (
-                                    <button
-                                      key={index}
-                                      onClick={() =>
-                                        sendQuickMessage(action.message)
-                                      }
-                                      className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0">
-                                      <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
-                                        <i
-                                          className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
-                                        {action.label}
-                                      </span>
-                                      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                                    </button>
-                                  ))}
-                              </div>
-                              <div className="flex gap-2 flex-wrap">
-                                {quickActions
-                                  .slice(5, 10)
-                                  .map((action, index) => (
-                                    <button
-                                      key={index + 5}
-                                      onClick={() =>
-                                        sendQuickMessage(action.message)
-                                      }
-                                      className="group relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0">
-                                      <span className="relative flex items-center gap-2 text-gray-300 group-hover:text-white">
-                                        <i
-                                          className={`fas ${action.icon} text-[#c9a84c] text-[10px]`}></i>
-                                        {action.label}
-                                      </span>
-                                      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
-                                    </button>
-                                  ))}
-                              </div>
+                      {/* Quick actions buttons with smooth animation */}
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                          showQuickActions
+                            ? "max-h-[120px] opacity-100"
+                            : "max-h-0 opacity-0"
+                        }`}>
+                        <div className="px-3 pb-3 overflow-x-auto">
+                          <div className="flex flex-col gap-1.5 min-w-max">
+                            <div className="flex gap-1.5 flex-wrap">
+                              {quickActions.slice(0, 5).map((action, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() =>
+                                    sendQuickMessage(action.message)
+                                  }
+                                  className="group relative overflow-hidden px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0">
+                                  <span className="relative flex items-center gap-1.5 text-gray-300 group-hover:text-white">
+                                    <i
+                                      className={`fas ${action.icon} text-[#c9a84c] text-[8px]`}></i>
+                                    {action.label}
+                                  </span>
+                                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {quickActions
+                                .slice(5, 10)
+                                .map((action, index) => (
+                                  <button
+                                    key={index + 5}
+                                    onClick={() =>
+                                      sendQuickMessage(action.message)
+                                    }
+                                    className="group relative overflow-hidden px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0">
+                                    <span className="relative flex items-center gap-1.5 text-gray-300 group-hover:text-white">
+                                      <i
+                                        className={`fas ${action.icon} text-[#c9a84c] text-[8px]`}></i>
+                                      {action.label}
+                                    </span>
+                                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                                  </button>
+                                ))}
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Input area - fixed at bottom */}
-                    <div className="flex-shrink-0 px-4 py-3 border-t border-white/10 bg-black/20">
+                    {/* Input area - fixed at very bottom */}
+                    <div className="flex-shrink-0 px-3 py-2.5 border-t border-white/10 bg-black/20">
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
@@ -1041,7 +1044,7 @@ export default function GuestPortal() {
                           onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                           placeholder="Type a message..."
                           aria-label="Type a message"
-                          className="flex-1 min-w-0 px-4 py-3 bg-black/30 rounded-xl border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all"
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-black/30 rounded-xl border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all"
                         />
                         <button
                           onClick={() => setShowQuickActions(!showQuickActions)}
@@ -1051,17 +1054,17 @@ export default function GuestPortal() {
                               : "Show quick requests"
                           }
                           aria-expanded={showQuickActions}
-                          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
+                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
                           <i
-                            className={`fas ${showQuickActions ? "fa-times" : "fa-plus"} text-sm`}></i>
+                            className={`fas ${showQuickActions ? "fa-chevron-up" : "fa-bolt"} text-xs`}></i>
                         </button>
                         <button
                           onClick={sendMessage}
                           disabled={!newMessage.trim()}
                           aria-label="Send message"
-                          className="shrink-0 px-5 py-3 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                          className="shrink-0 px-4 py-2.5 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
                           <i className="fas fa-paper-plane text-sm"></i>
-                          <span className="hidden sm:inline">Send</span>
+                          <span className="hidden sm:inline text-xs">Send</span>
                         </button>
                       </div>
                     </div>
