@@ -26,6 +26,7 @@ export default function RoomDetailPanel({
   const [showQR, setShowQR] = useState(false);
   const chatEndRef = useRef(null);
   const panelRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   // Check if the booking is active (current) or future
   const isActiveBooking = room.booking && room.bookingStatus === "occupied";
@@ -53,7 +54,12 @@ export default function RoomDetailPanel({
     await onSendMessage(room.id, reply, "admin");
     setReply("");
     setTimeout(() => {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }, 100);
   };
 
@@ -82,7 +88,12 @@ export default function RoomDetailPanel({
   // Auto-scroll to the newest message whenever messages change (incoming or sent)
   useEffect(() => {
     if (messages.length > 0) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTo({
+          top: chatContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }
   }, [messages.length]);
 
@@ -277,7 +288,7 @@ export default function RoomDetailPanel({
               )}
             </div>
 
-            <div className="bg-[#f8fafc] rounded-xl p-3 max-h-48 overflow-y-auto mb-3">
+            <div ref={chatContainerRef} className="bg-[#f8fafc] rounded-xl p-3 max-h-48 overflow-y-auto mb-3">
               {messages.length === 0 ? (
                 <p className="text-[#8a8278] text-center text-sm py-4">
                   No messages yet

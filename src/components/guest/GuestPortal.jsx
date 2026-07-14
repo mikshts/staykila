@@ -891,7 +891,7 @@ export default function GuestPortal() {
               {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
-                  <div className="p-4 max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
+                  <div className="p-4 pb-5 max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
                     {messages.length === 0 ? (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
@@ -948,7 +948,7 @@ export default function GuestPortal() {
                   </div>
 
                   {showQuickActions ? (
-                    <div className="p-3 border-t border-white/5 bg-black/10">
+                    <div className="p-3 mt-2 border-t border-white/5 bg-black/10">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">
                           Quick Requests
@@ -959,7 +959,7 @@ export default function GuestPortal() {
                           <i className="fas fa-times"></i>
                         </button>
                       </div>
-                      <div className="overflow-x-auto overflow-y-visible pb-2 -mx-1 px-1">
+                      <div className="overflow-x-auto pb-2 -mx-1 px-1">
                         <div className="flex flex-col gap-2 min-w-max">
                           <div className="flex gap-2">
                             {quickActions.slice(0, 5).map((action, index) => (
@@ -995,7 +995,7 @@ export default function GuestPortal() {
                       </div>
                     </div>
                   ) : (
-                    <div className="p-2 border-t border-white/5 bg-black/10">
+                    <div className="p-2 mt-2 border-t border-white/5 bg-black/10">
                       <button
                         onClick={() => setShowQuickActions(true)}
                         className="w-full py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center justify-center gap-2">
