@@ -14,7 +14,6 @@ import QRDownload from "./QRDownload";
 import { buildGuestUrl } from "../../lib/guestUrl";
 import CalendarManager from "../settings/CalendarManager";
 import AnalyticsPanel from "../analytics/AnalyticsPanel";
-import BillingCard from "../billing/BillingCard";
 import { useSubscription } from "../../contexts/SubscriptionContext";
 import TrialBanner from "../billing/TrialBanner";
 import { useNavigate } from "react-router-dom";
@@ -1150,8 +1149,6 @@ export default function Dashboard() {
               }}
             />
           )}
-          {/* Subscription Banner */}
-          <BillingCard />
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
             {/* All button - always shows total rooms */}
             <button
