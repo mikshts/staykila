@@ -998,13 +998,6 @@ export default function GuestPortal() {
 
                   <div className="px-4 py-3 border-t border-white/10 bg-black/20">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowQuickActions(!showQuickActions)}
-                        aria-label={showQuickActions ? "Hide quick requests" : "Show quick requests"}
-                        aria-expanded={showQuickActions}
-                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
-                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus"} text-sm`}></i>
-                      </button>
                       <input
                         type="text"
                         value={newMessage}
@@ -1014,6 +1007,13 @@ export default function GuestPortal() {
                         aria-label="Type a message"
                         className="flex-1 min-w-0 px-4 py-3 bg-black/30 rounded-xl border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all"
                       />
+                      <button
+                        onClick={() => setShowQuickActions(!showQuickActions)}
+                        aria-label={showQuickActions ? "Hide quick requests" : "Show quick requests"}
+                        aria-expanded={showQuickActions}
+                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
+                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus"} text-sm`}></i>
+                      </button>
                       <button
                         onClick={sendMessage}
                         disabled={!newMessage.trim()}
