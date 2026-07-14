@@ -14,7 +14,7 @@ import {
 } from "../ui";
 import QRCode from "qrcode";
 import ImageViewer from "./ImageViewer";
-//constant
+
 export default function GuestPortal() {
   const [searchParams] = useSearchParams();
   const [room, setRoom] = useState(null);
@@ -33,6 +33,7 @@ export default function GuestPortal() {
   const [error, setError] = useState(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const chatEndRef = useRef(null);
+  const chatContainerRef = useRef(null); // <-- ADD THIS LINE
   const subscriptionRef = useRef(null);
   const qrContainerRef = useRef(null);
   const messageIdsRef = useRef(new Set());
@@ -43,12 +44,24 @@ export default function GuestPortal() {
   const roomName = searchParams.get("name") || "Room";
 
   // ------------------------------
+  // AUTO-SCROLL TO BOTTOM ON NEW MESSAGES
+  // ------------------------------
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 50);
+    }
+  }, [messages]); // <-- ADD THIS EFFECT
+
+  // ------------------------------
   // 1. Offline/Online event listeners
   // ------------------------------
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
-      // Auto-retry when back online
       loadRoomData();
     };
     const handleOffline = () => {
@@ -82,7 +95,6 @@ export default function GuestPortal() {
         if (cached) {
           try {
             cachedData = JSON.parse(cached);
-            // Immediately apply cached data
             setRoom(cachedData.room);
             setHotel(cachedData.hotel);
             setWifiPassword(cachedData.wifiPassword || "");
@@ -96,7 +108,7 @@ export default function GuestPortal() {
             } else {
               setIsExpired(true);
             }
-            setLoading(false); // show cached content immediately
+            setLoading(false);
           } catch (e) {
             console.warn("Invalid cache, ignoring");
           }
@@ -144,7 +156,6 @@ export default function GuestPortal() {
         }
       }
 
-      // If room still not found, try again
       if (!freshRoom && roomId) {
         const roomData = await roomService.getRoom(roomId);
         if (roomData) {
@@ -164,12 +175,10 @@ export default function GuestPortal() {
         }
       }
 
-      // Update state with fresh data
       if (freshRoom) setRoom(freshRoom);
       if (freshHotel) setHotel(freshHotel);
       if (freshWifi) setWifiPassword(freshWifi);
 
-      // Fetch menu images
       const currentHotelId = freshHotel?.id || hotelId;
       if (currentHotelId) {
         const { data: menuData } = await supabase
@@ -183,7 +192,6 @@ export default function GuestPortal() {
         }
       }
 
-      // Fetch active booking
       if (roomId) {
         const { data: bookings } = await supabase
           .from("bookings")
@@ -202,7 +210,6 @@ export default function GuestPortal() {
           setIsExpired(true);
         }
 
-        // Messages
         const msgs = await messageService.getMessages(roomId);
         const uniqueMsgs = [];
         const seenIds = new Set();
@@ -215,7 +222,6 @@ export default function GuestPortal() {
         setMessages(uniqueMsgs);
         uniqueMsgs.forEach((msg) => messageIdsRef.current.add(msg.id));
 
-        // Guest session token
         let token = localStorage.getItem(`guest_${roomId}_token`);
         if (!token) {
           const session = await messageService.createGuestSession(roomId);
@@ -223,14 +229,8 @@ export default function GuestPortal() {
           localStorage.setItem(`guest_${roomId}_token`, token);
         }
         setGuestToken(token);
-
-        // NOTE: the realtime subscription is established in a dedicated
-        // useEffect (see below) keyed on roomId, NOT here. Creating it inside
-        // an async load function risks duplicate/stale channels and races with
-        // React's cleanup. We only seed messageIdsRef here.
       }
 
-      // Save to cache after successful fetch
       if (roomId && (freshRoom || room) && (freshHotel || hotel)) {
         const cachePayload = {
           room: freshRoom || room,
@@ -244,7 +244,6 @@ export default function GuestPortal() {
         );
       }
 
-      // If we had cached data, loading was set to false already, but we need to ensure it's false after fetch
       setLoading(false);
     } catch (err) {
       console.error("Error loading room:", err);
@@ -253,14 +252,12 @@ export default function GuestPortal() {
         setIsOffline(true);
       }
       toast.error("Failed to load room data");
-      // If we have cached data, we keep showing it; otherwise show error UI
-      // But loading is already false if we had cache; if no cache, we need to set loading false
       setLoading(false);
     }
   };
 
   // ------------------------------
-  // 3. Other functions (existing)
+  // 3. Other functions
   // ------------------------------
   const getRoomTypeInfo = (roomType) => {
     const types = {
@@ -308,10 +305,6 @@ export default function GuestPortal() {
         messageIdsRef.current.add(msg.id);
         setMessages((prev) => [...prev, msg]);
       }
-      chatEndRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
       toast.success("Message sent!");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -376,10 +369,7 @@ export default function GuestPortal() {
     };
   }, [roomParam]);
 
-  // Real-time subscription for this room. Established in its own effect so
-  // it is created exactly once per roomId and cleaned up on change/unmount.
-  // Handles INSERT (new messages from either side), UPDATE (e.g. read state)
-  // and DELETE. This is what makes admin replies appear live for the guest.
+  // Real-time subscription
   useEffect(() => {
     const parsed = parseRoomParam(roomParam);
     const roomId = parsed?.roomId;
@@ -399,14 +389,9 @@ export default function GuestPortal() {
           );
           return;
         }
-        // INSERT (or unknown): append only if not already present.
         if (!messageIdsRef.current.has(newMsg.id)) {
           messageIdsRef.current.add(newMsg.id);
           setMessages((prev) => [...prev, newMsg]);
-          chatEndRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-          });
         }
       },
       onDelete: (oldMsg) => {
@@ -519,10 +504,6 @@ export default function GuestPortal() {
         setMessages((prev) => [...prev, msg]);
       }
       setNewMessage("");
-      chatEndRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
       toast.success("Message sent!");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -579,12 +560,10 @@ export default function GuestPortal() {
     );
   }
 
-  // Loading skeleton (if no cached data and still loading)
   if (loading) {
     return <GuestPortalLoading />;
   }
 
-  // Room not found
   if (!room) {
     return <RoomNotFoundSkeleton />;
   }
@@ -603,7 +582,7 @@ export default function GuestPortal() {
     : 0;
 
   // ------------------------------
-  // 5. Main UI (unchanged except footer is already updated)
+  // 5. Main UI
   // ------------------------------
   return (
     <div className="min-h-screen bg-[#0f1b2d]">
@@ -896,14 +875,17 @@ export default function GuestPortal() {
                   </div>
                 </div>
               )}
+
               {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
                   {/* Fixed height container */}
                   <div className="h-[360px] flex flex-col">
-                    {/* Messages area - scrollable with padding for bottom elements */}
-                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                      <div className="p-4 space-y-3 pb-2">
+                    {/* Messages area - scrollable from bottom */}
+                    <div
+                      className="flex-1 min-h-0 overflow-y-auto custom-scrollbar"
+                      ref={chatContainerRef}>
+                      <div className="p-4 space-y-3">
                         {messages.length === 0 ? (
                           <div className="text-center py-8">
                             <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
@@ -917,45 +899,47 @@ export default function GuestPortal() {
                             </p>
                           </div>
                         ) : (
-                          messages.map((msg) => (
-                            <div
-                              key={msg.id}
-                              className={`flex ${
-                                msg.sender === "admin"
-                                  ? "justify-start"
-                                  : "justify-end"
-                              }`}>
+                          <>
+                            {messages.map((msg, index) => (
                               <div
-                                className={`max-w-[85%] px-4 py-2.5 rounded-2xl ${
+                                key={msg.id}
+                                className={`flex ${
                                   msg.sender === "admin"
-                                    ? "bg-white/10 text-gray-200 rounded-tl-none border border-white/5"
-                                    : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-tr-none shadow-lg shadow-[#c9a84c]/20"
-                                }`}>
-                                <p className="text-sm leading-relaxed">
-                                  {msg.message}
-                                </p>
-                                <p
-                                  className={`text-[10px] mt-1 ${
+                                    ? "justify-start"
+                                    : "justify-end"
+                                } ${index === messages.length - 1 ? "mb-1" : ""}`}>
+                                <div
+                                  className={`max-w-[85%] px-4 py-2.5 rounded-2xl ${
                                     msg.sender === "admin"
-                                      ? "text-gray-500"
-                                      : "text-[#0f1b2d]/60"
+                                      ? "bg-white/10 text-gray-200 rounded-tl-none border border-white/5"
+                                      : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-tr-none shadow-lg shadow-[#c9a84c]/20"
                                   }`}>
-                                  {new Date(msg.created_at).toLocaleTimeString(
-                                    [],
-                                    {
+                                  <p className="text-sm leading-relaxed">
+                                    {msg.message}
+                                  </p>
+                                  <p
+                                    className={`text-[10px] mt-1 ${
+                                      msg.sender === "admin"
+                                        ? "text-gray-500"
+                                        : "text-[#0f1b2d]/60"
+                                    }`}>
+                                    {new Date(
+                                      msg.created_at,
+                                    ).toLocaleTimeString([], {
                                       hour: "2-digit",
                                       minute: "2-digit",
-                                    },
-                                  )}
-                                  {msg.sender === "admin"
-                                    ? " · Front Desk"
-                                    : " · You"}
-                                </p>
+                                    })}
+                                    {msg.sender === "admin"
+                                      ? " · Front Desk"
+                                      : " · You"}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          ))
+                            ))}
+                            {/* Extra spacer at bottom for better visibility */}
+                            <div className="h-2" ref={chatEndRef} />
+                          </>
                         )}
-                        <div ref={chatEndRef} />
                       </div>
                     </div>
 
@@ -1127,7 +1111,7 @@ export default function GuestPortal() {
           </div>
         </div>
 
-        {/* Footer - Premium Version (already updated) */}
+        {/* Footer */}
         <div className="text-center mt-6 pb-4 space-y-3">
           <div className="flex items-center justify-center gap-2">
             <span className="h-px w-8 bg-white/10" />
