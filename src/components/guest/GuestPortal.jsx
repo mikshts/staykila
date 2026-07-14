@@ -687,7 +687,7 @@ export default function GuestPortal() {
                   </div>
                 </div>
 
-                {/* Progress Bar */}
+                {/* Progress Bars */}
                 <div>
                   <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                     <div
