@@ -935,8 +935,8 @@ export default function GuestPortal() {
                           Start a conversation with the front desk
                         </p>
                         <p className="text-[10px] text-gray-500 mt-3">
-                          <i className="fas fa-arrow-left text-[#c9a84c] mr-1"></i>
-                          Swipe to see more quick requests
+                          <i className="fas fa-plus text-[#c9a84c] mr-1"></i>
+                          Tap + to see quick requests
                         </p>
                       </div>
                     ) : (
