@@ -922,7 +922,7 @@ export default function GuestPortal() {
               {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
-                  <div className={`p-4 pb-5 overflow-y-auto space-y-3 custom-scrollbar transition-all duration-300 ${showQuickActions ? "max-h-80" : "max-h-32"}`}>
+                  <div className="p-4 pb-5 max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
                     {messages.length === 0 ? (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
