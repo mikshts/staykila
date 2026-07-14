@@ -526,6 +526,54 @@ export default function GuestPortal() {
     toast.success("Copied to clipboard!");
   };
 
+  // Group a flat message list into day-bucketed, consecutive-sender clusters
+  // for a Messenger-style chat layout.
+  const buildChatGroups = (list) => {
+    const groups = [];
+    let lastDay = null;
+    let lastSender = null;
+    let current = null;
+
+    const pushCurrent = () => {
+      if (current) groups.push(current);
+      current = null;
+      lastSender = null;
+    };
+
+    list.forEach((msg) => {
+      const d = new Date(msg.created_at);
+      const dayKey = d.toDateString();
+      if (dayKey !== lastDay) {
+        pushCurrent();
+        groups.push({ type: "day", key: dayKey, label: formatDayLabel(d) });
+        lastDay = dayKey;
+      }
+      if (msg.sender !== lastSender) {
+        if (current) groups.push(current);
+        current = { type: "messages", sender: msg.sender, items: [] };
+        lastSender = msg.sender;
+      }
+      current.items.push(msg);
+    });
+    pushCurrent();
+    return groups;
+  };
+
+  const formatDayLabel = (d) => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([], {
+      month: "short",
+      day: "numeric",
+      year: d.getFullYear() === today.getFullYear() ? undefined : "numeric",
+    });
+  };
+
+  const chatGroups = buildChatGroups(messages);
+
   // ------------------------------
   // 4. Offline/Error UI
   // ------------------------------
@@ -891,7 +939,7 @@ export default function GuestPortal() {
               {/* Chat Tab */}
               {activeTab === "chat" && (
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
-                  <div className="p-4 pb-5 max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
+                  <div className="p-4 pb-5 max-h-[60vh] overflow-y-auto space-y-1 custom-scrollbar">
                     {messages.length === 0 ? (
                       <div className="text-center py-8">
                         <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
@@ -909,40 +957,78 @@ export default function GuestPortal() {
                         </p>
                       </div>
                     ) : (
-                      messages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`flex ${
-                            msg.sender === "admin"
-                              ? "justify-start"
-                              : "justify-end"
-                          }`}>
+                      chatGroups.map((group, gi) => {
+                        if (group.type === "day") {
+                          return (
+                            <div
+                              key={`day-${group.key}`}
+                              className="flex justify-center my-4">
+                              <span className="text-[10px] font-medium text-gray-500 bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                                {group.label}
+                              </span>
+                            </div>
+                          );
+                        }
+                        const isAdmin = group.sender === "admin";
+                        return (
                           <div
-                            className={`max-w-[85%] px-4 py-2.5 rounded-2xl ${
-                              msg.sender === "admin"
-                                ? "bg-white/10 text-gray-200 rounded-tl-none border border-white/5"
-                                : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-tr-none shadow-lg shadow-[#c9a84c]/20"
-                            }`}>
-                            <p className="text-sm leading-relaxed">
-                              {msg.message}
-                            </p>
-                            <p
-                              className={`text-[10px] mt-1 ${
-                                msg.sender === "admin"
-                                  ? "text-gray-500"
-                                  : "text-[#0f1b2d]/60"
-                              }`}>
-                              {new Date(msg.created_at).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
+                            key={`grp-${gi}`}
+                            className={`flex items-end gap-2 mt-3 ${isAdmin ? "flex-row" : "flex-row-reverse"}`}>
+                            {/* Avatar */}
+                            <div
+                              className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold ${isAdmin ? "bg-[#c9a84c]/20 text-[#c9a84c]" : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d]"}`}>
+                              {isAdmin ? (
+                                <i className="fas fa-concierge-bell"></i>
+                              ) : (
+                                <i className="fas fa-user"></i>
+                              )}
+                            </div>
+                            <div className={`flex flex-col gap-1 max-w-[78%] ${isAdmin ? "items-start" : "items-end"}`}>
+                              {isAdmin && (
+                                <span className="text-[10px] text-[#c9a84c] font-medium ml-1">
+                                  Front Desk
+                                </span>
+                              )}
+                              {group.items.map((msg, mi) => {
+                                const isLast = mi === group.items.length - 1;
+                                const isFirst = mi === 0;
+                                const tail = isAdmin
+                                  ? isLast
+                                    ? "rounded-bl-md"
+                                    : ""
+                                  : isLast
+                                    ? "rounded-br-md"
+                                    : "";
+                                return (
+                                  <div
+                                    key={msg.id}
+                                    className={`px-4 py-2.5 rounded-2xl ${tail} ${isAdmin ? "bg-white/[0.07] text-gray-100 border border-white/5" : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] shadow-lg shadow-[#c9a84c]/20"}`}>
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                                      {msg.message}
+                                    </p>
+                                    {isLast && (
+                                      <p
+                                        className={`text-[10px] mt-1 flex items-center gap-1 ${isAdmin ? "text-gray-500" : "text-[#0f1b2d]/60"}`}>
+                                        {new Date(msg.created_at).toLocaleTimeString(
+                                          [],
+                                          {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          },
+                                        )}
+                                        {!isAdmin && (
+                                          <i
+                                            className={`fas fa-check-double ${msg.is_read ? "text-blue-700" : "text-[#0f1b2d]/50"}`}></i>
+                                        )}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
                               })}
-                              {msg.sender === "admin"
-                                ? " · Front Desk"
-                                : " · You"}
-                            </p>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                     <div ref={chatEndRef} />
                   </div>
@@ -998,6 +1084,13 @@ export default function GuestPortal() {
 
                   <div className="px-4 py-3 border-t border-white/10 bg-black/20">
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowQuickActions(!showQuickActions)}
+                        aria-label={showQuickActions ? "Hide quick requests" : "Show quick requests"}
+                        aria-expanded={showQuickActions}
+                        className="shrink-0 w-11 h-11 flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
+                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus"} text-lg`}></i>
+                      </button>
                       <input
                         type="text"
                         value={newMessage}
@@ -1005,22 +1098,14 @@ export default function GuestPortal() {
                         onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                         placeholder="Type a message..."
                         aria-label="Type a message"
-                        className="flex-1 min-w-0 px-4 py-3 bg-black/30 rounded-xl border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all"
+                        className="flex-1 min-w-0 px-4 py-3 bg-black/30 rounded-full border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all"
                       />
                       <button
                         onClick={sendMessage}
                         disabled={!newMessage.trim()}
                         aria-label="Send message"
-                        className="shrink-0 px-5 py-3 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
+                        className="shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed">
                         <i className="fas fa-paper-plane text-sm"></i>
-                        <span className="hidden sm:inline">Send</span>
-                      </button>
-                      <button
-                        onClick={() => setShowQuickActions(!showQuickActions)}
-                        aria-label={showQuickActions ? "Hide quick requests" : "Show quick requests"}
-                        aria-expanded={showQuickActions}
-                        className="shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
-                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus-circle"} text-lg`}></i>
                       </button>
                     </div>
                   </div>
