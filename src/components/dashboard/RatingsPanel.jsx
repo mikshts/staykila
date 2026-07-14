@@ -16,62 +16,6 @@ export default function RatingsPanel({ hotel, onClose }) {
   const [filter, setFilter] = useState("all");
   const [selectedRoomType, setSelectedRoomType] = useState(null);
 
-  useEffect(() => {
-    if (hotel?.id) {
-      fetchRatings();
-    }
-  }, [hotel]);
-
-  // Realtime: refresh when a rating is added/updated/deleted
-  useEffect(() => {
-    if (!hotel?.id) return;
-    const channel = supabase
-      .channel(`ratings-${hotel.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "ratings",
-          filter: `hotel_id=eq.${hotel.id}`,
-        },
-        () => fetchRatings(),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [hotel?.id, fetchRatings]);
-
-  const fetchRatings = async () => {
-    try {
-      setLoading(true);
-
-      // Fetch all ratings for this hotel
-      const { data, error } = await supabase
-        .from("ratings")
-        .select(
-          `
-          *,
-          rooms:room_id (name, room_number)
-        `,
-        )
-        .eq("hotel_id", hotel.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      setRatings(data || []);
-      setRecentRatings((data || []).slice(0, 10));
-      calculateSummary(data || []);
-    } catch (error) {
-      console.error("Error fetching ratings:", error);
-      toast.error("Failed to load ratings");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const calculateSummary = (ratingsData) => {
     const roomTypes = ["single", "double", "family"];
     const result = {
@@ -118,6 +62,62 @@ export default function RatingsPanel({ hotel, onClose }) {
 
     setSummary(result);
   };
+
+  const fetchRatings = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch all ratings for this hotel
+      const { data, error } = await supabase
+        .from("ratings")
+        .select(
+          `
+          *,
+          rooms:room_id (name, room_number)
+        `,
+        )
+        .eq("hotel_id", hotel.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setRatings(data || []);
+      setRecentRatings((data || []).slice(0, 10));
+      calculateSummary(data || []);
+    } catch (error) {
+      console.error("Error fetching ratings:", error);
+      toast.error("Failed to load ratings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (hotel?.id) {
+      fetchRatings();
+    }
+  }, [hotel]);
+
+  // Realtime: refresh when a rating is added/updated/deleted
+  useEffect(() => {
+    if (!hotel?.id) return;
+    const channel = supabase
+      .channel(`ratings-${hotel.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ratings",
+          filter: `hotel_id=eq.${hotel.id}`,
+        },
+        () => fetchRatings(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [hotel?.id, fetchRatings]);
 
   const getFilteredRatings = () => {
     if (filter === "all") return recentRatings;
