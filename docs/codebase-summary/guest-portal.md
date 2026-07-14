@@ -65,34 +65,3 @@ device) can read the WiFi password and the guest token. The audit flags this as
 a critical issue — see [known-issues.md](./known-issues.md) #4. Recommended fix:
 don't persist secrets to `localStorage`; fetch on load and keep in memory, or
 exclude `wifiPassword` from the cache.
-
-## Recent changes — Messenger-style chat (commit `0a07b06`)
-
-The guest chat was restyled to feel like a Messenger conversation. All changes
-are in `src/components/guest/GuestPortal.jsx`.
-
-### Input bar
-- **Plus (quick requests) button** moved to the **left**; **Send button** moved to
-the **right** (both round icon buttons, `rounded-full`).
-- Text input is now a pill between them.
-
-### Message rendering
-- **Avatars**: each message group shows a circular avatar — concierge bell
-  (`fa-concierge-bell`) for Front Desk, user icon for the guest.
-- **Alignment**: admin messages render on the **left**, guest messages on the
-  **right** (via `flex-row` / `flex-row-reverse`).
-- **"Front Desk" label** appears above admin message groups.
-- **Grouped bubbles**: consecutive messages from the same sender stack into one
-  cluster with a single tail corner instead of separate bubbles.
-- **Day separators**: messages are bucketed by day with centered "Today" /
-  "Yesterday" / date labels.
-- **Read receipts**: guest messages show a double-check icon that turns blue
-  (`text-blue-700`) when `is_read` is true, gray when unread.
-- **Text wrapping**: `whitespace-pre-wrap break-words` for long messages / line
-  breaks.
-- **Taller history**: chat scroll area raised from `max-h-48` to `max-h-[60vh]`.
-
-### Data integration
-- Admin/guest distinction relies on the existing `sender: "admin" | "guest"`
-  field from `messageService`. No backend changes were needed; the realtime
-  subscription already surfaces admin replies live.
