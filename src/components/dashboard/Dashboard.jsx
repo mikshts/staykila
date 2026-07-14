@@ -14,10 +14,12 @@ import QRDownload from "./QRDownload";
 import { buildGuestUrl } from "../../lib/guestUrl";
 import CalendarManager from "../settings/CalendarManager";
 import AnalyticsPanel from "../analytics/AnalyticsPanel";
+import RatingsPanel from "./RatingsPanel";
 import { useSubscription } from "../../contexts/SubscriptionContext";
 import TrialBanner from "../billing/TrialBanner";
 import { useNavigate } from "react-router-dom";
 import { messageService } from "../../services/messageService";
+import { ratingService } from "../../services/ratingService";
 
 import {
   CheckinModal,
@@ -61,6 +63,8 @@ export default function Dashboard() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showCalendarManager, setShowCalendarManager] = useState(false);
   const [showAnalyticsPanel, setShowAnalyticsPanel] = useState(false);
+  const [showRatingsPanel, setShowRatingsPanel] = useState(false);
+  const [hotelRating, setHotelRating] = useState({ average: 0, count: 0 });
   const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
@@ -169,6 +173,22 @@ export default function Dashboard() {
       window.removeEventListener("refreshRooms", handleRefreshRooms);
     };
   }, [hotel]);
+
+  // Fetch overall hotel rating for the sidebar badge
+  useEffect(() => {
+    let active = true;
+    if (hotel?.id) {
+      ratingService
+        .getHotelAverage(hotel.id)
+        .then((res) => {
+          if (active) setHotelRating(res);
+        })
+        .catch((e) => console.error("Failed to load hotel rating:", e));
+    }
+    return () => {
+      active = false;
+    };
+  }, [hotel?.id]);
 
   // Realtime: keep the dashboard's message list live. A single hotel-wide
   // channel receives INSERT/UPDATE/DELETE for every room, so a guest message
@@ -1077,6 +1097,8 @@ export default function Dashboard() {
         hotelName={hotel?.name}
         roomCount={rooms.length}
         occupancyRate={revenue.occupancyRate}
+        averageRating={hotelRating.average}
+        totalRatings={hotelRating.count}
         filter={filter}
         isExpired={isExpired}
         onFilterChange={(f) => {
@@ -1095,6 +1117,10 @@ export default function Dashboard() {
         }}
         onAnalyticsClick={() => {
           setShowAnalyticsPanel(true);
+          setSidebarOpen(false);
+        }}
+        onRatingsClick={() => {
+          setShowRatingsPanel(true);
           setSidebarOpen(false);
         }}
         onSettingsClick={() => {
@@ -1329,6 +1355,9 @@ export default function Dashboard() {
           bookings={[]}
           onClose={() => setShowAnalyticsPanel(false)}
         />
+      )}
+      {showRatingsPanel && (
+        <RatingsPanel hotel={hotel} onClose={() => setShowRatingsPanel(false)} />
       )}
 
       {showResetModal && (

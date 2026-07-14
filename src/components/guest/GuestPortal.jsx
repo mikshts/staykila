@@ -5,6 +5,8 @@ import { roomService } from "../../services/roomService";
 import { messageService } from "../../services/messageService";
 import { supabase } from "../../lib/supabase";
 import { buildGuestUrl, parseRoomParam } from "../../lib/guestUrl";
+import RatingStars from "./RatingStars";
+
 import {
   GuestPortalSkeleton,
   RoomNotFoundSkeleton,
@@ -385,31 +387,28 @@ export default function GuestPortal() {
       subscriptionRef.current = null;
     }
 
-    subscriptionRef.current = messageService.subscribeToRoom(
-      roomId,
-      {
-        onChange: (newMsg, eventType) => {
-          if (!newMsg?.id) return;
-          if (eventType === "UPDATE") {
-            setMessages((prev) =>
-              prev.map((m) => (m.id === newMsg.id ? newMsg : m)),
-            );
-            return;
-          }
-          // INSERT (or unknown): append only if not already present.
-          if (!messageIdsRef.current.has(newMsg.id)) {
-            messageIdsRef.current.add(newMsg.id);
-            setMessages((prev) => [...prev, newMsg]);
-            chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-          }
-        },
-        onDelete: (oldMsg) => {
-          if (!oldMsg?.id) return;
-          messageIdsRef.current.delete(oldMsg.id);
-          setMessages((prev) => prev.filter((m) => m.id !== oldMsg.id));
-        },
+    subscriptionRef.current = messageService.subscribeToRoom(roomId, {
+      onChange: (newMsg, eventType) => {
+        if (!newMsg?.id) return;
+        if (eventType === "UPDATE") {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === newMsg.id ? newMsg : m)),
+          );
+          return;
+        }
+        // INSERT (or unknown): append only if not already present.
+        if (!messageIdsRef.current.has(newMsg.id)) {
+          messageIdsRef.current.add(newMsg.id);
+          setMessages((prev) => [...prev, newMsg]);
+          chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
       },
-    );
+      onDelete: (oldMsg) => {
+        if (!oldMsg?.id) return;
+        messageIdsRef.current.delete(oldMsg.id);
+        setMessages((prev) => prev.filter((m) => m.id !== oldMsg.id));
+      },
+    });
 
     return () => {
       if (subscriptionRef.current) {
@@ -867,6 +866,16 @@ export default function GuestPortal() {
                         </div>
                       </div>
                     </div>
+                  )}
+                  {room.booking && (
+                    <RatingStars
+                      room={room}
+                      hotel={hotel}
+                      booking={room.booking}
+                      onRatingSubmitted={(rating) =>
+                        console.log("Rating submitted:", rating)
+                      }
+                    />
                   )}
                   <div className="text-center pt-2">
                     <button

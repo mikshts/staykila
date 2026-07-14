@@ -8,6 +8,8 @@ export default function Sidebar({
   hotelName,
   roomCount,
   occupancyRate,
+  averageRating = 0,
+  totalRatings = 0,
   filter,
   onFilterChange,
   stats,
@@ -22,6 +24,7 @@ export default function Sidebar({
   onQRDownloadClick,
   onCalendarClick,
   onAnalyticsClick,
+  onRatingsClick,
   user,
   onLogout,
   onResetTotals,
@@ -74,6 +77,17 @@ export default function Sidebar({
             {hotelName || "Hotel"}
           </div>
           <div className="text-white/40 text-xs">{roomCount} rooms</div>
+          {averageRating > 0 && (
+            <div className="mt-1 flex items-center gap-1">
+              <span className="text-[#c9a84c] text-sm">★</span>
+              <span className="text-white/70 text-sm font-medium">
+                {averageRating.toFixed(1)}
+              </span>
+              <span className="text-white/30 text-xs">
+                ({totalRatings})
+              </span>
+            </div>
+          )}
           <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#c9a84c] rounded-full transition-all duration-500"
@@ -159,6 +173,12 @@ export default function Sidebar({
                 className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
                 <i className="fas fa-file-invoice w-5 text-center"></i>
                 Night Audit
+              </button>
+              <button
+                onClick={onRatingsClick}
+                className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-lg transition">
+                <i className="fas fa-star w-5 text-center text-[#c9a84c]"></i>
+                Ratings
               </button>
               <button
                 onClick={onCalendarClick}
