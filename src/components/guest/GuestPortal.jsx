@@ -526,6 +526,32 @@ export default function GuestPortal() {
     toast.success("Copied to clipboard!");
   };
 
+  // Mark all unread admin messages as read (both in state and in the DB) so the
+  // chat notification badge clears once the guest opens the conversation.
+  const markAdminMessagesRead = async () => {
+    const unread = messages.filter((m) => m.sender === "admin" && !m.is_read);
+    if (unread.length === 0) return;
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.sender === "admin" && !m.is_read
+          ? { ...m, is_read: true, read_at: new Date().toISOString() }
+          : m,
+      ),
+    );
+    await Promise.all(
+      unread.map((m) =>
+        messageService
+          .markAsRead(m.id)
+          .catch((e) => console.error("markAsRead failed:", e)),
+      ),
+    );
+  };
+
+  // Count of unread admin messages (drives the chat tab notification badge).
+  const unreadCount = messages.filter(
+    (m) => m.sender === "admin" && !m.is_read,
+  ).length;
+
   // ------------------------------
   // 4. Offline/Error UI
   // ------------------------------
@@ -763,12 +789,17 @@ export default function GuestPortal() {
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: "info", icon: "fa-info-circle", label: "Info" },
-                { id: "chat", icon: "fa-comment", label: "Chat" },
+                { id: "chat", icon: "fa-comment", label: "Chat", badge: unreadCount },
                 { id: "menu", icon: "fa-utensils", label: "Menu" },
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tab.id === "chat" && unreadCount > 0) {
+                      markAdminMessagesRead();
+                    }
+                  }}
                   className={`py-2.5 px-3 rounded-xl text-xs font-medium transition-all duration-300 relative ${
                     activeTab === tab.id
                       ? "text-[#0f1b2d] bg-gradient-to-r from-[#c9a84c] to-[#e8d189] shadow-lg shadow-[#c9a84c]/25"
@@ -776,11 +807,11 @@ export default function GuestPortal() {
                   }`}>
                   <i className={`fas ${tab.icon} mr-1.5`}></i>
                   {tab.label}
-                  {tab.id === "chat" &&
-                    messages.filter((m) => m.sender === "admin" && !m.is_read)
-                      .length > 0 && (
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                    )}
+                  {tab.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none animate-pulse">
+                      {tab.badge > 99 ? "99+" : tab.badge}
+                    </span>
+                  )}
                   {tab.id === "menu" && menuImages.length > 0 && (
                     <span className="ml-1 text-[10px] opacity-60">
                       ({menuImages.length})
