@@ -1002,8 +1002,8 @@ export default function GuestPortal() {
                         onClick={() => setShowQuickActions(!showQuickActions)}
                         aria-label={showQuickActions ? "Hide quick requests" : "Show quick requests"}
                         aria-expanded={showQuickActions}
-                        className="shrink-0 w-12 h-12 flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
-                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus-circle"} text-lg`}></i>
+                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
+                        <i className={`fas ${showQuickActions ? "fa-times" : "fa-plus"} text-sm`}></i>
                       </button>
                       <input
                         type="text"
