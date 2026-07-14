@@ -8,6 +8,7 @@ export default function MessagesPanel({ rooms, hotelId, onClose, onOpenChat }) {
   const [loading, setLoading] = useState(true);
   const panelRef = useRef(null);
   const channelRef = useRef(null);
+  const roomScrollRefs = useRef({});
 
   useEffect(() => {
     const fetchAllMessages = async () => {
@@ -77,6 +78,14 @@ export default function MessagesPanel({ rooms, hotelId, onClose, onOpenChat }) {
       }
     };
   }, [hotelId]);
+
+  // Auto-scroll each room's message list to the newest (top) when messages change
+  useEffect(() => {
+    Object.keys(roomScrollRefs.current).forEach((rid) => {
+      const el = roomScrollRefs.current[rid];
+      if (el) el.scrollTop = 0;
+    });
+  }, [allMessages]);
 
   // Handle click outside to close
   useEffect(() => {
@@ -167,7 +176,12 @@ export default function MessagesPanel({ rooms, hotelId, onClose, onOpenChat }) {
                       </span>
                     )}
                   </div>
-                  <div className="p-3 max-h-48 overflow-y-auto">
+                  <div
+                    className="p-3 max-h-48 overflow-y-auto"
+                    ref={(el) => {
+                      if (el) roomScrollRefs.current[roomId] = el;
+                    }}
+                  >
                     {msgs.slice(0, 5).map((msg) => (
                       <div
                         key={msg.id}

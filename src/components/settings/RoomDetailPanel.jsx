@@ -79,6 +79,13 @@ export default function RoomDetailPanel({
     };
   }, [onClose]);
 
+  // Auto-scroll to the newest message whenever messages change (incoming or sent)
+  useEffect(() => {
+    if (messages.length > 0) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages.length]);
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">

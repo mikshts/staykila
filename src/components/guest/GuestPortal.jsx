@@ -308,7 +308,7 @@ export default function GuestPortal() {
         messageIdsRef.current.add(msg.id);
         setMessages((prev) => [...prev, msg]);
       }
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       toast.success("Message sent!");
     } catch (error) {
       console.error("Error sending message:", error);
@@ -400,7 +400,7 @@ export default function GuestPortal() {
         if (!messageIdsRef.current.has(newMsg.id)) {
           messageIdsRef.current.add(newMsg.id);
           setMessages((prev) => [...prev, newMsg]);
-          chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
       },
       onDelete: (oldMsg) => {
@@ -513,7 +513,7 @@ export default function GuestPortal() {
         setMessages((prev) => [...prev, msg]);
       }
       setNewMessage("");
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       toast.success("Message sent!");
     } catch (error) {
       console.error("Error sending message:", error);
