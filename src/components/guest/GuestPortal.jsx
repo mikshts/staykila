@@ -613,7 +613,7 @@ export default function GuestPortal() {
       {/* Subtle gradient glow */}
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,168,76,0.08),transparent_55%)] pointer-events-none" />
 
-      <div className="relative max-w-md mx-auto px-4 py-6 min-h-screen flex flex-col">
+      <div className="relative max-w-5xl mx-auto px-4 py-6 min-h-screen flex flex-col">
         {/* Header */}
         <div className="text-center mb-8 pt-4">
           <img
@@ -635,9 +635,8 @@ export default function GuestPortal() {
           </div>
         </div>
 
-        <div className="relative bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl shadow-black/40 overflow-hidden flex-1">
-          {/* Gold Accent Bar */}
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#c9a84c] to-transparent" />
+        <div className="relative flex-1">
+
 
           {/* Room Header */}
           <div className="px-6 pt-8 pb-6 text-center border-b border-white/5 bg-gradient-to-b from-[#c9a84c]/5 to-transparent">
@@ -796,7 +795,7 @@ export default function GuestPortal() {
               {activeTab === "info" && (
                 <div className="space-y-4 animate-fadeIn">
                   <div
-                    className={`bg-white/5 rounded-2xl p-4 border border-white/10`}>
+                    className="p-4">
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-10 h-10 rounded-xl flex items-center justify-center ${getRoomTypeInfo(room.room_type).color.replace("text-", "bg-").replace("border-", "border-")}`}>
@@ -815,7 +814,7 @@ export default function GuestPortal() {
                     </div>
                   </div>
                   {wifiPassword && (
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                    <div className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-[#c9a84c]/20 rounded-xl flex items-center justify-center">
@@ -853,7 +852,7 @@ export default function GuestPortal() {
                     </div>
                   )}
                   {room.notes && (
-                    <div className="bg-amber-500/5 rounded-2xl p-4 border border-amber-500/20">
+                    <div className="bg-amber-500/5 rounded-2xl p-4">
                       <div className="flex items-start gap-3">
                         <i className="fas fa-sticky-note text-amber-400 mt-0.5"></i>
                         <div>
@@ -890,7 +889,7 @@ export default function GuestPortal() {
 
               {/* Chat Tab */}
               {activeTab === "chat" && (
-                <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
+                <div>
                   <div className="p-4 pb-5 max-h-48 overflow-y-auto space-y-3 custom-scrollbar">
                     {messages.length === 0 ? (
                       <div className="text-center py-8">
@@ -1032,11 +1031,11 @@ export default function GuestPortal() {
                 <div className="animate-fadeIn">
                   {menuImages.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {menuImages.map((img, i) => (
                           <div
                             key={i}
-                            className="group relative rounded-2xl overflow-hidden bg-white/5 aspect-square cursor-pointer hover:shadow-xl hover:shadow-black/30 transition-all duration-300 border border-white/5"
+                            className="group relative rounded-2xl overflow-hidden bg-white/5 aspect-square cursor-pointer hover:shadow-xl hover:shadow-black/30 transition-all duration-300"
                             onClick={() => setSelectedImage(img.image_url)}>
                             <img
                               src={img.image_url}
@@ -1066,7 +1065,7 @@ export default function GuestPortal() {
                       </div>
                     </>
                   ) : (
-                    <div className="text-center py-8 bg-white/5 rounded-2xl border border-white/5">
+                    <div className="text-center py-8">
                       <i className="fas fa-utensils text-gray-600 text-3xl mb-3 block"></i>
                       <p className="text-gray-400 font-medium">
                         No menu available
