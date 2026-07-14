@@ -318,7 +318,7 @@ export default function GuestPortal() {
 
   const quickActions = [
     {
-      icon: "fa-towel",
+      icon: "fa-bath",
       label: "Towels",
       message: "Can I get extra towels please?",
     },
