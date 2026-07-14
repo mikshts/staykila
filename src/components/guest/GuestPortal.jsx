@@ -883,12 +883,12 @@ export default function GuestPortal() {
                   <div className="h-[360px] flex flex-col">
                     {/* Messages area - scrollable from bottom */}
                     <div
-                      className="flex-1 min-h-0 overflow-y-auto custom-scrollbar"
+                      className="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-smooth"
                       ref={chatContainerRef}>
                       <div className="p-4 space-y-3">
                         {messages.length === 0 ? (
-                          <div className="text-center py-8">
-                            <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
+                          <div className="text-center py-8 animate-fadeIn">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20 animate-pulse-slow">
                               <i className="fas fa-comment-dots text-[#c9a84c] text-xl"></i>
                             </div>
                             <p className="text-gray-400 font-medium">
@@ -907,18 +907,22 @@ export default function GuestPortal() {
                                   msg.sender === "admin"
                                     ? "justify-start"
                                     : "justify-end"
-                                } ${index === messages.length - 1 ? "mb-1" : ""}`}>
+                                } ${index === messages.length - 1 ? "mb-1" : ""} animate-message-in`}
+                                style={{
+                                  animationDelay: `${Math.min(index * 50, 300)}ms`,
+                                  animationDuration: "300ms",
+                                }}>
                                 <div
-                                  className={`max-w-[85%] px-4 py-2.5 rounded-2xl ${
+                                  className={`max-w-[85%] px-4 py-2.5 rounded-2xl transform transition-all duration-300 hover:scale-[1.02] ${
                                     msg.sender === "admin"
-                                      ? "bg-white/10 text-gray-200 rounded-tl-none border border-white/5"
-                                      : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-tr-none shadow-lg shadow-[#c9a84c]/20"
+                                      ? "bg-white/10 text-gray-200 rounded-tl-none border border-white/5 hover:bg-white/15"
+                                      : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-tr-none shadow-lg shadow-[#c9a84c]/20 hover:shadow-[#c9a84c]/40"
                                   }`}>
                                   <p className="text-sm leading-relaxed">
                                     {msg.message}
                                   </p>
                                   <p
-                                    className={`text-[10px] mt-1 ${
+                                    className={`text-[10px] mt-1 transition-opacity duration-300 ${
                                       msg.sender === "admin"
                                         ? "text-gray-500"
                                         : "text-[#0f1b2d]/60"
@@ -949,31 +953,32 @@ export default function GuestPortal() {
                       <div className="flex items-center justify-between px-3 py-1.5">
                         <button
                           onClick={() => setShowQuickActions(!showQuickActions)}
-                          className="flex items-center gap-2 text-[10px] text-gray-400 hover:text-gray-300 transition-colors group">
+                          className="flex items-center gap-2 text-[10px] text-gray-400 hover:text-gray-300 transition-all duration-300 group">
                           <i
-                            className={`fas ${showQuickActions ? "fa-chevron-down" : "fa-chevron-right"} text-[#c9a84c] text-[8px] group-hover:translate-x-0.5 transition-transform`}></i>
-                          <span className="font-medium tracking-wider uppercase">
+                            className={`fas ${showQuickActions ? "fa-chevron-down" : "fa-chevron-right"} text-[#c9a84c] text-[8px] transition-all duration-300 group-hover:translate-x-0.5`}></i>
+                          <span className="font-medium tracking-wider uppercase transition-colors duration-300">
                             {showQuickActions ? "Hide" : "Show"} Quick Requests
                           </span>
-                          <span className="text-[8px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">
+                          <span className="text-[8px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded transition-all duration-300 group-hover:bg-white/10">
                             {quickActions.length}
                           </span>
                         </button>
                         {messages.filter(
                           (m) => m.sender === "admin" && !m.is_read,
                         ).length > 0 && (
-                          <span className="text-[8px] text-[#c9a84c] animate-pulse">
-                            ● New messages
+                          <span className="text-[8px] text-[#c9a84c] animate-pulse flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-[#c9a84c] rounded-full animate-ping"></span>
+                            New messages
                           </span>
                         )}
                       </div>
 
                       {/* Quick actions buttons with smooth animation */}
                       <div
-                        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        className={`overflow-hidden transition-all duration-400 ease-in-out ${
                           showQuickActions
-                            ? "max-h-[120px] opacity-100"
-                            : "max-h-0 opacity-0"
+                            ? "max-h-[140px] opacity-100 translate-y-0"
+                            : "max-h-0 opacity-0 translate-y-[-10px]"
                         }`}>
                         <div className="px-3 pb-3 overflow-x-auto">
                           <div className="flex flex-col gap-1.5 min-w-max">
@@ -984,13 +989,16 @@ export default function GuestPortal() {
                                   onClick={() =>
                                     sendQuickMessage(action.message)
                                   }
-                                  className="group relative overflow-hidden px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0">
-                                  <span className="relative flex items-center gap-1.5 text-gray-300 group-hover:text-white">
+                                  className="group relative overflow-hidden px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0 hover:scale-105 active:scale-95"
+                                  style={{
+                                    animationDelay: `${index * 30}ms`,
+                                  }}>
+                                  <span className="relative flex items-center gap-1.5 text-gray-300 group-hover:text-white transition-colors duration-300">
                                     <i
-                                      className={`fas ${action.icon} text-[#c9a84c] text-[8px]`}></i>
+                                      className={`fas ${action.icon} text-[#c9a84c] text-[8px] transition-transform duration-300 group-hover:rotate-12`}></i>
                                     {action.label}
                                   </span>
-                                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></span>
                                 </button>
                               ))}
                             </div>
@@ -1003,13 +1011,16 @@ export default function GuestPortal() {
                                     onClick={() =>
                                       sendQuickMessage(action.message)
                                     }
-                                    className="group relative overflow-hidden px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0">
-                                    <span className="relative flex items-center gap-1.5 text-gray-300 group-hover:text-white">
+                                    className="group relative overflow-hidden px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all duration-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#c9a84c]/30 backdrop-blur-sm hover:shadow-lg hover:shadow-[#c9a84c]/10 whitespace-nowrap flex-shrink-0 hover:scale-105 active:scale-95"
+                                    style={{
+                                      animationDelay: `${(index + 5) * 30}ms`,
+                                    }}>
+                                    <span className="relative flex items-center gap-1.5 text-gray-300 group-hover:text-white transition-colors duration-300">
                                       <i
-                                        className={`fas ${action.icon} text-[#c9a84c] text-[8px]`}></i>
+                                        className={`fas ${action.icon} text-[#c9a84c] text-[8px] transition-transform duration-300 group-hover:rotate-12`}></i>
                                       {action.label}
                                     </span>
-                                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></span>
+                                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></span>
                                   </button>
                                 ))}
                             </div>
@@ -1028,7 +1039,7 @@ export default function GuestPortal() {
                           onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                           placeholder="Type a message..."
                           aria-label="Type a message"
-                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-black/30 rounded-xl border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all"
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-black/30 rounded-xl border border-white/10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#c9a84c] focus:ring-2 focus:ring-[#c9a84c]/20 transition-all duration-300 hover:border-white/20"
                         />
                         <button
                           onClick={() => setShowQuickActions(!showQuickActions)}
@@ -1038,16 +1049,16 @@ export default function GuestPortal() {
                               : "Show quick requests"
                           }
                           aria-expanded={showQuickActions}
-                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300">
+                          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-white/10 bg-white/5 text-[#c9a84c] hover:bg-white/10 hover:border-[#c9a84c]/30 transition-all duration-300 hover:scale-110 active:scale-95">
                           <i
-                            className={`fas ${showQuickActions ? "fa-chevron-up" : "fa-bolt"} text-xs`}></i>
+                            className={`fas ${showQuickActions ? "fa-chevron-up" : "fa-bolt"} text-xs transition-transform duration-300 ${showQuickActions ? "rotate-0" : "rotate-0"}`}></i>
                         </button>
                         <button
                           onClick={sendMessage}
                           disabled={!newMessage.trim()}
                           aria-label="Send message"
-                          className="shrink-0 px-4 py-2.5 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed">
-                          <i className="fas fa-paper-plane text-sm"></i>
+                          className="shrink-0 px-4 py-2.5 bg-gradient-to-r from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-xl hover:shadow-lg hover:shadow-[#c9a84c]/25 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95">
+                          <i className="fas fa-paper-plane text-sm transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"></i>
                           <span className="hidden sm:inline text-xs">Send</span>
                         </button>
                       </div>
