@@ -901,60 +901,62 @@ export default function GuestPortal() {
                 <div className="bg-black/20 rounded-2xl border border-white/10 overflow-hidden">
                   {/* Fixed height container */}
                   <div className="h-[360px] flex flex-col">
-                    {/* Messages area - takes remaining space, scrollable */}
-                    <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-3 custom-scrollbar">
-                      {messages.length === 0 ? (
-                        <div className="text-center py-8">
-                          <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
-                            <i className="fas fa-comment-dots text-[#c9a84c] text-xl"></i>
-                          </div>
-                          <p className="text-gray-400 font-medium">
-                            No messages yet
-                          </p>
-                          <p className="text-gray-500 text-sm mt-1">
-                            Start a conversation with the front desk
-                          </p>
-                        </div>
-                      ) : (
-                        messages.map((msg) => (
-                          <div
-                            key={msg.id}
-                            className={`flex ${
-                              msg.sender === "admin"
-                                ? "justify-start"
-                                : "justify-end"
-                            }`}>
-                            <div
-                              className={`max-w-[85%] px-4 py-2.5 rounded-2xl ${
-                                msg.sender === "admin"
-                                  ? "bg-white/10 text-gray-200 rounded-tl-none border border-white/5"
-                                  : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-tr-none shadow-lg shadow-[#c9a84c]/20"
-                              }`}>
-                              <p className="text-sm leading-relaxed">
-                                {msg.message}
-                              </p>
-                              <p
-                                className={`text-[10px] mt-1 ${
-                                  msg.sender === "admin"
-                                    ? "text-gray-500"
-                                    : "text-[#0f1b2d]/60"
-                                }`}>
-                                {new Date(msg.created_at).toLocaleTimeString(
-                                  [],
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )}
-                                {msg.sender === "admin"
-                                  ? " · Front Desk"
-                                  : " · You"}
-                              </p>
+                    {/* Messages area - scrollable with padding for bottom elements */}
+                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                      <div className="p-4 space-y-3 pb-2">
+                        {messages.length === 0 ? (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#c9a84c]/10 to-[#e8d189]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#c9a84c]/20">
+                              <i className="fas fa-comment-dots text-[#c9a84c] text-xl"></i>
                             </div>
+                            <p className="text-gray-400 font-medium">
+                              No messages yet
+                            </p>
+                            <p className="text-gray-500 text-sm mt-1">
+                              Start a conversation with the front desk
+                            </p>
                           </div>
-                        ))
-                      )}
-                      <div ref={chatEndRef} />
+                        ) : (
+                          messages.map((msg) => (
+                            <div
+                              key={msg.id}
+                              className={`flex ${
+                                msg.sender === "admin"
+                                  ? "justify-start"
+                                  : "justify-end"
+                              }`}>
+                              <div
+                                className={`max-w-[85%] px-4 py-2.5 rounded-2xl ${
+                                  msg.sender === "admin"
+                                    ? "bg-white/10 text-gray-200 rounded-tl-none border border-white/5"
+                                    : "bg-gradient-to-br from-[#c9a84c] to-[#e8d189] text-[#0f1b2d] rounded-tr-none shadow-lg shadow-[#c9a84c]/20"
+                                }`}>
+                                <p className="text-sm leading-relaxed">
+                                  {msg.message}
+                                </p>
+                                <p
+                                  className={`text-[10px] mt-1 ${
+                                    msg.sender === "admin"
+                                      ? "text-gray-500"
+                                      : "text-[#0f1b2d]/60"
+                                  }`}>
+                                  {new Date(msg.created_at).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )}
+                                  {msg.sender === "admin"
+                                    ? " · Front Desk"
+                                    : " · You"}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                        <div ref={chatEndRef} />
+                      </div>
                     </div>
 
                     {/* Quick Actions - fixed at bottom, above input */}
@@ -973,13 +975,11 @@ export default function GuestPortal() {
                             {quickActions.length}
                           </span>
                         </button>
-                        {messages.length > 0 && (
-                          <span className="text-[8px] text-gray-500">
-                            {messages.filter(
-                              (m) => m.sender === "admin" && !m.is_read,
-                            ).length > 0 && (
-                              <span className="text-[#c9a84c]">● New</span>
-                            )}
+                        {messages.filter(
+                          (m) => m.sender === "admin" && !m.is_read,
+                        ).length > 0 && (
+                          <span className="text-[8px] text-[#c9a84c] animate-pulse">
+                            ● New messages
                           </span>
                         )}
                       </div>
