@@ -129,8 +129,8 @@ export default function ReportsPanel({ hotel, onClose }) {
     }).format(amount);
   };
 
-  // Split data into pages for printing (max 35 rows per page)
-  const getPageData = (data, rowsPerPage = 35) => {
+  // Split data into pages for printing (max 50 rows per page)
+  const getPageData = (data, rowsPerPage = 50) => {
     const pages = [];
     for (let i = 0; i < data.length; i += rowsPerPage) {
       pages.push(data.slice(i, i + rowsPerPage));
@@ -400,11 +400,10 @@ export default function ReportsPanel({ hotel, onClose }) {
                     </div>
                   )}
 
-                  {/* Compact header for subsequent pages */}
+                  {/* Compact header for subsequent pages — just page number */}
                   {!isFirstPage && (
-                    <div className="text-center text-[10px] text-gray-400 pb-1 mb-1">
-                      Night Audit — {hotel?.name} — Page {pageIndex + 1} of{" "}
-                      {pages.length}
+                    <div className="text-center text-[8px] text-gray-400 py-0.5">
+                      Night Audit — {hotel?.name} — Page {pageIndex + 1} of {pages.length}
                     </div>
                   )}
 
