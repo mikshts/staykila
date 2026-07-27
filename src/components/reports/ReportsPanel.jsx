@@ -129,8 +129,8 @@ export default function ReportsPanel({ hotel, onClose }) {
     }).format(amount);
   };
 
-  // Split data into pages for printing (max 18 rows per page)
-  const getPageData = (data, rowsPerPage = 18) => {
+  // Split data into pages for printing (max 35 rows per page)
+  const getPageData = (data, rowsPerPage = 35) => {
     const pages = [];
     for (let i = 0; i < data.length; i += rowsPerPage) {
       pages.push(data.slice(i, i + rowsPerPage));
@@ -375,24 +375,23 @@ export default function ReportsPanel({ hotel, onClose }) {
                   className={!isLastPage ? "page-break" : ""}>
                   {/* Header with Logo - Only on FIRST page */}
                   {isFirstPage && (
-                    <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-5 rounded-t-lg flex items-center justify-between border-b-4 border-[#c9a84c]">
-                      <div className="flex items-center gap-4">
+                    <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white px-4 py-3 rounded-t-lg flex items-center justify-between border-b-4 border-[#c9a84c]">
+                      <div className="flex items-center gap-3">
                         <img
                           src="/favicon1.png"
                           alt="StayKila"
-                          className="w-12 h-12 rounded-lg border-2 border-[#c9a84c]"
+                          className="w-10 h-10 rounded-lg border-2 border-[#c9a84c]"
                         />
                         <div>
-                          <h1 className="text-2xl font-bold">
-                            Stay<span className="text-[#c9a84c]">Kila</span>
-                          </h1>
-                          <p className="text-sm text-white/70">
+                          <h1 className="text-lg font-bold">
                             Night Audit Report
+                          </h1>
+                          <p className="text-xs text-white/70">
+                            {hotel?.name}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-semibold">{hotel?.name}</p>
                         <p className="text-xs text-white/60">
                           {new Date(dateRange.start).toLocaleDateString()} -{" "}
                           {new Date(dateRange.end).toLocaleDateString()}
@@ -401,13 +400,11 @@ export default function ReportsPanel({ hotel, onClose }) {
                     </div>
                   )}
 
-                  {/* Simple header for subsequent pages */}
+                  {/* Compact header for subsequent pages */}
                   {!isFirstPage && (
-                    <div className="text-center border-b border-gray-300 pb-2 mb-3">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Night Audit Report - Page {pageIndex + 1} of{" "}
-                        {pages.length}
-                      </span>
+                    <div className="text-center text-[10px] text-gray-400 pb-1 mb-1">
+                      Night Audit — {hotel?.name} — Page {pageIndex + 1} of{" "}
+                      {pages.length}
                     </div>
                   )}
 
@@ -416,28 +413,28 @@ export default function ReportsPanel({ hotel, onClose }) {
                   {/* ======================================================== */}
 
                   {/* Transaction Table */}
-                  <table className="w-full text-sm border-collapse">
+                  <table className="w-full text-[11px] border-collapse">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                        <th className="text-left px-1.5 py-1 font-semibold text-gray-700 text-[10px] border border-gray-300">
                           Date
                         </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                        <th className="text-left px-1.5 py-1 font-semibold text-gray-700 text-[10px] border border-gray-300">
                           Room
                         </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
-                          Hours
+                        <th className="text-left px-1.5 py-1 font-semibold text-gray-700 text-[10px] border border-gray-300">
+                          Hrs
                         </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                        <th className="text-left px-1.5 py-1 font-semibold text-gray-700 text-[10px] border border-gray-300">
                           Price
                         </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                        <th className="text-left px-1.5 py-1 font-semibold text-gray-700 text-[10px] border border-gray-300">
                           Guest
                         </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                        <th className="text-left px-1.5 py-1 font-semibold text-gray-700 text-[10px] border border-gray-300">
                           Check-in
                         </th>
-                        <th className="text-left p-2 font-semibold text-gray-700 text-xs border border-gray-300">
+                        <th className="text-left px-1.5 py-1 font-semibold text-gray-700 text-[10px] border border-gray-300">
                           Checkout
                         </th>
                       </tr>
@@ -445,25 +442,25 @@ export default function ReportsPanel({ hotel, onClose }) {
                     <tbody>
                       {pageData.map((booking) => (
                         <tr key={booking.id} className="border border-gray-200">
-                          <td className="p-2 text-xs border border-gray-200">
+                          <td className="px-1.5 py-1 text-[10px] border border-gray-200">
                             {new Date(booking.created_at).toLocaleDateString()}
                           </td>
-                          <td className="p-2 font-medium text-xs border border-gray-200">
+                          <td className="px-1.5 py-1 font-medium text-[10px] border border-gray-200">
                             {booking.rooms?.name || "Unknown"}
                           </td>
-                          <td className="p-2 text-xs border border-gray-200">
+                          <td className="px-1.5 py-1 text-[10px] border border-gray-200">
                             {booking.hours}h
                           </td>
-                          <td className="p-2 font-medium text-xs border border-gray-200">
+                          <td className="px-1.5 py-1 font-medium text-[10px] border border-gray-200">
                             ₱{booking.price}
                           </td>
-                          <td className="p-2 text-xs border border-gray-200">
+                          <td className="px-1.5 py-1 text-[10px] border border-gray-200">
                             {booking.guest_name || "N/A"}
                           </td>
-                          <td className="p-2 text-xs border border-gray-200">
+                          <td className="px-1.5 py-1 text-[10px] border border-gray-200">
                             {new Date(booking.start_time).toLocaleTimeString()}
                           </td>
-                          <td className="p-2 text-xs border border-gray-200">
+                          <td className="px-1.5 py-1 text-[10px] border border-gray-200">
                             {new Date(booking.end_time).toLocaleTimeString()}
                           </td>
                         </tr>
@@ -473,32 +470,32 @@ export default function ReportsPanel({ hotel, onClose }) {
                       <tr className="bg-gray-50 font-semibold">
                         <td
                           colSpan="3"
-                          className="p-2 text-right text-xs border border-gray-300">
+                          className="px-1.5 py-1 text-right text-[10px] border border-gray-300">
                           Page Total:
                         </td>
-                        <td className="p-2 text-xs border border-gray-300 text-[#c9a84c] font-bold">
+                        <td className="px-1.5 py-1 text-[10px] border border-gray-300 text-[#c9a84c] font-bold">
                           {formatCurrency(pageTotalRevenue)}
                         </td>
                         <td
                           colSpan="3"
-                          className="p-2 text-xs border border-gray-300">
-                          {pageTotalBookings} bookings • {pageTotalHours}h
+                          className="px-1.5 py-1 text-[10px] border border-gray-300">
+                          {pageTotalBookings} bookings · {pageTotalHours}h
                         </td>
                       </tr>
                       {isLastPage && reports.length > 0 && (
                         <tr className="bg-blue-50 font-bold">
                           <td
                             colSpan="3"
-                            className="p-2 text-right text-xs border border-blue-300">
+                            className="px-1.5 py-1 text-right text-[10px] border border-blue-300">
                             GRAND TOTAL:
                           </td>
-                          <td className="p-2 text-xs border border-blue-300 text-[#c9a84c] font-bold">
+                          <td className="px-1.5 py-1 text-[10px] border border-blue-300 text-[#c9a84c] font-bold">
                             {formatCurrency(summary.totalRevenue)}
                           </td>
                           <td
                             colSpan="3"
-                            className="p-2 text-xs border border-blue-300">
-                            {summary.totalBookings} bookings •{" "}
+                            className="px-1.5 py-1 text-[10px] border border-blue-300">
+                            {summary.totalBookings} bookings ·{" "}
                             {summary.totalHours}h total
                           </td>
                         </tr>
@@ -506,14 +503,15 @@ export default function ReportsPanel({ hotel, onClose }) {
                     </tfoot>
                   </table>
 
-                  {/* Footer */}
-                  <div className="text-center text-xs text-gray-400 mt-2 pt-1 border-t border-gray-200">
-                    {hotel?.name} •{" "}
-                    {new Date(dateRange.start).toLocaleDateString()} -{" "}
-                    {new Date(dateRange.end).toLocaleDateString()}
-                    {!isFirstPage &&
-                      ` • Page ${pageIndex + 1} of ${pages.length}`}
-                  </div>
+                  {/* Only first page has the main summary and footer; subsequent pages omit footer to save paper */}
+                  {isFirstPage && (
+                    <div className="text-center text-[9px] text-gray-400 mt-1 pt-0.5 border-t border-gray-200">
+                      {hotel?.name} ·{" "}
+                      {new Date(dateRange.start).toLocaleDateString()} -{" "}
+                      {new Date(dateRange.end).toLocaleDateString()}
+                      {pages.length > 1 && ` · Page 1 of ${pages.length}`}
+                    </div>
+                  )}
                 </div>
               );
             })}
