@@ -1094,11 +1094,8 @@ export default function Dashboard() {
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        hotelName={hotel?.name}
         roomCount={rooms.length}
         occupancyRate={revenue.occupancyRate}
-        averageRating={hotelRating.average}
-        totalRatings={hotelRating.count}
         filter={filter}
         isExpired={isExpired}
         onFilterChange={(f) => {
@@ -1162,6 +1159,11 @@ export default function Dashboard() {
           onViewChange={setView}
           soundEnabled={soundEnabled}
           onSoundToggle={() => setSoundEnabled(!soundEnabled)}
+          hotelName={hotel?.name}
+          roomCount={rooms.length}
+          occupancyRate={revenue.occupancyRate || 0}
+          averageRating={hotelRating.average}
+          totalRatings={hotelRating.count}
         />
 
         <div className="p-4">

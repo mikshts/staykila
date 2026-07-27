@@ -5,8 +5,13 @@ export default function TopBar({
   onMenuClick,
   view,
   onViewChange,
-  soundEnabled, // ← Add this
-  onSoundToggle, // ← Add this (or setSoundEnabled)
+  soundEnabled,
+  onSoundToggle,
+  hotelName,
+  roomCount,
+  occupancyRate,
+  averageRating,
+  totalRatings,
 }) {
   return (
     <header className="bg-white border-b border-[#e5e2db] sticky top-0 z-30 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
@@ -15,14 +20,16 @@ export default function TopBar({
           <i className="fas fa-bars text-xl"></i>
         </button>
         <div>
-          <h1 className="text-base font-bold text-[#0f1b2d] truncate">Rooms</h1>
-          <p className="text-[10px] text-[#8a8278] truncate">
-            {new Date().toLocaleDateString("en-PH", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-          </p>
+          <h1 className="text-base font-bold text-[#0f1b2d] truncate">
+            {hotelName || "Rooms"}
+          </h1>
+          <div className="flex items-center gap-3 text-[10px] text-[#8a8278]">
+            <span>{roomCount} rooms</span>
+            {averageRating > 0 && (
+              <span>★ {averageRating.toFixed(1)} ({totalRatings})</span>
+            )}
+            <span>{occupancyRate}% occupancy</span>
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
@@ -58,7 +65,9 @@ export default function TopBar({
             }`}
             title={soundEnabled ? "Sound alerts on" : "Sound alerts off"}>
             <i
-              className={`fas ${soundEnabled ? "fa-volume-up" : "fa-volume-mute"}`}></i>
+              className={`fas ${
+                soundEnabled ? "fa-volume-up" : "fa-volume-mute"
+              }`}></i>
             {soundEnabled ? "Sound On" : "Sound Off"}
           </button>
         </div>

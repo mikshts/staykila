@@ -5,11 +5,8 @@ import { Link } from "react-router-dom";
 export default function Sidebar({
   isOpen,
   onClose,
-  hotelName,
   roomCount,
   occupancyRate,
-  averageRating = 0,
-  totalRatings = 0,
   filter,
   onFilterChange,
   stats,
@@ -71,20 +68,6 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Hotel Badge – always visible */}
-        <div className="m-2 p-2 bg-white/5 border border-white/10 rounded-xl flex-shrink-0">
-          <div className="text-white text-[11px] font-semibold truncate">
-            {hotelName || "Hotel"}
-          </div>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="text-white/40 text-[9px]">{roomCount} rooms</span>
-            {averageRating > 0 && (
-              <span className="text-white/40 text-[9px]">★ {averageRating.toFixed(1)} ({totalRatings})</span>
-            )}
-            <span className="text-white/40 text-[9px]">{occupancyRate}% occupancy</span>
-          </div>
-        </div>
-
         {/* Navigation — no overflow scroll, all items fit */}
         <nav className="px-1 py-1 space-y-0.5">
           {!isExpired ? (
@@ -93,28 +76,29 @@ export default function Sidebar({
               <div className="text-white/25 text-[7px] font-semibold tracking-wider uppercase px-2 pt-2 pb-1">
                 Operations
               </div>
+              {/* Rooms */}
               <button
                 onClick={() => onFilterChange("all")}
-                className={`w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium rounded-md transition ${
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition ${
                   filter === "all"
                     ? "text-[#c9a84c] bg-[#c9a84c]/10 border-l-2 border-[#c9a84c]"
                     : "text-white/55 hover:text-white hover:bg-white/5"
                 }`}>
-                <i className="fas fa-door-open w-3.5 text-center"></i>
+                <i className="fas fa-door-open w-4 text-center"></i>
                 Rooms
-                <span className="ml-auto text-white/30 text-[9px]">
+                <span className="ml-auto text-white/30 text-xs">
                   {roomCount}
                 </span>
               </button>
               {stats.expiring + stats.expired > 0 && (
                 <button
                   onClick={() => onFilterChange("alerts")}
-                  className={`w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium rounded-md transition ${
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition ${
                     filter === "alerts"
                       ? "text-[#c9a84c] bg-[#c9a84c]/10 border-l-2 border-[#c9a84c]"
                       : "text-white/55 hover:text-white hover:bg-white/5"
                   }`}>
-                  <i className="fas fa-triangle-exclamation w-3.5 text-center"></i>
+                  <i className="fas fa-triangle-exclamation w-4 text-center"></i>
                   Alerts
                   <span className="ml-auto bg-orange-500 text-white text-[7px] font-bold px-1.5 py-0.5 rounded-full">
                     {stats.expiring + stats.expired}
@@ -123,8 +107,8 @@ export default function Sidebar({
               )}
               <button
                 onClick={onMessagesClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-envelope w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-envelope w-4 text-center"></i>
                 Messages
                 {unreadCount > 0 && (
                   <span className="ml-auto bg-red-500 text-white text-[7px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
@@ -134,83 +118,83 @@ export default function Sidebar({
               </button>
               <button
                 onClick={onActivityClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-list-ul w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-list-ul w-4 text-center"></i>
                 Activity
               </button>
 
               {/* Analytics */}
-              <div className="text-white/25 text-[7px] font-semibold tracking-wider uppercase px-2 pt-2 pb-1">
+              <div className="text-white/25 text-[7px] font-semibold tracking-wider uppercase px-2 pt-3 pb-1">
                 Analytics
               </div>
               <button
                 onClick={onAnalyticsClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-chart-pie w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-chart-pie w-4 text-center"></i>
                 Analytics
               </button>
               <button
                 onClick={onReportsClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-file-invoice w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-file-invoice w-4 text-center"></i>
                 Night Audit
               </button>
               <button
                 onClick={onRatingsClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-star w-3.5 text-center text-[#c9a84c]"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-star w-4 text-center text-[#c9a84c]"></i>
                 Ratings
               </button>
               <button
                 onClick={onCalendarClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-calendar-alt w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-calendar-alt w-4 text-center"></i>
                 Calendar
               </button>
 
               {/* Management */}
-              <div className="text-white/25 text-[7px] font-semibold tracking-wider uppercase px-2 pt-2 pb-1">
+              <div className="text-white/25 text-[7px] font-semibold tracking-wider uppercase px-2 pt-3 pb-1">
                 Management
               </div>
               <button
                 onClick={onQRDownloadClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-qrcode w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-qrcode w-4 text-center"></i>
                 QR Codes
               </button>
               <button
                 onClick={onPriceClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-tag w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-tag w-4 text-center"></i>
                 Edit Prices
               </button>
               <button
                 onClick={onWifiClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-wifi w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-wifi w-4 text-center"></i>
                 WiFi
               </button>
               <button
                 onClick={onMenuClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-utensils w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-utensils w-4 text-center"></i>
                 Menu
               </button>
               <button
                 onClick={onSettingsClick}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
-                <i className="fas fa-gear w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/55 hover:text-white hover:bg-white/5 rounded-md transition">
+                <i className="fas fa-gear w-4 text-center"></i>
                 Settings
               </button>
 
               {/* Danger Zone */}
-              <div className="text-white/25 text-[7px] font-semibold tracking-wider uppercase px-2 pt-2 pb-1">
+              <div className="text-white/25 text-[7px] font-semibold tracking-wider uppercase px-2 pt-3 pb-1">
                 Danger Zone
               </div>
               <button
                 onClick={onResetTotals}
-                className="w-full flex items-center gap-2 px-2 py-1 text-[11px] font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 rounded-md transition">
-                <i className="fas fa-trash w-3.5 text-center"></i>
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 rounded-md transition">
+                <i className="fas fa-trash w-4 text-center"></i>
                 Reset Totals
               </button>
             </>
