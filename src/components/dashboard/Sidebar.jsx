@@ -76,26 +76,12 @@ export default function Sidebar({
           <div className="text-white text-[11px] font-semibold truncate">
             {hotelName || "Hotel"}
           </div>
-          <div className="text-white/40 text-[9px]">{roomCount} rooms</div>
-          {averageRating > 0 && (
-            <div className="mt-0.5 flex items-center gap-1">
-              <span className="text-[#c9a84c] text-[10px]">★</span>
-              <span className="text-white/70 text-[10px] font-medium">
-                {averageRating.toFixed(1)}
-              </span>
-              <span className="text-white/30 text-[9px]">
-                ({totalRatings})
-              </span>
-            </div>
-          )}
-          <div className="mt-0.5 h-1 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#c9a84c] rounded-full transition-all duration-500"
-              style={{ width: occupancyRate + "%" }}
-            />
-          </div>
-          <div className="text-white/30 text-[8px] mt-0.5">
-            {occupancyRate}% occupancy
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="text-white/40 text-[9px]">{roomCount} rooms</span>
+            {averageRating > 0 && (
+              <span className="text-white/40 text-[9px]">★ {averageRating.toFixed(1)} ({totalRatings})</span>
+            )}
+            <span className="text-white/40 text-[9px]">{occupancyRate}% occupancy</span>
           </div>
         </div>
 
