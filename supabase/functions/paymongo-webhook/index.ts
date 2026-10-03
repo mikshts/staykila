@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { addOneCalendarMonth } from "../_shared/subscriptionPeriod.ts";
+import { verifyPayMongoWebhookSignature } from "../_shared/paymongoWebhookSignature.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
@@ -14,72 +15,30 @@ serve(async (req) => {
   const signature = req.headers.get("paymongo-signature");
   const rawBody = await req.text();
 
-  if (PAYMONGO_WEBHOOK_SECRET) {
-    if (!signature) {
-      console.error("Missing paymongo-signature header");
-      return new Response("Unauthorized: Missing signature", { status: 401 });
-    }
+  if (!PAYMONGO_WEBHOOK_SECRET) {
+    console.error("PAYMONGO_WEBHOOK_SECRET is not configured");
+    return new Response("Webhook verification is not configured", {
+      status: 500,
+    });
+  }
+  if (!signature) {
+    return new Response("Unauthorized: Missing signature", { status: 401 });
+  }
 
-    try {
-      // PayMongo sends the signature as a COMPOSITE header:
-      //   "t=<timestamp>,te=<test_hex>,li=<live_hex>"
-      // In TEST mode the HMAC is under `te=`, in LIVE mode under `li=`.
-      // We must read whichever segment PayMongo actually sent for the
-      // configured secret — otherwise sigHex is undefined and we 401 every
-      // webhook, so the subscription_status never flips to 'active'.
-      const sigTimestamp = (signature.match(/t=(\d+)/) || [])[1];
-      const teMatch = (signature.match(/te=([0-9a-f]+)/i) || [])[1];
-      const liMatch = (signature.match(/li=([0-9a-f]+)/i) || [])[1];
-      const sigHex = teMatch || liMatch; // prefer test segment, fall back to live
-
-      if (!sigTimestamp || !sigHex) {
-        console.error(
-          "Malformed paymongo-signature header:",
-          signature,
-          "(extracted t=",
-          sigTimestamp,
-          "te=",
-          teMatch,
-          "li=",
-          liMatch,
-          ")",
-        );
-        return new Response("Unauthorized: Malformed signature", {
-          status: 401,
-        });
-      }
-
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(PAYMONGO_WEBHOOK_SECRET),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"],
-      );
-      const signedData = encoder.encode(`${sigTimestamp}.${rawBody}`);
-      const signatureBuffer = await crypto.subtle.sign("HMAC", key, signedData);
-      const signatureArray = Array.from(new Uint8Array(signatureBuffer));
-      const computedHex = signatureArray
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-      // Constant-time-ish compare to avoid timing leaks.
-      const normalize = (h) => h.replace(/^0x/, "").toLowerCase();
-      if (normalize(computedHex) !== normalize(sigHex)) {
-        console.error("Signature verification failed");
-        return new Response("Unauthorized: Invalid signature", { status: 401 });
-      }
-    } catch (err) {
-      console.error("Error during signature verification:", err);
-      return new Response("Internal Server Error during verification", {
-        status: 500,
-      });
-    }
-  } else {
-    console.warn(
-      "PAYMONGO_WEBHOOK_SECRET is not set. Webhook signature verification bypassed.",
+  try {
+    const validSignature = await verifyPayMongoWebhookSignature(
+      rawBody,
+      PAYMONGO_WEBHOOK_SECRET,
+      signature,
     );
+    if (!validSignature) {
+      return new Response("Unauthorized: Invalid signature", { status: 401 });
+    }
+  } catch (err) {
+    console.error("Error during signature verification:", err);
+    return new Response("Internal Server Error during verification", {
+      status: 500,
+    });
   }
 
   let payload;
@@ -96,9 +55,16 @@ serve(async (req) => {
   try {
     if (eventType === "checkout_session.payment.paid") {
       const sessionId = event.attributes.data.id;
-      const paymentMethodTypes =
-        event.attributes.data.attributes.payment_method_types || [];
-      const paymentMethod = paymentMethodTypes[0] || "unknown";
+      const sessionAttributes = event.attributes.data.attributes || {};
+      const paymentMethodTypes = sessionAttributes.payment_method_types || [];
+      const paidPayment = (sessionAttributes.payments || []).find(
+        (payment) => payment?.attributes?.status === "paid",
+      );
+      const paymentMethod =
+        paidPayment?.attributes?.source?.type ||
+        sessionAttributes.payment_method_used ||
+        paymentMethodTypes[0] ||
+        "unknown";
 
       // Locate the subscription for this checkout session via
       // provider_subscription_id (set by create-checkout). This is the

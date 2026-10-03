@@ -3,7 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useSubscription } from "../../contexts/SubscriptionContext";
 import { usePayments } from "../../hooks/usePayments";
 import { supabase } from "../../lib/supabase";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import TrialBanner from "./TrialBanner";
@@ -29,22 +29,6 @@ export default function BillingPage() {
   const [cancelText, setCancelText] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [verifyingId, setVerifyingId] = useState(null);
-
-  // When PayMongo redirects back (?payment=success), the SubscriptionContext
-  // at the app root automatically verifies + activates the payment and then
-  // redirects to the dashboard. Nothing to do here but strip the param.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("payment")) {
-      params.delete("payment");
-      const newSearch = params.toString();
-      window.history.replaceState(
-        {},
-        "",
-        window.location.pathname + (newSearch ? `?${newSearch}` : ""),
-      );
-    }
-  }, []);
 
   // Manual verification: ask the backend to check the LIVE PayMongo status
   // for this hotel's checkout session. The backend is the only authority — it
@@ -72,7 +56,7 @@ export default function BillingPage() {
       );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Verification failed.");
-      if (data.paid || data.status === "active") {
+      if (data.paid === true) {
         toast.success("Payment confirmed — subscription activated!");
         window.location.reload();
       } else {
@@ -97,11 +81,14 @@ export default function BillingPage() {
     (subscription?.room_count || 0) * (subscription?.price_per_room || 0);
 
   const handleSubscribe = async () => {
+    if (processingPayment) return;
+
     // Create checkout session
     if (!hotel?.id) {
       toast.error("Hotel not found. Please set up your hotel first.");
       return;
     }
+    setProcessingPayment(true);
     try {
       const {
         data: { session },
@@ -143,6 +130,7 @@ export default function BillingPage() {
       toast.error(
         err.message || "Failed to initiate payment. Please try again.",
       );
+      setProcessingPayment(false);
     }
   };
 
@@ -207,6 +195,7 @@ export default function BillingPage() {
             <TrialBanner
               daysRemaining={trialDaysRemaining}
               onSubscribe={handleSubscribe}
+              isProcessing={processingPayment}
             />
           )}
 
@@ -222,8 +211,9 @@ export default function BillingPage() {
               </p>
               <button
                 onClick={handleSubscribe}
+                disabled={processingPayment}
                 className="mt-4 bg-[#c9a84c] text-[#0f1b2d] px-6 py-2 rounded-lg font-semibold hover:bg-[#b8973a] transition">
-                Renew Now
+                {processingPayment ? "Opening checkout..." : "Renew Now"}
               </button>
             </div>
           )}
@@ -300,8 +290,9 @@ export default function BillingPage() {
               {isExpired && (
                 <button
                   onClick={handleSubscribe}
+                  disabled={processingPayment}
                   className="bg-[#c9a84c] text-[#0f1b2d] px-6 py-2 rounded-lg font-semibold hover:bg-[#b8973a] transition">
-                  Renew Now
+                  {processingPayment ? "Opening checkout..." : "Renew Now"}
                 </button>
               )}
               {isActive &&
@@ -317,7 +308,8 @@ export default function BillingPage() {
                   yet (e.g. the user came back, or the webhook is delayed),
                   offer a manual "Verify" that re-checks PayMongo. This can
                   NEVER grant a renewal by itself — it only refreshes status. */}
-              {!isActive && subscription?.provider_subscription_id && (
+              {(!isActive || isExpired) &&
+                subscription?.provider_subscription_id && (
                 <button
                   onClick={verifyPaymentRecord}
                   disabled={verifyingId === "subscription"}

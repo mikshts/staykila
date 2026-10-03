@@ -88,7 +88,7 @@ export function SubscriptionProvider({ children }) {
       if (!res.ok) return { paid: false };
       const data = await res.json();
       return {
-        paid: data?.paid === true || data?.status === "active",
+        paid: data?.paid === true,
         status: data?.status,
         nothingToVerify: data?.nothingToVerify === true,
       };
@@ -130,9 +130,7 @@ export function SubscriptionProvider({ children }) {
         let latest = await fetchSubscription();
 
         const params = new URLSearchParams(window.location.search);
-        const cameFromPayment =
-          params.get("payment") === "success" ||
-          params.get("payment") === "cancelled";
+        const cameFromPayment = params.get("payment") === "success";
 
         if (cameFromPayment) {
           // Auto-verify: confirm the payment with PayMongo via the backend.

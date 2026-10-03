@@ -14,6 +14,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { addOneCalendarMonth } from "../_shared/subscriptionPeriod.ts";
+import { normalizePayMongoCheckoutStatus } from "../_shared/paymongoPaymentStatus.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
@@ -53,41 +54,7 @@ async function getPayMongoSessionStatus(sessionId) {
     }
     const json = await res.json();
     const attrs = json?.data?.attributes;
-    if (!attrs) return { status: null, paymentMethod: null };
-
-    // IMPORTANT: the Checkout Session's own top-level `status` field only
-    // ever reflects whether the session itself is open or expired
-    // ("active" / "expired") — it is NOT the payment result and NEVER
-    // becomes "paid". Comparing this field to "paid" (the old bug) could
-    // never succeed, so a real payment was never detected and the user got
-    // stuck on the billing page forever after paying.
-    //
-    // The real outcome lives on the embedded Payment Intent
-    // (`payment_intent.attributes.status`, one of:
-    // awaiting_payment_method / awaiting_next_action / processing / succeeded)
-    // and/or the `payments` array (each with its own `status: "paid"`).
-    const paymentIntentStatus = attrs.payment_intent?.attributes?.status;
-    const payments = attrs.payments || [];
-    const paidPayment = payments.find((p) => p?.attributes?.status === "paid");
-
-    if (paymentIntentStatus === "succeeded" || paidPayment) {
-      const paymentMethod =
-        paidPayment?.attributes?.source?.type ||
-        attrs.payment_method_used ||
-        "paymongo";
-      return { status: "paid", paymentMethod };
-    }
-
-    if (
-      paymentIntentStatus === "processing" ||
-      paymentIntentStatus === "awaiting_payment_method" ||
-      paymentIntentStatus === "awaiting_next_action"
-    ) {
-      return { status: "pending", paymentMethod: null };
-    }
-
-    // Session itself expired/cancelled with no successful payment intent.
-    return { status: attrs.status ?? "unknown", paymentMethod: null };
+    return normalizePayMongoCheckoutStatus(attrs);
   } catch (err) {
     console.error("Error querying PayMongo session:", err);
     return { status: null, paymentMethod: null };

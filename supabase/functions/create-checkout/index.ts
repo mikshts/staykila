@@ -209,9 +209,7 @@ serve(async (req) => {
       .update({ provider_subscription_id: sessionId })
       .eq("id", subscription.id);
 
-    if (updateError) {
-      console.error("Error updating provider_subscription_id:", updateError);
-    }
+    if (updateError) throw updateError;
 
     return new Response(JSON.stringify({ checkoutUrl, sessionId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
