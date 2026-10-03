@@ -1082,6 +1082,30 @@ export default function Dashboard() {
     return buildGuestUrl(hotel.id, room.id, room.name);
   };
 
+  const activePanel = showMessagesPanel
+    ? "messages"
+    : showActivityPanel
+      ? "activity"
+      : showAnalyticsPanel
+        ? "analytics"
+        : showReportsPanel
+          ? "reports"
+          : showRatingsPanel
+            ? "ratings"
+            : showCalendarManager
+              ? "reservations"
+              : showSettingsPanel
+                ? "settings"
+                : showPriceModal
+                  ? "rates"
+                  : showQRDownload
+                    ? "qr"
+                    : showWifiModal
+                      ? "wifi"
+                      : showMenuModal
+                        ? "menu"
+                        : null;
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -1148,6 +1172,8 @@ export default function Dashboard() {
         user={user}
         onLogout={logout}
         onResetTotals={() => setShowResetModal(true)}
+        hotelName={hotel?.name}
+        activePanel={activePanel}
       />
       <main className="flex-1 min-w-0">
         <TopBar
