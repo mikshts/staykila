@@ -4,14 +4,8 @@ import { useSubscription } from "../../contexts/SubscriptionContext";
 
 export default function ProtectedRoute({ children }) {
   const { user, loading, hotel, setupComplete } = useAuth(); // ensure hotel is available
-  const {
-    subscription,
-    isLoading,
-    isPolling,
-    paymentStuck,
-    isExpired,
-    error,
-  } = useSubscription();
+  const { subscription, isLoading, isPolling, paymentStuck, isExpired, error } =
+    useSubscription();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -66,11 +60,13 @@ export default function ProtectedRoute({ children }) {
     return children;
   }
 
-  // If subscription is expired, redirect to billing — unless already on the
-  // billing page (the one place expired users are allowed to land). Without
-  // this guard, /billing (also wrapped in ProtectedRoute) would redirect back
-  // to itself, causing an infinite loop and a blank page.
-  if (subscription && isExpired && location.pathname !== "/billing") {
+  // Expired accounts retain dashboard read access and can always reach billing.
+  if (
+    subscription &&
+    isExpired &&
+    location.pathname !== "/billing" &&
+    location.pathname !== "/dashboard"
+  ) {
     return <Navigate to="/billing" replace />;
   }
 

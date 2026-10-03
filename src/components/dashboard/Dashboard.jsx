@@ -208,44 +208,41 @@ export default function Dashboard() {
       messagesChannelRef.current = null;
     }
 
-    messagesChannelRef.current = messageService.subscribeToHotel(
-      hotel.id,
-      {
-        onChange: (row, eventType) => {
-          if (!row?.room_id) return;
-          setMessages((prev) => {
-            const roomMessages = prev[row.room_id] || [];
-            let nextRoomMessages;
-            if (eventType === "UPDATE") {
-              // Replace the existing row in place.
-              nextRoomMessages = roomMessages.map((m) =>
-                m.id === row.id ? row : m,
-              );
-            } else {
-              // INSERT (or unknown): append if not already present.
-              if (roomMessages.some((m) => m.id === row.id)) return prev;
-              nextRoomMessages = [...roomMessages, row];
-            }
-            const next = { ...prev, [row.room_id]: nextRoomMessages };
-            // Recompute unread from the authoritative message map.
-            setUnreadCount(computeUnread(next));
-            return next;
-          });
-        },
-        onDelete: (oldRow) => {
-          if (!oldRow?.room_id) return;
-          setMessages((prev) => {
-            const roomMessages = prev[oldRow.room_id] || [];
-            const next = {
-              ...prev,
-              [oldRow.room_id]: roomMessages.filter((m) => m.id !== oldRow.id),
-            };
-            setUnreadCount(computeUnread(next));
-            return next;
-          });
-        },
+    messagesChannelRef.current = messageService.subscribeToHotel(hotel.id, {
+      onChange: (row, eventType) => {
+        if (!row?.room_id) return;
+        setMessages((prev) => {
+          const roomMessages = prev[row.room_id] || [];
+          let nextRoomMessages;
+          if (eventType === "UPDATE") {
+            // Replace the existing row in place.
+            nextRoomMessages = roomMessages.map((m) =>
+              m.id === row.id ? row : m,
+            );
+          } else {
+            // INSERT (or unknown): append if not already present.
+            if (roomMessages.some((m) => m.id === row.id)) return prev;
+            nextRoomMessages = [...roomMessages, row];
+          }
+          const next = { ...prev, [row.room_id]: nextRoomMessages };
+          // Recompute unread from the authoritative message map.
+          setUnreadCount(computeUnread(next));
+          return next;
+        });
       },
-    );
+      onDelete: (oldRow) => {
+        if (!oldRow?.room_id) return;
+        setMessages((prev) => {
+          const roomMessages = prev[oldRow.room_id] || [];
+          const next = {
+            ...prev,
+            [oldRow.room_id]: roomMessages.filter((m) => m.id !== oldRow.id),
+          };
+          setUnreadCount(computeUnread(next));
+          return next;
+        });
+      },
+    });
 
     return () => {
       if (messagesChannelRef.current) {
@@ -1166,6 +1163,24 @@ export default function Dashboard() {
           totalRatings={hotelRating.count}
         />
 
+        {isExpired && (
+          <div className="mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-amber-900">
+                Subscription expired. Dashboard is read-only.
+              </p>
+              <p className="text-xs text-amber-800">
+                Your hotel data remains available. Renew to resume changes.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/billing")}
+              className="rounded-md bg-[#0f1b2d] px-3 py-2 text-sm font-medium text-white hover:bg-[#1a2d4a]">
+              Renew subscription
+            </button>
+          </div>
+        )}
+
         <div className="p-4">
           <StatsCards stats={stats} revenue={revenue} />
           {/* Inside the Dashboard component, after StatsCards */}
@@ -1316,6 +1331,7 @@ export default function Dashboard() {
               getRoomStatus={getRoomStatus}
               getStatusMeta={getStatusMeta}
               getUnreadForRoom={getUnreadForRoom}
+              isReadOnly={isExpired}
             />
           ) : (
             <RoomList
@@ -1335,6 +1351,7 @@ export default function Dashboard() {
               getRoomStatus={getRoomStatus}
               getStatusMeta={getStatusMeta}
               getUnreadForRoom={getUnreadForRoom}
+              isReadOnly={isExpired}
             />
           )}
         </div>
@@ -1359,7 +1376,10 @@ export default function Dashboard() {
         />
       )}
       {showRatingsPanel && (
-        <RatingsPanel hotel={hotel} onClose={() => setShowRatingsPanel(false)} />
+        <RatingsPanel
+          hotel={hotel}
+          onClose={() => setShowRatingsPanel(false)}
+        />
       )}
 
       {showResetModal && (
@@ -1559,6 +1579,7 @@ export default function Dashboard() {
           getStatusMeta={getStatusMeta}
           getUnreadForRoom={getUnreadForRoom}
           hotelId={hotel?.id}
+          isReadOnly={isExpired}
         />
       )}
     </div>

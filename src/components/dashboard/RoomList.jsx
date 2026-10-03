@@ -42,6 +42,7 @@ export default function RoomList({
   getRoomStatus,
   getStatusMeta,
   getUnreadForRoom,
+  isReadOnly = false,
 }) {
   if (!rooms.length) {
     return (
@@ -199,30 +200,34 @@ export default function RoomList({
                   </td>
                   <td className="p-2">
                     <div className="flex gap-1 flex-wrap">
-                      {(displayStatus === "available" ||
-                        displayStatus === "cleaning") && (
-                        <button
-                          onClick={() => onRoomAction("checkin", room)}
-                          className="btn btn-navy text-[10px] font-semibold py-1 px-2 rounded bg-[#0f1b2d] text-white hover:opacity-90 transition">
-                          <i className="fas fa-sign-in-alt"></i>
-                        </button>
-                      )}
-                      {(displayStatus === "occupied" ||
-                        displayStatus === "expiring") && (
-                        <button
-                          onClick={() => onRoomAction("extend", room)}
-                          className="btn btn-gold text-[10px] font-semibold py-1 px-2 rounded bg-[#c9a84c] text-white hover:opacity-90 transition">
-                          <i className="fas fa-plus"></i>
-                        </button>
-                      )}
-                      {room.booking && room.bookingStatus !== "booked" && (
-                        <button
-                          onClick={() => onRoomAction("checkout", room)}
-                          className="btn btn-red text-[10px] font-semibold py-1 px-2 rounded bg-red-600 text-white hover:opacity-90 transition">
-                          <i className="fas fa-sign-out-alt"></i>
-                        </button>
-                      )}
-                      {displayStatus === "cleaning" && (
+                      {!isReadOnly &&
+                        (displayStatus === "available" ||
+                          displayStatus === "cleaning") && (
+                          <button
+                            onClick={() => onRoomAction("checkin", room)}
+                            className="btn btn-navy text-[10px] font-semibold py-1 px-2 rounded bg-[#0f1b2d] text-white hover:opacity-90 transition">
+                            <i className="fas fa-sign-in-alt"></i>
+                          </button>
+                        )}
+                      {!isReadOnly &&
+                        (displayStatus === "occupied" ||
+                          displayStatus === "expiring") && (
+                          <button
+                            onClick={() => onRoomAction("extend", room)}
+                            className="btn btn-gold text-[10px] font-semibold py-1 px-2 rounded bg-[#c9a84c] text-white hover:opacity-90 transition">
+                            <i className="fas fa-plus"></i>
+                          </button>
+                        )}
+                      {!isReadOnly &&
+                        room.booking &&
+                        room.bookingStatus !== "booked" && (
+                          <button
+                            onClick={() => onRoomAction("checkout", room)}
+                            className="btn btn-red text-[10px] font-semibold py-1 px-2 rounded bg-red-600 text-white hover:opacity-90 transition">
+                            <i className="fas fa-sign-out-alt"></i>
+                          </button>
+                        )}
+                      {!isReadOnly && displayStatus === "cleaning" && (
                         <button
                           onClick={() => onMarkAvailable(room.id)}
                           className="btn btn-green text-[10px] font-semibold py-1 px-2 rounded bg-green-600 text-white hover:opacity-90 transition">

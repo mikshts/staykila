@@ -1,6 +1,7 @@
- // supabase/functions/paymongo-webhook/index.ts
+// supabase/functions/paymongo-webhook/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { addOneCalendarMonth } from "../_shared/subscriptionPeriod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
@@ -35,9 +36,17 @@ serve(async (req) => {
         console.error(
           "Malformed paymongo-signature header:",
           signature,
-          "(extracted t=", sigTimestamp, "te=", teMatch, "li=", liMatch, ")",
+          "(extracted t=",
+          sigTimestamp,
+          "te=",
+          teMatch,
+          "li=",
+          liMatch,
+          ")",
         );
-        return new Response("Unauthorized: Malformed signature", { status: 401 });
+        return new Response("Unauthorized: Malformed signature", {
+          status: 401,
+        });
       }
 
       const encoder = new TextEncoder();
@@ -130,8 +139,8 @@ serve(async (req) => {
       const baseEnd = subscription.current_period_end
         ? new Date(subscription.current_period_end)
         : now;
-      const periodEnd = new Date(Math.max(now.getTime(), baseEnd.getTime()));
-      periodEnd.setDate(periodEnd.getDate() + 30);
+      const renewalBase = new Date(Math.max(now.getTime(), baseEnd.getTime()));
+      const periodEnd = addOneCalendarMonth(renewalBase);
 
       const { error: updateError } = await supabase
         .from("subscriptions")

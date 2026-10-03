@@ -42,6 +42,7 @@ export default function RoomGrid({
   getRoomStatus,
   getStatusMeta,
   getUnreadForRoom,
+  isReadOnly = false,
 }) {
   if (!rooms.length) {
     return (
@@ -100,7 +101,9 @@ export default function RoomGrid({
                 <button
                   onClick={() => onRoomAction("detail", room)}
                   className="text-[10px] text-[#8a8278] hover:text-[#c9a84c] mt-0.5">
-                  <i className="fas fa-pen text-[9px] mr-1"></i>Rename
+                  <i
+                    className={`fas ${isReadOnly ? "fa-eye" : "fa-pen"} text-[9px] mr-1`}></i>
+                  {isReadOnly ? "Details" : "Rename"}
                 </button>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -196,30 +199,34 @@ export default function RoomGrid({
 
             {/* Actions - STAYS EXACTLY THE SAME */}
             <div className="p-2 bg-[#fafafa] border-t border-[#e5e2db] flex flex-wrap gap-1">
-              {(displayStatus === "available" ||
-                displayStatus === "cleaning") && (
-                <button
-                  onClick={() => onRoomAction("checkin", room)}
-                  className="flex-1 btn btn-navy text-xs font-semibold py-1.5 px-2 rounded-lg bg-[#0f1b2d] text-white hover:opacity-90 transition flex items-center justify-center gap-1">
-                  <i className="fas fa-sign-in-alt"></i> Check In
-                </button>
-              )}
-              {(displayStatus === "occupied" ||
-                displayStatus === "expiring") && (
-                <button
-                  onClick={() => onRoomAction("extend", room)}
-                  className="flex-1 btn btn-gold text-xs font-semibold py-1.5 px-2 rounded-lg bg-[#c9a84c] text-white hover:opacity-90 transition flex items-center justify-center gap-1">
-                  <i className="fas fa-plus"></i> Extend
-                </button>
-              )}
-              {room.booking && room.bookingStatus !== "booked" && (
-                <button
-                  onClick={() => onRoomAction("checkout", room)}
-                  className="btn btn-red text-xs font-semibold py-1.5 px-2 rounded-lg bg-red-600 text-white hover:opacity-90 transition flex items-center justify-center gap-1">
-                  <i className="fas fa-sign-out-alt"></i>
-                </button>
-              )}
-              {displayStatus === "cleaning" && (
+              {!isReadOnly &&
+                (displayStatus === "available" ||
+                  displayStatus === "cleaning") && (
+                  <button
+                    onClick={() => onRoomAction("checkin", room)}
+                    className="flex-1 btn btn-navy text-xs font-semibold py-1.5 px-2 rounded-lg bg-[#0f1b2d] text-white hover:opacity-90 transition flex items-center justify-center gap-1">
+                    <i className="fas fa-sign-in-alt"></i> Check In
+                  </button>
+                )}
+              {!isReadOnly &&
+                (displayStatus === "occupied" ||
+                  displayStatus === "expiring") && (
+                  <button
+                    onClick={() => onRoomAction("extend", room)}
+                    className="flex-1 btn btn-gold text-xs font-semibold py-1.5 px-2 rounded-lg bg-[#c9a84c] text-white hover:opacity-90 transition flex items-center justify-center gap-1">
+                    <i className="fas fa-plus"></i> Extend
+                  </button>
+                )}
+              {!isReadOnly &&
+                room.booking &&
+                room.bookingStatus !== "booked" && (
+                  <button
+                    onClick={() => onRoomAction("checkout", room)}
+                    className="btn btn-red text-xs font-semibold py-1.5 px-2 rounded-lg bg-red-600 text-white hover:opacity-90 transition flex items-center justify-center gap-1">
+                    <i className="fas fa-sign-out-alt"></i>
+                  </button>
+                )}
+              {!isReadOnly && displayStatus === "cleaning" && (
                 <button
                   onClick={() => onMarkAvailable(room.id)}
                   className="flex-1 btn btn-green text-xs font-semibold py-1.5 px-2 rounded-lg bg-green-600 text-white hover:opacity-90 transition flex items-center justify-center gap-1">

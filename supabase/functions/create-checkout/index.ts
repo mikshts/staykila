@@ -32,7 +32,7 @@ serve(async (req) => {
       );
     }
 
-    const { hotelId, roomCount, successUrl, cancelUrl } = await req.json();
+    const { hotelId, successUrl, cancelUrl } = await req.json();
 
     if (!hotelId || !successUrl || !cancelUrl) {
       throw new Error(
@@ -98,16 +98,29 @@ serve(async (req) => {
 
     if (!subscription) {
       // Create a trial subscription (shouldn't happen if setup flow is correct, but fallback)
+      const { count: roomCount, error: roomCountError } = await supabase
+        .from("rooms")
+        .select("id", { count: "exact", head: true })
+        .eq("hotel_id", hotelId);
+      if (roomCountError) throw roomCountError;
+      if (
+        roomCount === null ||
+        !Number.isSafeInteger(roomCount) ||
+        roomCount < 1
+      ) {
+        throw new Error("No rooms found for this hotel subscription.");
+      }
+
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() + 30);
       const { data: newSub, error: insertError } = await supabase
         .from("subscriptions")
         .insert({
           hotel_id: hotelId,
-          room_count: roomCount || 10,
+          room_count: roomCount,
           price_per_room: PRICE_PER_ROOM,
-          monthly_amount: (roomCount || 10) * PRICE_PER_ROOM,
-          yearly_amount: (roomCount || 10) * PRICE_PER_ROOM * 12,
+          monthly_amount: roomCount * PRICE_PER_ROOM,
+          yearly_amount: roomCount * PRICE_PER_ROOM * 12,
           currency: "PHP",
           trial_start: new Date().toISOString(),
           trial_end: trialEnd.toISOString(),
@@ -121,13 +134,22 @@ serve(async (req) => {
       subscription = newSub;
     }
 
-    const currentRooms = roomCount || subscription.room_count;
+    const currentRooms = Number(subscription.room_count);
+    if (!Number.isSafeInteger(currentRooms) || currentRooms < 1) {
+      throw new Error("The subscription has an invalid room count.");
+    }
     // Charge the hotel's actual per-room price from the DB (set during hotel
-    // setup / billing), so the amount always matches what's shown in the UI.
+    // setup / billing), so the amount always matches the stored plan.
     // Fall back to the constant only if the record is somehow missing it.
     const pricePerRoom = subscription.price_per_room || PRICE_PER_ROOM;
     const monthlyAmount = currentRooms * pricePerRoom;
+    if (!Number.isSafeInteger(monthlyAmount) || monthlyAmount < 1) {
+      throw new Error("The subscription has an invalid monthly amount.");
+    }
     const amountInCents = monthlyAmount * 100;
+    if (!Number.isSafeInteger(amountInCents)) {
+      throw new Error("The monthly amount is too large to process.");
+    }
 
     // Create PayMongo checkout session
     const response = await fetch(

@@ -54,8 +54,11 @@ export default function BillingPage() {
   const verifyPaymentRecord = async () => {
     setVerifyingId("subscription");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token =
+        session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
         {
@@ -100,7 +103,9 @@ export default function BillingPage() {
       return;
     }
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
 
       const response = await fetch(
@@ -113,7 +118,6 @@ export default function BillingPage() {
           },
           body: JSON.stringify({
             hotelId: hotel.id,
-            roomCount: subscription?.room_count,
             // Land on /billing?payment=success after PayMongo. Billing is always
             // reachable for expired users, so the auto-verify can run there and
             // then automatically redirect to the dashboard once active — no
@@ -136,14 +140,18 @@ export default function BillingPage() {
         throw new Error("No checkout URL was returned. Please try again.");
       }
     } catch (err) {
-      toast.error(err.message || "Failed to initiate payment. Please try again.");
+      toast.error(
+        err.message || "Failed to initiate payment. Please try again.",
+      );
     }
   };
 
   const handleCancel = async () => {
     setCancelling(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
 
       const response = await fetch(
@@ -229,14 +237,20 @@ export default function BillingPage() {
                 </h2>
                 <div className="mt-2">
                   <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-[#c9a84c]/20 text-[#c9a84c]">
-                    {isTrial ? "Trial" : isActive ? "Active" : "Expired"}
+                    {isExpired
+                      ? "Expired"
+                      : isTrial
+                        ? "Trial"
+                        : isActive
+                          ? "Active"
+                          : "Expired"}
                   </span>
                   {isTrial && (
                     <span className="ml-2 text-sm text-gray-500">
                       {trialDaysRemaining} days remaining
                     </span>
                   )}
-                  {isActive && (
+                  {isActive && !isExpired && (
                     <span className="ml-2 text-sm text-gray-500">
                       Renews in {daysUntilExpiration} days
                     </span>
@@ -271,7 +285,7 @@ export default function BillingPage() {
                 </p>
               </div>
             </div>
-            {isActive && subscription?.cancel_at_period_end && (
+            {isActive && !isExpired && subscription?.cancel_at_period_end && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-yellow-700 text-sm">
                   Your subscription will end on{" "}
@@ -290,13 +304,15 @@ export default function BillingPage() {
                   Renew Now
                 </button>
               )}
-              {isActive && !subscription?.cancel_at_period_end && (
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  className="border border-red-300 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition">
-                  Cancel Subscription
-                </button>
-              )}
+              {isActive &&
+                !isExpired &&
+                !subscription?.cancel_at_period_end && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="border border-red-300 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition">
+                    Cancel Subscription
+                  </button>
+                )}
               {/* If a checkout was started but PayMongo hasn't confirmed payment
                   yet (e.g. the user came back, or the webhook is delayed),
                   offer a manual "Verify" that re-checks PayMongo. This can
@@ -306,7 +322,9 @@ export default function BillingPage() {
                   onClick={verifyPaymentRecord}
                   disabled={verifyingId === "subscription"}
                   className="border border-[#c9a84c] text-[#c9a84c] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#c9a84c]/10 transition disabled:opacity-50">
-                  {verifyingId === "subscription" ? "Verifying..." : "Verify Payment"}
+                  {verifyingId === "subscription"
+                    ? "Verifying..."
+                    : "Verify Payment"}
                 </button>
               )}
             </div>
@@ -347,7 +365,9 @@ export default function BillingPage() {
                   </button>
                   <button
                     onClick={handleCancel}
-                    disabled={cancelling || cancelText !== CANCEL_CONFIRM_PHRASE}
+                    disabled={
+                      cancelling || cancelText !== CANCEL_CONFIRM_PHRASE
+                    }
                     className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50">
                     {cancelling ? "Cancelling..." : "Cancel Subscription"}
                   </button>

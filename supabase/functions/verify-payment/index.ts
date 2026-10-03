@@ -13,6 +13,7 @@
 // function can both safely run without double-adding a month.
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { addOneCalendarMonth } from "../_shared/subscriptionPeriod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY =
@@ -173,8 +174,16 @@ serve(async (req) => {
       );
     }
 
-    // Already active? Report the current status without doing anything.
-    if (subscription.subscription_status === "active") {
+    const currentPeriodEnd = new Date(
+      subscription.current_period_end,
+    ).getTime();
+    const hasCurrentPaidPeriod =
+      subscription.subscription_status === "active" &&
+      Number.isFinite(currentPeriodEnd) &&
+      currentPeriodEnd > Date.now();
+
+    // An active status with an elapsed period still needs payment verification.
+    if (hasCurrentPaidPeriod) {
       return new Response(
         JSON.stringify({ status: "active", paid: true, nothingToVerify: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -188,7 +197,10 @@ serve(async (req) => {
     if (!sessionId) {
       return new Response(
         JSON.stringify({
-          status: subscription.subscription_status,
+          status:
+            subscription.subscription_status === "active"
+              ? "expired"
+              : subscription.subscription_status,
           paid: false,
           message: "No payment in progress.",
         }),
@@ -223,8 +235,8 @@ serve(async (req) => {
     const baseEnd = subscription.current_period_end
       ? new Date(subscription.current_period_end)
       : now;
-    const periodEnd = new Date(Math.max(now.getTime(), baseEnd.getTime()));
-    periodEnd.setDate(periodEnd.getDate() + 30);
+    const renewalBase = new Date(Math.max(now.getTime(), baseEnd.getTime()));
+    const periodEnd = addOneCalendarMonth(renewalBase);
 
     const { error: updateError } = await supabase
       .from("subscriptions")

@@ -20,6 +20,7 @@ export default function RoomDetailPanel({
   getStatusMeta,
   getUnreadForRoom,
   hotelId,
+  isReadOnly = false,
 }) {
   const [reply, setReply] = useState("");
   const [notes, setNotes] = useState(room.notes || "");
@@ -288,7 +289,9 @@ export default function RoomDetailPanel({
               )}
             </div>
 
-            <div ref={chatContainerRef} className="bg-[#f8fafc] rounded-xl p-3 max-h-48 overflow-y-auto mb-3">
+            <div
+              ref={chatContainerRef}
+              className="bg-[#f8fafc] rounded-xl p-3 max-h-48 overflow-y-auto mb-3">
               {messages.length === 0 ? (
                 <p className="text-[#8a8278] text-center text-sm py-4">
                   No messages yet
@@ -314,29 +317,32 @@ export default function RoomDetailPanel({
             </div>
 
             {/* Reply Input */}
-            <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && sendReply()}
-                placeholder="Reply to guest..."
-                className="flex-1 px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:border-[#c9a84c] outline-none"
-              />
-              <button
-                onClick={sendReply}
-                className="px-4 py-2 bg-[#0f1b2d] text-white rounded-lg hover:opacity-90 transition">
-                <i className="fas fa-paper-plane"></i>
-              </button>
-            </div>
+            {!isReadOnly && (
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && sendReply()}
+                  placeholder="Reply to guest..."
+                  className="flex-1 px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:border-[#c9a84c] outline-none"
+                />
+                <button
+                  onClick={sendReply}
+                  className="px-4 py-2 bg-[#0f1b2d] text-white rounded-lg hover:opacity-90 transition">
+                  <i className="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="text-[10px] font-bold uppercase tracking-wider text-[#8a8278] mb-2">
               Actions
             </div>
             <div className="space-y-2 mb-4">
-              {(displayStatus === "available" ||
-                displayStatus === "cleaning") &&
+              {!isReadOnly &&
+                (displayStatus === "available" ||
+                  displayStatus === "cleaning") &&
                 !isFutureBooking && (
                   <button
                     onClick={onCheckin}
@@ -344,22 +350,23 @@ export default function RoomDetailPanel({
                     <i className="fas fa-sign-in-alt"></i> Check In Guest
                   </button>
                 )}
-              {(displayStatus === "occupied" ||
-                displayStatus === "expiring") && (
-                <button
-                  onClick={onExtend}
-                  className="w-full py-2 bg-[#c9a84c] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
-                  <i className="fas fa-plus"></i> Extend Stay
-                </button>
-              )}
-              {isActiveBooking && room.booking && (
+              {!isReadOnly &&
+                (displayStatus === "occupied" ||
+                  displayStatus === "expiring") && (
+                  <button
+                    onClick={onExtend}
+                    className="w-full py-2 bg-[#c9a84c] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+                    <i className="fas fa-plus"></i> Extend Stay
+                  </button>
+                )}
+              {!isReadOnly && isActiveBooking && room.booking && (
                 <button
                   onClick={onCheckout}
                   className="w-full py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
                   <i className="fas fa-sign-out-alt"></i> Check Out Now
                 </button>
               )}
-              {displayStatus === "cleaning" && (
+              {!isReadOnly && displayStatus === "cleaning" && (
                 <button
                   onClick={onMarkAvailable}
                   className="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
@@ -380,11 +387,13 @@ export default function RoomDetailPanel({
                 className="w-full py-2 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition flex items-center justify-center gap-2">
                 <i className="fas fa-copy"></i> Copy QR URL
               </button>
-              <button
-                onClick={onRename}
-                className="w-full py-2 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition flex items-center justify-center gap-2">
-                <i className="fas fa-pen"></i> Rename Room
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={onRename}
+                  className="w-full py-2 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition flex items-center justify-center gap-2">
+                  <i className="fas fa-pen"></i> Rename Room
+                </button>
+              )}
             </div>
 
             {/* Notes */}
@@ -396,15 +405,18 @@ export default function RoomDetailPanel({
                 rows="3"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                disabled={isReadOnly}
                 placeholder="Guest notes, special requests…"
                 className="flex-1 px-3 py-2 border border-[#e5e2db] rounded-lg text-sm focus:border-[#c9a84c] outline-none resize-none"
               />
             </div>
-            <button
-              onClick={() => onSaveNotes(room.id, notes)}
-              className="mt-2 py-1.5 px-4 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition">
-              <i className="fas fa-save mr-1"></i>Save notes
-            </button>
+            {!isReadOnly && (
+              <button
+                onClick={() => onSaveNotes(room.id, notes)}
+                className="mt-2 py-1.5 px-4 border border-[#e5e2db] rounded-lg text-sm text-[#8a8278] hover:bg-[#f7f3ee] transition">
+                <i className="fas fa-save mr-1"></i>Save notes
+              </button>
+            )}
           </div>
         </div>
       </div>

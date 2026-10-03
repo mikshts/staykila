@@ -32,6 +32,12 @@ const SubscriptionContext = createContext(null);
 const POLL_INTERVAL_MS = 1500;
 const POLL_TIMEOUT_MS = 20000;
 
+const hasCurrentPaidPeriod = (subscription) => {
+  if (subscription?.subscription_status !== "active") return false;
+  const periodEnd = new Date(subscription.current_period_end).getTime();
+  return Number.isFinite(periodEnd) && periodEnd > Date.now();
+};
+
 export function SubscriptionProvider({ children }) {
   const { hotel, user } = useAuth();
   const [subscription, setSubscription] = useState(null);
@@ -141,7 +147,7 @@ export function SubscriptionProvider({ children }) {
 
           while (
             !cancelled &&
-            latest?.subscription_status !== "active" &&
+            !hasCurrentPaidPeriod(latest) &&
             Date.now() - start < POLL_TIMEOUT_MS
           ) {
             // Self-heal: try to confirm + activate via PayMongo directly.
@@ -168,14 +174,14 @@ export function SubscriptionProvider({ children }) {
 
           setIsPolling(false);
 
-          if (!cancelled && latest?.subscription_status === "active") {
+          if (!cancelled && hasCurrentPaidPeriod(latest)) {
             // Payment confirmed and subscription is now active — send the user
             // straight to the dashboard. No manual "Verify" click needed.
             window.location.href = `${window.location.origin}/dashboard`;
             return;
           }
 
-          if (!cancelled && latest?.subscription_status !== "active") {
+          if (!cancelled && !hasCurrentPaidPeriod(latest)) {
             // Polling timed out without activation. Don't spin forever —
             // surface a clear "still confirming" state instead (the billing
             // page offers a manual Verify button as a fallback).
